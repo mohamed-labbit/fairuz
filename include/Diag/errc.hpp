@@ -78,18 +78,18 @@ case ErrorCode::name: return ErrorCategory::category;
 constexpr char const* error_category_name(ErrorCategory category) noexcept
 {
     switch (category) {
-    case ErrorCategory::FILE: return "file";
-    case ErrorCategory::LEXICAL: return "lexical";
-    case ErrorCategory::SYNTAX: return "syntax";
-    case ErrorCategory::SEMANTIC: return "semantic";
-    case ErrorCategory::COMPILE: return "compile";
-    case ErrorCategory::RUNTIME: return "runtime";
-    case ErrorCategory::BUILTIN: return "builtin";
-    case ErrorCategory::CONTAINER: return "container";
-    case ErrorCategory::INTERNAL: return "internal";
-    case ErrorCategory::UNKNOWN: return "unknown";
+    case ErrorCategory::FILE: return "FileError";
+    case ErrorCategory::LEXICAL: return "LexicalError";
+    case ErrorCategory::SYNTAX: return "SyntaxError";
+    case ErrorCategory::SEMANTIC: return "SemanticError";
+    case ErrorCategory::COMPILE: return "CompileError";
+    case ErrorCategory::RUNTIME: return "RuntimeError";
+    case ErrorCategory::BUILTIN: return "BuiltinError";
+    case ErrorCategory::CONTAINER: return "ContainerError";
+    case ErrorCategory::INTERNAL: return "InternalError";
+    case ErrorCategory::UNKNOWN: return "UnknownError";
     }
-    return "unknown";
+    return "Unknown";
 }
 
 } // namespace fairuz
