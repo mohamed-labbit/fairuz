@@ -26,25 +26,33 @@ TEST(RuntimeResultHelpers, UnexpectedErrorReportsFatalFailureWithoutUnwrapping)
     test_source::Program program("تاكد(خطا)\n");
     RuntimeError error(ErrorCode::ASSERT_FAILED, program.source, { 1, 1, 0, 0 });
     testing::TestPartResultArray failures;
+    unsigned caller_line = 0;
     {
         testing::ScopedFakeTestPartResultReporter reporter(
             testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        caller_line = __LINE__ + 1;
         EXPECT_THROW(run_success(VM::RuntimeResult(error)), testing::AssertionException);
     }
     ASSERT_EQ(failures.size(), 1);
     EXPECT_TRUE(failures.GetTestPartResult(0).fatally_failed());
+    EXPECT_STREQ(failures.GetTestPartResult(0).file_name(), __FILE__);
+    EXPECT_EQ(failures.GetTestPartResult(0).line_number(), caller_line);
 }
 
 TEST(RuntimeResultHelpers, UnexpectedSuccessReportsFatalFailureWithoutFabricatingError)
 {
     testing::TestPartResultArray failures;
+    unsigned caller_line = 0;
     {
         testing::ScopedFakeTestPartResultReporter reporter(
             testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        caller_line = __LINE__ + 1;
         EXPECT_THROW(run_failed(VM::RuntimeResult(Value::nil())), testing::AssertionException);
     }
     ASSERT_EQ(failures.size(), 1);
     EXPECT_TRUE(failures.GetTestPartResult(0).fatally_failed());
+    EXPECT_STREQ(failures.GetTestPartResult(0).file_name(), __FILE__);
+    EXPECT_EQ(failures.GetTestPartResult(0).line_number(), caller_line);
 }
 
 TEST(RuntimeRecovery, NativeHostFailureHasNoInventedSourceAndDoesNotReport)
