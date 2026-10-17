@@ -58,6 +58,15 @@ struct CompilerState {
     Array<LoopContext> loop_stack;
     CompilerState* enclosing { nullptr };
 
+    CompilerState() = default;
+    CompilerState(Chunk* ch, StringRef const name, bool const is_top_level = false, CompilerState* enclosing = nullptr)
+        : chunk(ch)
+        , func_name(name)
+        , is_top_level(is_top_level)
+        , enclosing(enclosing)
+    {
+    }
+
     u8 alloc_register()
     {
         u8 reg = next_reg;
@@ -177,21 +186,13 @@ struct ExprResult {
         e.ival = 0;
         return e;
     }
-
-    bool is_const() const
-    {
-        return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL;
-    }
-
-    bool is_reg() const { return kind == Kind::REG; }
-    bool is_reloc() const { return kind == Kind::RELOC; }
 }; // struct ExprResult
 
 class Compiler {
 public:
     using RegType = u8;
     using CompileExprResult = ErrorOr<ExprResult, RuntimeError>;
-    using CompileStmtResult = ErrorOr<bool, RuntimeError>;
+    using CompileStmtResult = ErrorOr<void, RuntimeError>;
 
     explicit Compiler(SourcePtr source)
         : m_source(std::move(source))
@@ -205,9 +206,6 @@ public:
     static ErrorOr<bool, RuntimeError> compile_all(Chunk* chunk);
 
 private:
-    SourcePtr m_source;
-    CompilerState* m_current { nullptr };
-
     struct ScopeGuard {
         CompilerState* cs { nullptr };
 
@@ -247,9 +245,12 @@ private:
         }
     };
 
+    SourcePtr m_source;
+    CompilerState* m_current { nullptr };
     HashTable<std::pair<StringRef, Chunk*>, u16, PairHash, PairEqual> m_string_cache;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_globals;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_module_names;
+    HashTable<StringRef, ClassDescriptor, StringRefHash, StringRefEqual> m_class_registry;
 
     struct VarInfo {
         enum class Kind {
@@ -258,31 +259,6 @@ private:
         } kind;
         u8 index { 0 };
     };
-
-    struct ClassDesc {
-        StringRef name;
-        Array<StringRef> field_names;
-        Array<StringRef> method_names;
-
-        using IndexTable = HashTable<StringRef, u32, StringRefHash, StringRefEqual>;
-
-        IndexTable field_map;
-        IndexTable method_map;
-
-        int field_index(StringRef name) const
-        {
-            u32 const* p = field_map.find_ptr(name);
-            return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
-        }
-
-        int method_slot(StringRef name) const
-        {
-            u32 const* p = method_map.find_ptr(name);
-            return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
-        }
-    };
-
-    HashTable<StringRef, ClassDesc, StringRefHash, StringRefEqual> m_class_registry;
 
     CompileStmtResult compile_stmt(AST::Stmt* s);
     CompileStmtResult compile_block(AST::BlockStmt* s);
@@ -376,7 +352,7 @@ private:
 
     u32 intern_string(StringRef const& str);
 
-    ClassDesc const* resolve_receiver_class(AST::ExprPtr e) const;
+    ClassDescriptor const* resolve_receiver_class(AST::ExprPtr e) const;
 
     bool is_declaration(AST::AssignExpr const* e) const;
 
