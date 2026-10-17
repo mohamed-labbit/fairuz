@@ -11,6 +11,7 @@
 
 #include "Compiler/compiler.hpp"
 #include "Diag/runtime_error.hpp"
+#include "Macros.hpp"
 #include "compile_macros.hpp"
 
 namespace fairuz::runtime {
@@ -37,15 +38,11 @@ static bool is_terminal_top_level_call(AST::StmtPtr s)
 ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts)
 {
     Chunk* chunk = make_chunk();
-    chunk->name = "<main>";
+    chunk->name = MAIN_PROGRAM;
     chunk->source = m_source;
     chunk->source_path = m_source->path;
 
-    CompilerState state;
-    state.chunk = chunk;
-    state.func_name = "<main>";
-    state.is_top_level = true;
-    state.enclosing = nullptr;
+    CompilerState state { chunk, MAIN_PROGRAM, true, nullptr };
     CompilerStateGuard state_guard(m_current, &state);
 
     for (size_t i = 0; i < stmts.size(); i++) {
@@ -54,19 +51,13 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
             auto const* expr_stmt = as_expr_stmt(stmt);
             SourceLocation loc = expr_stmt->get_location();
             RegMark mark(m_current);
-            auto expr_result = compile_expr_impl(expr_stmt->expr);
-            if (expr_result.has_error())
-                return expr_result.error();
-            auto src = any_reg(expr_result.value(), loc);
-            if (src.has_error())
-                return raise_compile_error(src.error().errc, src.error().loc);
-            emit(make_ABC(OpCode::RETURN, src.value(), 1, 0), loc);
+            FA_COMPILE_TRY(expr_result, compile_expr_impl(expr_stmt->expr));
+            ANY_REG_BIND(expr_result, loc, src);
+            emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
             state.is_dead = true;
             break;
         }
-        auto stmt_result = compile_stmt(stmt);
-        if (stmt_result.has_error())
-            return stmt_result.error();
+        FA_COMPILE_DISCARD_TRY(stmt_result, compile_stmt(stmt));
     }
 
     SourceLocation loc = { 1, 1, 0 };
