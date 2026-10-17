@@ -48,13 +48,13 @@
         return FA_COMPILE_JOIN(parse_result_, __LINE__).error(); \
     auto name = std::move(FA_COMPILE_JOIN(parse_result_, __LINE__)).value()
 
-#define FA_COMPILE_DISCARD_TRY(name, expr)                    \
+#define FA_COMPILE_DISCARD_TRY(expr)                          \
     auto FA_COMPILE_JOIN(parse_result_, __LINE__) = (expr);   \
     if (FA_COMPILE_JOIN(parse_result_, __LINE__).has_error()) \
         return FA_COMPILE_JOIN(parse_result_, __LINE__).error();
 
 #define ANY_REG_BIND(v, l, name) FA_COMPILE_TRY(name, any_reg((v), (l)))
 #define ANY_REG_SET(v, l, name) TRY_SET(name, any_reg((v), (l)))
-#define ALLOC_REG(name) FA_COMPILE_TRY(name, alloc_register())
+#define ALLOC_REG(name, loc) FA_COMPILE_TRY(name, alloc_register(loc))
 
 #endif // FAIRUZ_LIB_COMPILER_COMPILE_MACROS_HPP

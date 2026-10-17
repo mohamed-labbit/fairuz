@@ -57,7 +57,7 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
             state.is_dead = true;
             break;
         }
-        FA_COMPILE_DISCARD_TRY(stmt_result, compile_stmt(stmt));
+        FA_COMPILE_DISCARD_TRY(compile_stmt(stmt));
     }
 
     SourceLocation loc = { 1, 1, 0 };
@@ -67,7 +67,7 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
     if (!state.is_dead)
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
 
-    chunk->local_count = state.max_reg;
+    chunk->local_count = state.registers.max_reg();
     state_guard.restore();
 
     if (diagnostic::has_errors())
@@ -160,12 +160,12 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
     current_chunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
 }
 
-ErrorOr<Compiler::RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
+ErrorOr<RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
 {
     if (r.kind == ExprResult::Kind::REG)
         return r.reg_;
 
-    auto allocated = alloc_register();
+    auto allocated = alloc_register(loc);
     if (allocated.has_error())
         return raise_compile_error(allocated.error().errc, loc);
     RegType dst = allocated.value();
@@ -173,12 +173,12 @@ ErrorOr<Compiler::RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, 
     return dst;
 }
 
-ErrorOr<Compiler::RegType, RuntimeError> Compiler::alloc_register()
+ErrorOr<RegType, RuntimeError> Compiler::alloc_register(SourceLocation loc)
 {
-    u8 reg = m_current->alloc_register();
-    if (reg >= MAX_REGS)
-        return raise_compile_error(ErrorCode::TOO_MANY_REGISTERS, { });
-    return reg;
+    auto alloc_result = m_current->registers.alloc_register();
+    if (alloc_result.has_error())
+        return raise_compile_error(alloc_result.error().get_code(), loc);
+    return alloc_result.value();
 }
 
 LocalVar const* Compiler::lookup_local(StringRef const& name) const
@@ -254,15 +254,6 @@ u32 Compiler::intern_string(StringRef const& str)
     u16 idx = chunk->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(obj)));
     m_string_cache[key] = idx;
     return idx;
-}
-
-void Compiler::reserve_register(RegType r)
-{
-    if (r >= m_current->next_reg) {
-        m_current->next_reg = r + 1;
-        if (m_current->next_reg > m_current->max_reg)
-            m_current->max_reg = m_current->next_reg;
-    }
 }
 
 } // namespace fairuz::runtime

@@ -11,6 +11,7 @@
 
 #include "Compiler/compiler.hpp"
 #include "Compiler/opcode.hpp"
+#include "Compiler/register_allocator.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Interpreter/object.hpp"
 #include "Macros.hpp"
@@ -136,7 +137,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
 
     AST::ExprKind op = e->get_kind();
     if (op == AST::ExprKind::OP_AND) {
-        ALLOC_REG(dst);
+        ALLOC_REG(dst, loc);
 
         {
             RegMark mark(m_current);
@@ -157,7 +158,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     }
 
     if (op == AST::ExprKind::OP_OR) {
-        ALLOC_REG(dst);
+        ALLOC_REG(dst, loc);
 
         {
             RegMark mark(m_current);
@@ -261,13 +262,13 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
     if (e->augmented && (AST::is_index(e->target) || AST::is_get(e->target))) {
         // Capture the target once, read its old value before the RHS, and
         // write the result back through the same object and index/field.
-        ALLOC_REG(result);
+        ALLOC_REG(result, loc);
         RegMark mark(m_current);
         auto capture = [&](AST::ExprPtr expression) -> ErrorOr<RegType, RuntimeError> {
-            ALLOC_REG(reg);
+            ALLOC_REG(reg, loc);
             FA_COMPILE_TRY(value, compile_expr_impl(expression));
             discharge(value, reg, expression->get_location());
-            m_current->free_regs_to(reg + 1);
+            m_current->registers.rewind(reg + 1);
             return reg;
         };
         auto* operation = AST::as_binary(e->value);
@@ -283,7 +284,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             TRY_SET(&object, capture(target->object));
             member = static_cast<u16>(intern_string(target->member->spelling));
         }
-        ALLOC_REG(previous);
+        ALLOC_REG(previous, loc);
         if (indexed)
             emit(make_ABC(OpCode::INDEX_READ, previous, object, index), loc);
         else {
@@ -389,7 +390,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             return ExprResult::reg(src);
         }
 
-        ALLOC_REG(dst);
+        ALLOC_REG(dst, loc);
         FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
         discharge(value_result, dst, loc);
         declare_local(name_value, dst, infer_constructed_class(e->value));
@@ -427,7 +428,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
     // Assignment inside a function introduces a local even when a global of
     // the same name already exists. Globals are only written at top level.
     if (!m_current->is_top_level) {
-        ALLOC_REG(dst);
+        ALLOC_REG(dst, loc);
         FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
         discharge(value_result, dst, loc);
         declare_local(name_value, dst, infer_constructed_class(e->value));
@@ -448,18 +449,31 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
 Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegType* dst, bool tail)
 {
     SourceLocation loc = e->get_location();
-    auto fn_reg_ret = dst == nullptr ? alloc_register() : *dst;
+    auto fn_reg_ret = dst == nullptr ? alloc_register(loc) : *dst;
     VERIFY_RESULT(fn_reg_ret);
     RegType fn_reg = fn_reg_ret.value();
 
     auto compile_args = [&]() -> Compiler::CompileStmtResult {
         for (AST::ExprPtr arg : e->args) {
-            ALLOC_REG(arg_reg);
+            ALLOC_REG(arg_reg, loc);
             FA_COMPILE_TRY(arg_cmp_ret, compile_expr_impl(arg));
             discharge(arg_cmp_ret, arg_reg, arg->get_location());
-            m_current->free_regs_to(arg_reg + 1);
+            m_current->registers.rewind(arg_reg + 1);
         }
         return { };
+    };
+
+    auto compile_object = [&](AST::ExprPtr object, SourceLocation loc) -> ErrorOr<std::tuple<RegType, RegType>, RuntimeError> {
+        ALLOC_REG(object_reg, loc);
+        FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
+        discharge(object_cmp_ret, object_reg, object->get_location());
+        // Nested receiver expressions may temporarily allocate well above
+        // object_reg. Method calling convention requires self and explicit
+        // arguments to occupy consecutive registers, so discard those
+        // temporaries before reserving the self slot and arguments.
+        m_current->registers.rewind(object_reg + 1);
+        ALLOC_REG(reserved_reg, loc);
+        return std::make_tuple(object_reg, reserved_reg);
     };
 
     // Resolve external members from the actual receiver at runtime, including
@@ -477,20 +491,9 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             auto method_name = AST::as_identifier(member)->spelling;
             int slot = current_method_slot(method_name);
             if (slot >= 0) {
-                ALLOC_REG(object_reg);
-                FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
-                discharge(object_cmp_ret, object_reg, object->get_location());
-                // Nested receiver expressions may temporarily allocate well above
-                // object_reg. Method calling convention requires self and explicit
-                // arguments to occupy consecutive registers, so discard those
-                // temporaries before reserving the self slot and arguments.
-                m_current->free_regs_to(object_reg + 1);
-                ALLOC_REG(reserved_reg);
-                assert(reserved_reg != 0);
-
-                auto args_cmp_ret = compile_args();
-                VERIFY_RESULT(args_cmp_ret);
-
+                FA_COMPILE_TRY(regs, compile_object(object, loc));
+                auto [object_reg, _] = regs;
+                FA_COMPILE_DISCARD_TRY(compile_args());
                 u8 argc = static_cast<u8>(e->args.size() + 1);
                 emit(make_ABC(OpCode::INVOKE, object_reg, static_cast<RegType>(slot), argc), loc);
                 emit(make_ABC(OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
@@ -498,7 +501,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 if (tail && !m_current->is_top_level)
                     emit(make_ABC(OpCode::RETURN, object_reg, 1, 0), loc);
 
-                m_current->free_regs_to(object_reg + 1);
+                m_current->registers.rewind(object_reg + 1);
                 return ExprResult::reg(object_reg);
             }
             // A member stored in a field can itself be callable. When no
@@ -506,16 +509,11 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             // CALL path instead of rejecting valid higher-order code.
             FA_COMPILE_TRY(callee_cmp_ret, compile_expr_impl(e->callee));
             discharge(callee_cmp_ret, fn_reg, loc);
-            m_current->free_regs_to(fn_reg + 1);
+            m_current->registers.rewind(fn_reg + 1);
         } else {
             /// external method call 'obj.method()'
-            ALLOC_REG(object_reg);
-            FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
-            discharge(object_cmp_ret, object_reg, object->get_location());
-            // Keep the runtime call frame contiguous even when `object` is itself
-            // a call such as value.first().second(arg).
-            m_current->free_regs_to(object_reg + 1);
-            ALLOC_REG(member_reg);
+            FA_COMPILE_TRY(regs, compile_object(object, loc));
+            auto [object_reg, member_reg] = regs;
 
             if (AST::is_identifier(member)) {
                 /// if it's a simple name then load it from the constant table
@@ -538,7 +536,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             if (tail && !m_current->is_top_level)
                 emit(make_ABC(OpCode::RETURN, object_reg, 1, 0), loc);
             /// move the cursor back where it was before compiling 'member'
-            m_current->free_regs_to(object_reg + 1);
+            m_current->registers.rewind(object_reg + 1);
             return ExprResult::reg(object_reg);
         }
     } else {
@@ -547,7 +545,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
         discharge(callee_cmp_ret, fn_reg, loc);
         // A computed callee can leave temporary registers live. Arguments must
         // begin immediately after fn_reg for CALL/IC_CALL.
-        m_current->free_regs_to(fn_reg + 1);
+        m_current->registers.rewind(fn_reg + 1);
     }
 
     auto args_cmp_ret = compile_args();
@@ -556,13 +554,13 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
     u8 argc = static_cast<u8>(e->args.size());
     if (tail && !m_current->is_top_level) {
         emit(make_ABC(OpCode::CALL_TAIL, fn_reg, argc, 0), loc);
-        m_current->free_regs_to(fn_reg);
+        m_current->registers.rewind(fn_reg);
         return ExprResult::reg(fn_reg);
     }
 
     RegType ic = current_chunk()->alloc_ic_slot();
     emit(make_ABC(OpCode::IC_CALL, fn_reg, argc, ic), loc);
-    m_current->free_regs_to(fn_reg + 1);
+    m_current->registers.rewind(fn_reg + 1);
     return ExprResult::reg(fn_reg);
 }
 
@@ -573,23 +571,23 @@ Compiler::CompileExprResult Compiler::compile_list_impl(AST::ListExpr* e)
     if (e->size() > 0xFF)
         return raise_compile_error(ErrorCode::TOO_MANY_LIST_ELEMENTS, loc);
 
-    ALLOC_REG(dst);
-    ALLOC_REG(list_reg);
+    ALLOC_REG(dst, loc);
+    ALLOC_REG(list_reg, loc);
     auto cap = static_cast<RegType>(e->size());
     emit(make_ABC(OpCode::LIST_NEW, list_reg, cap, 0), loc);
 
     for (AST::ExprPtr elem : e->elements) {
-        ALLOC_REG(reg);
+        ALLOC_REG(reg, loc);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(elem));
         discharge(expr_result, reg, loc);
         emit(make_ABC(OpCode::LIST_APPEND, list_reg, reg, 0), loc);
-        m_current->free_regs_to(reg);
+        m_current->registers.rewind(reg);
     }
 
     if (list_reg != dst)
         emit(make_ABC(OpCode::MOVE, dst, list_reg, 0), loc);
 
-    m_current->free_regs_to(dst + 1);
+    m_current->registers.rewind(dst + 1);
     return ExprResult::reg(dst);
 }
 
@@ -609,21 +607,21 @@ Compiler::CompileExprResult Compiler::compile_dict_impl(AST::DictExpr* e)
 {
     SourceLocation loc = e->get_location();
 
-    ALLOC_REG(dst); // reserve the expression's result register FIRST
-    ALLOC_REG(fn_reg);
+    ALLOC_REG(dst, loc); // reserve the expression's result register FIRST
+    ALLOC_REG(fn_reg, loc);
     u16 kidx = intern_string("قاموس");
     emit(make_ABx(OpCode::LOAD_GLOBAL, fn_reg, kidx), loc);
 
     for (auto const& [key, value] : e->content) {
-        ALLOC_REG(key_reg);
+        ALLOC_REG(key_reg, loc);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(key));
         discharge(expr_result, key_reg, key->get_location());
-        m_current->free_regs_to(key_reg + 1);
+        m_current->registers.rewind(key_reg + 1);
 
-        ALLOC_REG(value_reg);
+        ALLOC_REG(value_reg, loc);
         FA_COMPILE_TRY(val_expr_result, compile_expr_impl(value));
         discharge(val_expr_result, value_reg, value->get_location());
-        m_current->free_regs_to(value_reg + 1);
+        m_current->registers.rewind(value_reg + 1);
     }
 
     RegType argc = static_cast<RegType>(e->content.size() * 2);
@@ -633,7 +631,7 @@ Compiler::CompileExprResult Compiler::compile_dict_impl(AST::DictExpr* e)
     if (fn_reg != dst)
         emit(make_ABC(OpCode::MOVE, dst, fn_reg, 0), loc);
 
-    m_current->free_regs_to(dst + 1);
+    m_current->registers.rewind(dst + 1);
     return ExprResult::reg(dst);
 }
 
@@ -641,7 +639,7 @@ Compiler::CompileExprResult Compiler::compile_get_impl(AST::GetExpr* e)
 {
     SourceLocation loc = e->get_location();
     u32 name_idx = intern_string(e->member->spelling);
-    ALLOC_REG(object_reg);
+    ALLOC_REG(object_reg, loc);
     FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(e->object));
     discharge(object_cmp_ret, object_reg, e->object->get_location());
     u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, object_reg, 0xFF), loc);
@@ -649,10 +647,13 @@ Compiler::CompileExprResult Compiler::compile_get_impl(AST::GetExpr* e)
     return ExprResult::reloc(pc);
 }
 
-ErrorOr<Compiler::RegType, RuntimeError> Compiler::compile_expr(AST::ExprPtr e, RegType* dst)
+ErrorOr<RegType, RuntimeError> Compiler::compile_expr(AST::ExprPtr e, RegType* dst)
 {
-    if (dst != nullptr)
-        reserve_register(*dst);
+    if (dst != nullptr) {
+        auto result = reserve_register(*dst);
+        if (result.has_error())
+            return raise_compile_error(result.error().get_code(), e->get_location());
+    }
 
     SourceLocation loc = e->get_location();
     FA_COMPILE_TRY(r, compile_expr_impl(e));

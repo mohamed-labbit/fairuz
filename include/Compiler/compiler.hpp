@@ -13,6 +13,7 @@
 
 #include "Compiler/chunk.hpp"
 #include "Compiler/opcode.hpp"
+#include "Compiler/register_allocator.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Interpreter/value.hpp"
 #include "Macros.hpp"
@@ -32,7 +33,7 @@ static constexpr char kClassInstanceName[] = "__class$instance";
 struct LocalVar {
     StringRef name { "" };
     u32 depth { 0 };
-    u8 reg { 0 };
+    RegType reg { 0 };
     StringRef known_class { "" };
 }; // struct LocalVar
 
@@ -40,8 +41,6 @@ struct CompilerState {
     Chunk* chunk { nullptr };
     Array<LocalVar> locals;
     u32 scope_depth { 0 };
-    u8 next_reg { 0 };
-    u8 max_reg { 0 };
     StringRef func_name { "" };
     bool is_top_level { false };
     bool is_dead { false };
@@ -49,6 +48,7 @@ struct CompilerState {
     bool class_layout_dynamic { false };
     Array<StringRef> class_field_names;
     Array<StringRef> class_method_names;
+    RegisterAllocator registers;
 
     struct LoopContext {
         Array<u32> break_patches;
@@ -66,21 +66,6 @@ struct CompilerState {
         , enclosing(enclosing)
     {
     }
-
-    u8 alloc_register()
-    {
-        u8 reg = next_reg;
-        next_reg++;
-        if (next_reg > max_reg)
-            max_reg = next_reg;
-        return reg;
-    }
-    void free_register()
-    {
-        if (next_reg > 0)
-            next_reg -= 1;
-    }
-    void free_regs_to(u8 m) { next_reg = m; }
 }; // struct CompilerState
 
 struct CompilerStateGuard {
@@ -105,12 +90,12 @@ struct CompilerStateGuard {
 
 struct RegMark {
     CompilerState* state { nullptr };
-    u8 mark { 0 };
+    RegType mark { 0 };
     size_t locals_mark { 0 };
 
     explicit RegMark(CompilerState* s)
         : state(s)
-        , mark(s->next_reg)
+        , mark(s->registers.next_reg())
         , locals_mark(s->locals.size())
     {
     }
@@ -119,10 +104,10 @@ struct RegMark {
     {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
-        u8 floor = mark;
+        RegType floor = mark;
         for (size_t i = locals_mark; i < state->locals.size(); ++i)
-            floor = std::max<u8>(floor, state->locals[i].reg + 1);
-        state->free_regs_to(floor);
+            floor = std::max<RegType>(floor, state->locals[i].reg + 1);
+        state->registers.rewind(floor);
     }
 };
 
@@ -137,14 +122,14 @@ struct ExprResult {
     } kind;
 
     union {
-        u8 reg_;
+        RegType reg_;
         u32 reloc_pc;
         i64 ival;
         f64 dval;
         bool bval;
     }; // union
 
-    static ExprResult reg(u8 r)
+    static ExprResult reg(RegType r)
     {
         ExprResult e;
         e.kind = Kind::REG;
@@ -190,7 +175,6 @@ struct ExprResult {
 
 class Compiler {
 public:
-    using RegType = u8;
     using CompileExprResult = ErrorOr<ExprResult, RuntimeError>;
     using CompileStmtResult = ErrorOr<void, RuntimeError>;
 
@@ -224,7 +208,7 @@ private:
             while (pop_from > 0 && locals[pop_from - 1].depth > depth)
                 pop_from -= 1;
             if (pop_from < locals.size())
-                cs->next_reg = locals[pop_from].reg;
+                cs->registers.rewind(locals[pop_from].reg);
             locals.resize(static_cast<u32>(pop_from));
         }
     };
@@ -291,23 +275,23 @@ private:
     CompileExprResult compile_unary_impl(AST::UnaryExpr* e);
     CompileExprResult compile_binary_impl(AST::BinaryExpr* e);
     CompileExprResult compile_assign_impl(AST::AssignExpr* e);
-    CompileExprResult compile_call_impl(AST::CallExpr* e, u8* dst, bool tail = false);
+    CompileExprResult compile_call_impl(AST::CallExpr* e, RegType* dst, bool tail = false);
     CompileExprResult compile_list_impl(AST::ListExpr* e);
     CompileExprResult compile_index_impl(AST::IndexExpr* e);
     CompileExprResult compile_dict_impl(AST::DictExpr* e);
     CompileExprResult compile_get_impl(AST::GetExpr* e);
 
-    ErrorOr<RegType, RuntimeError> compile_expr(AST::ExprPtr e, u8* dst = nullptr);
+    ErrorOr<RegType, RuntimeError> compile_expr(AST::ExprPtr e, RegType* dst = nullptr);
 
-    void discharge(ExprResult const& r, u8 dst, SourceLocation loc);
+    void discharge(ExprResult const& r, RegType dst, SourceLocation loc);
     ErrorOr<RegType, RuntimeError> any_reg(ExprResult const& r, SourceLocation loc);
-    ErrorOr<RegType, RuntimeError> alloc_register();
+    ErrorOr<RegType, RuntimeError> alloc_register(SourceLocation loc);
 
-    void declare_local(StringRef const& name, u8 reg)
+    void declare_local(StringRef const& name, RegType reg)
     {
         declare_local(name, reg, "");
     }
-    void declare_local(StringRef const& name, u8 reg, StringRef const& known_class)
+    void declare_local(StringRef const& name, RegType reg, StringRef const& known_class)
     {
         m_current->locals.push({ name, m_current->scope_depth, reg, known_class });
     }
@@ -327,7 +311,7 @@ private:
         return current_chunk()->emit(instr, loc);
     }
 
-    u32 emit_jump(OpCode op, u8 cond, SourceLocation loc)
+    u32 emit_jump(OpCode op, RegType cond, SourceLocation loc)
     {
         return emit(make_AsBx(op, cond, 0), loc);
     }
@@ -344,7 +328,7 @@ private:
 
     void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
     void patch_jump_to(u32 instr_idx, u32 target);
-    void emit_load_value(u8 dst, Value v, SourceLocation loc);
+    void emit_load_value(RegType dst, Value v, SourceLocation loc);
 
     Chunk* current_chunk() const { return m_current->chunk; }
 
@@ -356,7 +340,10 @@ private:
 
     bool is_declaration(AST::AssignExpr const* e) const;
 
-    void reserve_register(u8 r);
+    ErrorOr<void> reserve_register(RegType reg)
+    {
+        return m_current->registers.reserve_register(reg);
+    }
 
     // Mirrors fairuz::parser::same_name (fparser.cc), which is file-local to
     // that translation unit and not visible here. Used to detect `this.field`
