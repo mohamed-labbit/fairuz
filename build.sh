@@ -531,7 +531,7 @@ if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
         -DCMAKE_BUILD_TYPE=Debug
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
     )
-    CXX_EXTRA_FLAGS="-fsanitize=address -g -Wall -Wextra -Wpedantic"
+    CXX_EXTRA_FLAGS="-fsanitize=address -g -Wall -Wextra -Wpedantic -Wshadow"
 else
     COMMON_FLAGS+=(
         -DCMAKE_BUILD_TYPE=Release
