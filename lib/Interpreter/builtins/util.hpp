@@ -90,26 +90,26 @@ static StringRef format_double_string(f64 value)
     return StringRef(oss.str().c_str());
 }
 
-static void print_runtime_value_impl(Value v,
+static void print_runtime_value_impl(Value value,
     std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
-    if (v.is_nil()) {
+    if (value.is_nil()) {
         std::cout << "عدم";
         return;
     }
 
-    if (v.is_bool()) {
-        std::cout << (v.as_bool() ? "صحيح" : "خطا");
+    if (value.is_bool()) {
+        std::cout << (value.as_bool() ? "صحيح" : "خطا");
         return;
     }
 
-    if (v.is_int()) {
-        std::cout << integer::to_string(v);
+    if (value.is_int()) {
+        std::cout << integer::to_string(value);
         return;
     }
 
-    if (v.is_obj()) {
-        ObjHeader* obj = v.as_obj();
+    if (value.is_obj()) {
+        ObjHeader* obj = value.as_obj();
 
         if ((obj->type == ObjType::LIST || obj->type == ObjType::DICT)
             && depth >= MAX_RENDER_DEPTH) {
@@ -237,7 +237,7 @@ static void print_runtime_value_impl(Value v,
         }
     }
 
-    f64 d = v.as_double();
+    f64 d = value.as_double();
     if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15) {
         std::cout << static_cast<i64>(d);
     } else {
@@ -251,43 +251,43 @@ static inline void print_runtime_value(Value v)
     print_runtime_value_impl(v, active_containers, 0);
 }
 
-static void append_rendered_value(StringRef& out, Value v, bool quote_strings,
+static void append_rendered_value(StringRef& out, Value value, bool quote_strings,
     std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
-    if (v.is_nil()) {
+    if (value.is_nil()) {
         out += "nil";
         return;
     }
-    if (v.is_bool()) {
-        out += v.as_bool() ? "صحيح" : "خطا";
+    if (value.is_bool()) {
+        out += value.as_bool() ? "صحيح" : "خطا";
         return;
     }
-    if (v.is_int()) {
-        out += StringRef(integer::to_string(v).c_str());
+    if (value.is_int()) {
+        out += StringRef(integer::to_string(value).c_str());
         return;
     }
-    if (v.is_double()) {
-        f64 d = v.as_double();
+    if (value.is_double()) {
+        f64 d = value.as_double();
         if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
             out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
         else
             out += format_double_string(d);
         return;
     }
-    if (v.is_string()) {
+    if (value.is_string()) {
         if (quote_strings)
             out += '"';
-        out += v.as_string()->str;
+        out += value.as_string()->str;
         if (quote_strings)
             out += '"';
         return;
     }
-    if ((v.is_list() || v.is_dict()) && depth >= MAX_RENDER_DEPTH) {
+    if ((value.is_list() || value.is_dict()) && depth >= MAX_RENDER_DEPTH) {
         out += "<max-depth>";
         return;
     }
-    if (v.is_list()) {
-        ObjList* list = v.as_list();
+    if (value.is_list()) {
+        ObjList* list = value.as_list();
         if (!active_containers.insert(&list->obj).second) {
             out += "<cycle>";
             return;
@@ -302,8 +302,8 @@ static void append_rendered_value(StringRef& out, Value v, bool quote_strings,
         active_containers.erase(&list->obj);
         return;
     }
-    if (v.is_dict()) {
-        ObjDict* dict = v.as_dict();
+    if (value.is_dict()) {
+        ObjDict* dict = value.as_dict();
         if (!active_containers.insert(&dict->obj).second) {
             out += "<cycle>";
             return;
@@ -324,24 +324,24 @@ static void append_rendered_value(StringRef& out, Value v, bool quote_strings,
         active_containers.erase(&dict->obj);
         return;
     }
-    if (v.is_native()) {
+    if (value.is_native()) {
         out += "<native>";
         return;
     }
-    if (v.is_function()) {
+    if (value.is_function()) {
         out += "<function>";
         return;
     }
-    if (v.is_class()) {
+    if (value.is_class()) {
         out += "<class ";
-        ObjClass* klass = v.as_class();
+        ObjClass* klass = value.as_class();
         out += klass->name;
         out += '>';
         return;
     }
-    if (v.is_instance()) {
+    if (value.is_instance()) {
         out += '<';
-        ObjInstance* instance = v.as_instance();
+        ObjInstance* instance = value.as_instance();
         out += instance->klass->name;
         out += " instance>";
         return;
