@@ -42,7 +42,7 @@ struct Chunk {
     u32 local_count { 0 };
 
     // Empty after successful first-call compilation. Captures definition-time context.
-    std::function<ErrorOr<bool, RuntimeError>(Chunk*)> deferred_body;
+    std::function<ErrorOr<void, RuntimeError>(Chunk*)> deferred_body;
 
     Array<u32> code;
     Array<SourceLocation> locations;
