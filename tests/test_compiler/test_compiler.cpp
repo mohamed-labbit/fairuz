@@ -12,6 +12,7 @@
 #include "Compiler/opcode.hpp"
 #include "Diag/diagnostic.hpp"
 #include "Interpreter/gc.hpp"
+#include "Macros.hpp"
 #include "Parser/ast.hpp"
 #include "Parser/ast_printer.hpp"
 #include "Support/string.hpp"
@@ -929,7 +930,7 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
-    EXPECT_EQ(chunk->name, "<main>");
+    EXPECT_EQ(chunk->name, MAIN_PROGRAM);
 }
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
