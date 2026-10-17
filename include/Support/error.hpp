@@ -158,6 +158,99 @@ private:
     std::expected<T, E> m_storage;
 }; // class ErrorOr
 
+/// partial specialization for T = void
+template<typename E>
+class [[nodiscard]] ErrorOr<void, E> {
+public:
+    // For void, default construction represents success.
+    ErrorOr() noexcept = default;
+
+    ErrorOr(E error)
+        : m_storage(std::unexpect, std::move(error))
+    {
+    }
+
+    static ErrorOr from_value() { return ErrorOr { }; }
+
+    static ErrorOr from_error(E error)
+    {
+        return ErrorOr(std::unexpect, std::move(error));
+    }
+
+    ErrorOr(ErrorOr const&) = default;
+    ErrorOr& operator=(ErrorOr const&) = default;
+    ErrorOr(ErrorOr&&) = default;
+    ErrorOr& operator=(ErrorOr&&) = default;
+    ~ErrorOr() = default;
+
+    bool has_value() const noexcept { return m_storage.has_value(); }
+    bool has_error() const noexcept { return !has_value(); }
+
+    // Checks success; there is no payload to retrieve.
+    void value() const noexcept
+    {
+        assert(has_value());
+    }
+
+    E& error() &
+    {
+        assert(has_error());
+        return m_storage.error();
+    }
+
+    E const& error() const&
+    {
+        assert(has_error());
+        return m_storage.error();
+    }
+
+    E&& error() &&
+    {
+        assert(has_error());
+        return std::move(m_storage).error();
+    }
+
+    E const&& error() const&&
+    {
+        assert(has_error());
+        return std::move(m_storage).error();
+    }
+
+    void set_value() noexcept
+    {
+        m_storage.emplace();
+    }
+
+    void set_error(E error)
+    {
+        m_storage = std::unexpected<E>(std::move(error));
+    }
+
+    template<typename U>
+    ErrorOr<U, E> error_or(U value) const&
+    {
+        if (has_error())
+            return ErrorOr<U, E>::from_error(error());
+        return ErrorOr<U, E>::from_value(std::move(value));
+    }
+
+    template<typename U>
+    ErrorOr<U, E> error_or(U value) &&
+    {
+        if (has_error())
+            return ErrorOr<U, E>::from_error(std::move(*this).error());
+        return ErrorOr<U, E>::from_value(std::move(value));
+    }
+
+private:
+    ErrorOr(std::unexpect_t, E error)
+        : m_storage(std::unexpect, std::move(error))
+    {
+    }
+
+    std::expected<void, E> m_storage;
+};
+
 inline Error report_error(ErrorCode errc, SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
