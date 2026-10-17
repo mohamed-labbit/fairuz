@@ -9,18 +9,20 @@
 // Compiles Fairuz statement AST nodes into bytecode.
 //===----------------------------------------------------------------------===//
 
+#include "Compiler/chunk.hpp"
 #include "Compiler/compiler.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Macros.hpp"
 #include "Parser/ast_builder.hpp"
 #include "compile_macros.hpp"
+#include <cassert>
 
 namespace fairuz::runtime {
 
 Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
 {
     if (m_current->is_dead)
-        return true;
+        return { };
 
     switch (s->get_kind()) {
     case AST::Stmt::Kind::EXPR: return compile_expr_stmt(AST::as_expr_stmt(s));
@@ -28,7 +30,7 @@ Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
     case AST::Stmt::Kind::WHILE: return compile_while(as_while(s));
     case AST::Stmt::Kind::FOR: return compile_for(as_for(s));
     case AST::Stmt::Kind::FUNC: return compile_function_def(as_function_def(s));
-    case AST::Stmt::Kind::FUNCTION_STUB: return true;
+    case AST::Stmt::Kind::FUNCTION_STUB: return { };
     case AST::Stmt::Kind::RETURN: return compile_return(as_return(s));
     case AST::Stmt::Kind::BREAK: return compile_break(as_break(s));
     case AST::Stmt::Kind::CONTINUE: return compile_continue(as_continue(s));
@@ -44,11 +46,10 @@ Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
 Compiler::CompileStmtResult Compiler::compile_expr_stmt(AST::ExprStmt* s)
 {
     RegMark mark(m_current);
-    ExprResult r;
-    COMPILE_EXPR_IMPL(s->expr, &r);
-    RegType tmp;
-    ANY_REG(r, s->get_location(), &tmp);
-    return true;
+    FA_COMPILE_TRY(r, compile_expr_impl(s->expr));
+    ANY_REG_BIND(r, s->get_location(), tmp);
+    (void)tmp;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
@@ -58,28 +59,24 @@ Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
     bool incoming_dead = m_current->is_dead;
 
     RegMark mark(m_current);
-    ExprResult expr_result;
-    RegType cond;
-    COMPILE_EXPR_IMPL(s->condition, &expr_result);
-    ANY_REG(expr_result, loc, &cond);
+    FA_COMPILE_TRY(expr_result, compile_expr_impl(s->condition));
+    ANY_REG_BIND(expr_result, loc, cond);
     u32 jump_false = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
-    COMPILE_STMT_DISCARD(s->then_stmt);
+    FA_COMPILE_DISCARD_TRY(discarded, compile_stmt(s->then_stmt));
 
     if (s->else_stmt) {
         u32 jump_end = emit_jump(OpCode::JUMP, 0, loc);
         patch_jump(jump_false);
         // A return/break/continue in the then branch does not make else dead.
         m_current->is_dead = incoming_dead;
-        auto else_ret = compile_stmt(s->else_stmt);
-        VERIFY_COMPILE_RESULT(else_ret);
-        (void)else_ret;
+        FA_COMPILE_DISCARD_TRY(else_ret, compile_stmt(s->else_stmt));
         patch_jump(jump_end);
     } else {
         patch_jump(jump_false);
     }
 
     m_current->is_dead = incoming_dead;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
@@ -93,19 +90,17 @@ Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
 
     {
         RegMark mark(m_current);
-        ExprResult expr_result;
-        RegType cond;
-        COMPILE_EXPR_IMPL(s->condition, &expr_result);
-        ANY_REG(expr_result, loc, &cond);
+        FA_COMPILE_TRY(expr_result, compile_expr_impl(s->condition));
+        ANY_REG_BIND(expr_result, loc, cond);
         u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
-        COMPILE_STMT_DISCARD(s->body);
+        FA_COMPILE_DISCARD_TRY(discarded, compile_stmt(s->body));
         u32 continue_target = current_offset();
         emit(make_AsBx(OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
         patch_jump(exit_jump);
         pop_loop(current_offset(), continue_target, loc.line);
     }
     m_current->is_dead = incoming_dead;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
@@ -116,23 +111,19 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
     auto target = AST::as_identifier(s->container);
     bool incoming_dead = m_current->is_dead;
 
-    RegType iter_reg;
-    ALLOC_REG(&iter_reg);
+    ALLOC_REG(iter_reg);
     {
         declare_local("__for_iter", iter_reg);
         RegMark mark(m_current);
-        ExprResult expr_result;
-        COMPILE_EXPR_IMPL(s->iter, &expr_result);
+        FA_COMPILE_TRY(expr_result, compile_expr_impl(s->iter));
         discharge(expr_result, iter_reg, loc);
     }
 
-    RegType len_reg, index_reg, target_reg, cond_reg, step_reg;
-
-    ALLOC_REG(&len_reg);
-    ALLOC_REG(&index_reg);
-    ALLOC_REG(&target_reg);
-    ALLOC_REG(&cond_reg);
-    ALLOC_REG(&step_reg);
+    ALLOC_REG(len_reg);
+    ALLOC_REG(index_reg);
+    ALLOC_REG(target_reg);
+    ALLOC_REG(cond_reg);
+    ALLOC_REG(step_reg);
 
     declare_local("__for_len", len_reg);
     declare_local("__for_index", index_reg);
@@ -151,7 +142,7 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
 
     u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond_reg, loc);
     emit(make_ABC(OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
-    COMPILE_STMT_DISCARD(s->body);
+    FA_COMPILE_DISCARD_TRY(discarded, compile_stmt(s->body));
 
     u32 continue_target = current_offset();
     emit(make_ABC(OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
@@ -162,7 +153,7 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
     pop_loop(current_offset(), continue_target, loc.line);
 
     m_current->is_dead = incoming_dead;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
@@ -183,13 +174,10 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
     current_chunk()->functions.push(fn_chunk);
 
-    CompilerState fn_state;
-    fn_state.chunk = fn_chunk;
-    fn_state.func_name = f->name->spelling;
+    CompilerState fn_state { fn_chunk, f->name->spelling, false, m_current };
     defer_function_body(fn_chunk, f, fn_state);
 
-    RegType dst;
-    ALLOC_REG(&dst);
+    ALLOC_REG(dst);
     emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), loc);
 
     if (m_current != nullptr && m_current->is_top_level) {
@@ -198,7 +186,7 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     }
 
     declare_local(f->name->spelling, dst);
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt const* node,
@@ -208,12 +196,11 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     ScopeGuard scope(m_current);
     RegType receiver = 0;
     if (state.is_class_method) {
-        ALLOC_REG(&receiver);
+        ALLOC_REG(receiver);
         declare_local(kClassInstanceName, receiver, receiver_class);
     }
     for (AST::ExprPtr param : node->params) {
-        RegType reg;
-        ALLOC_REG(&reg);
+        ALLOC_REG(reg);
         declare_local(AST::as_identifier(param)->spelling, reg);
     }
     AST::StmtPtr body = node->body;
@@ -224,7 +211,7 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
             return raise_compile_error(parsed.error());
         body = parsed.value();
     }
-    COMPILE_STMT_DISCARD(body);
+    FA_COMPILE_DISCARD_TRY(discarded, compile_stmt(body));
     if (!state.is_dead) {
         emit(state.is_class_method
                 ? make_ABC(OpCode::RETURN, receiver, 1, 0)
@@ -232,7 +219,7 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
             node->get_location());
     }
     state.chunk->local_count = state.max_reg;
-    return true;
+    return { };
 }
 
 void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
@@ -284,14 +271,14 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
     if (!s->has_value()) {
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
         m_current->is_dead = true;
-        return true;
+        return { };
     }
 
     AST::ExprPtr value = s->value;
     if (AST::is_nil(value)) {
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
         m_current->is_dead = true;
-        return true;
+        return { };
     }
 
     if (AST::is_call(value) && !m_current->is_top_level) {
@@ -302,27 +289,24 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
 
         RegMark mark(m_current);
         auto call_ret = compile_call_impl(call_expr, nullptr, /*tail=*/!is_ctor_call);
-        VERIFY_COMPILE_RESULT(call_ret);
+        VERIFY_RESULT(call_ret);
         (void)call_ret;
 
         if (is_ctor_call) {
             // compile_call_impl didn't emit a RETURN for a non-tail call; do it here.
-            RegType src;
-            ANY_REG(call_ret.value(), loc, &src);
+            ANY_REG_BIND(call_ret.value(), loc, src);
             emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
         }
         m_current->is_dead = true;
-        return true;
+        return { };
     }
 
     RegMark mark(m_current);
-    ExprResult expr_result;
-    RegType src;
-    COMPILE_EXPR_IMPL(value, &expr_result);
-    ANY_REG(expr_result, loc, &src);
+    FA_COMPILE_TRY(expr_result, compile_expr_impl(value));
+    ANY_REG_BIND(expr_result, loc, src);
     emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
     m_current->is_dead = true;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
@@ -333,7 +317,7 @@ Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().break_patches.push(emit_jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
@@ -344,7 +328,7 @@ Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().continue_patches.push(emit_jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_block(AST::BlockStmt* s)
@@ -352,14 +336,13 @@ Compiler::CompileStmtResult Compiler::compile_block(AST::BlockStmt* s)
     ScopeGuard scope(m_current);
 
     for (AST::StmtPtr child : s->stmts) {
-        auto r = compile_stmt(child);
-        VERIFY_COMPILE_RESULT(r);
+        FA_COMPILE_DISCARD_TRY(r, compile_stmt(child));
     }
 
     SourceLocation loc = { 1, 1, 0 };
     if (!s->stmts.empty() && s->stmts.back())
         loc = s->stmts.back()->get_location();
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
@@ -370,7 +353,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 
     StringRef class_name = AST::as_identifier(s->name)->spelling;
     StringRef parent_name;
-    ClassDesc const* parent_desc = nullptr;
+    ClassDescriptor const* parent_desc = nullptr;
     if (s->parent != nullptr) {
         parent_name = AST::as_identifier(s->parent)->spelling;
         parent_desc = m_class_registry.find_ptr(parent_name);
@@ -425,17 +408,14 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
         current_chunk()->functions.push(ch);
 
-        CompilerState state;
-        state.chunk = ch;
-        state.func_name = method->name->spelling;
+        CompilerState state { ch, method->name->spelling, false, m_current };
         state.is_class_method = true;
         state.class_field_names = field_names;
         state.class_layout_dynamic = s->parent != nullptr && parent_desc == nullptr;
         state.class_method_names = method_names;
         defer_function_body(ch, method, state, class_name);
 
-        RegType dst;
-        ALLOC_REG(&dst);
+        ALLOC_REG(dst);
         emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), method_loc);
         return std::tuple<RegType, Chunk*> { dst, ch };
     };
@@ -536,7 +516,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     for (u32 i = 0, n = static_cast<u32>(s->methods.size()); i < n; i++) {
         auto* method = as_function_def(s->methods[i]);
         auto result = compile_method_closure(method);
-        VERIFY_COMPILE_RESULT(result);
+        VERIFY_RESULT(result);
         auto [reg, chunk] = result.value();
 
         if (chunk == nullptr)
@@ -580,30 +560,22 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     desc_data.vtable_indices = std::move(vtable_indices);
 
     u16 desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
-    RegType class_reg;
 
-    ALLOC_REG(&class_reg);
+    ALLOC_REG(class_reg);
     emit(make_ABx(OpCode::NEW_CLASS, class_reg, desc_idx), loc);
     u16 name_idx = intern_string(class_name);
     emit(make_ABx(OpCode::STORE_GLOBAL, class_reg, name_idx), loc);
     declare_local(class_name, class_reg);
 
     // ClassDesc registration — unchanged
-    ClassDesc cdesc;
+    ClassDescriptor cdesc;
     cdesc.name = class_name;
     if (s->parent == nullptr || parent_desc != nullptr)
         cdesc.field_names = field_names;
     cdesc.method_names = method_names;
 
-    for (size_t i = 0; i < cdesc.field_names.size(); i++)
-        cdesc.field_map[cdesc.field_names[i]] = static_cast<int>(i);
-    for (size_t i = 0; i < method_names.size(); i++) {
-        if (!method_names[i].empty())
-            cdesc.method_map[method_names[i]] = static_cast<int>(i);
-    }
-
     m_class_registry[class_name] = std::move(cdesc);
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
@@ -626,7 +598,7 @@ Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
     for (size_t i = 0; i < names.size(); ++i)
         TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
 
-    return true;
+    return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_import_single(
@@ -638,13 +610,14 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     // stored globally. Rewind the load/extract temporaries after this
     // statement and resolve later references through LOAD_GLOBAL.
     RegMark mark(m_current);
-    RegType module_reg;
-    ALLOC_REG(&module_reg);
+
+    ALLOC_REG(module_reg);
     emit(make_ABx(OpCode::IMPORT_MODULE, module_reg, intern_string(module)), loc);
 
     RegType value_reg = module_reg;
     if (imports_member) {
-        ALLOC_REG(&value_reg);
+        /// not using ALLOC_REG to not overshadow the existing 'value_reg'
+        TRY_SET(&value_reg, alloc_register());
         emit(make_ABC(OpCode::GET_FIELD, value_reg, module_reg, 0xFF), loc);
         emit(make_ABx(OpCode::NOP, 0, intern_string(name)), loc);
     }
@@ -653,10 +626,10 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     m_globals[alias] = true;
     if (!imports_member)
         m_module_names[alias] = true;
-    return true;
+    return { };
 }
 
-Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::ExprPtr e) const
+ClassDescriptor const* Compiler::resolve_receiver_class(AST::ExprPtr e) const
 {
     // Ordinary bindings can change class across branches and loop backedges.
     // Without flow analysis their declaration-time class is not a slot proof.
