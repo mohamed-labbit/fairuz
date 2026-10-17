@@ -196,7 +196,7 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     ScopeGuard scope(m_current);
     RegType receiver = 0;
     if (state.is_class_method) {
-        ALLOC_REG(receiver);
+        TRY_SET(&receiver, alloc_register());
         declare_local(kClassInstanceName, receiver, receiver_class);
     }
     for (AST::ExprPtr param : node->params) {
