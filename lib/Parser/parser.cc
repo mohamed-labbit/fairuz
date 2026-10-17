@@ -154,14 +154,17 @@ Array<TokenPtr> const& checked_stream(Array<TokenPtr> const& tokens)
 // Distinguish overflow from invalid spelling, including invalid bytes AFTER an
 // overflow. The utility's bool result cannot make that distinction. This also
 // keeps malformed replay tokens on the parser's recoverable error path.
-enum class IntegerStatus { Invalid,
-    Small,
-    Large };
+enum class IntegerStatus {
+    INVALID,
+    SMALL,
+    LARGE,
+};
+
 IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& result)
 {
     std::string_view text(spelling.data(), spelling.len());
     if (text.empty())
-        return IntegerStatus::Invalid;
+        return IntegerStatus::INVALID;
     bool negative = text.front() == '-';
     size_t i = negative ? 1 : 0;
     if (i + 1 < text.size() && text[i] == '0') {
@@ -172,7 +175,7 @@ IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& res
                                                                 : 0;
         if (prefix_base != 0) {
             if (prefix_base != base)
-                return IntegerStatus::Invalid;
+                return IntegerStatus::INVALID;
             i += 2;
         }
     }
@@ -196,9 +199,9 @@ IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& res
             && static_cast<unsigned char>(text[i]) <= 0xA9)
             digit = static_cast<unsigned char>(text[i++]) - 0xA0;
         else
-            return IntegerStatus::Invalid;
+            return IntegerStatus::INVALID;
         if (digit >= base)
-            return IntegerStatus::Invalid;
+            return IntegerStatus::INVALID;
         saw_digit = true;
         if (!overflow) {
             if (magnitude > (limit - digit) / base)
@@ -208,14 +211,14 @@ IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& res
         }
     }
     if (!saw_digit)
-        return IntegerStatus::Invalid;
+        return IntegerStatus::INVALID;
     if (overflow)
-        return IntegerStatus::Large;
+        return IntegerStatus::LARGE;
     result = negative ? (magnitude == (u64 { 1 } << 63)
                                 ? std::numeric_limits<i64>::min()
                                 : -static_cast<i64>(magnitude))
                       : static_cast<i64>(magnitude);
-    return IntegerStatus::Small;
+    return IntegerStatus::SMALL;
 }
 
 } // namespace
@@ -1056,10 +1059,10 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
                                                                        : 10;
         i64 value = 0;
         auto status = integer_literal(token->lexeme(), base, value);
-        if (status == IntegerStatus::Invalid)
+        if (status == IntegerStatus::INVALID)
             return fail(ErrorCode::INVALID_NUMBER_LITERAL, token->location());
         auto* literal = m_builder.make_literal_int(value, token->location());
-        if (status == IntegerStatus::Large) {
+        if (status == IntegerStatus::LARGE) {
             literal->large_literal = token->lexeme();
             literal->literal_base = static_cast<int>(base);
         }
