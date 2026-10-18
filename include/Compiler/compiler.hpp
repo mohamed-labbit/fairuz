@@ -180,7 +180,8 @@ public:
     using CompileStmtResult = ErrorOr<void, RuntimeError>;
 
     explicit Compiler(SourcePtr source)
-        : m_source(std::move(source)), m_bytecode_emitter(this)
+        : m_source(std::move(source))
+        , m_bytecode_emitter(this)
     {
         assert(m_source != nullptr);
     }
@@ -191,6 +192,7 @@ public:
     static ErrorOr<bool, RuntimeError> compile_all(Chunk* chunk);
 
     Chunk* current_chunk() const { return m_current->chunk; }
+
 private:
     struct ScopeGuard {
         CompilerState* cs { nullptr };
@@ -308,28 +310,12 @@ private:
 
     int current_method_slot(StringRef const& name) const;
 
-    u32 emit(u32 instr, SourceLocation loc)
-    {
-        return current_chunk()->emit(instr, loc);
-    }
-
-    u32 emit_jump(OpCode op, RegType cond, SourceLocation loc)
-    {
-        return emit(make_AsBx(op, cond, 0), loc);
-    }
-
-    void patch_jump(u32 idx)
-    {
-        if (!current_chunk()->patch_jump(idx))
-            diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
-    }
     void push_loop(u32 loop_start)
     {
         m_current->loop_stack.push({ { }, { }, loop_start });
     }
 
     void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
-    void patch_jump_to(u32 instr_idx, u32 target);
 
     u32 current_offset() const { return current_chunk()->code.size(); }
 

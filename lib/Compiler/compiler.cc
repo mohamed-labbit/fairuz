@@ -90,21 +90,11 @@ void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 line)
     auto& ctx = m_current->loop_stack.back();
 
     for (u32 idx : ctx.break_patches)
-        patch_jump_to(idx, loop_exit);
+        m_bytecode_emitter.patch_jump_to(idx, loop_exit);
     for (u32 idx : ctx.continue_patches)
-        patch_jump_to(idx, continue_target);
+        m_bytecode_emitter.patch_jump_to(idx, continue_target);
 
     m_current->loop_stack.pop();
-}
-
-void Compiler::patch_jump_to(u32 instr_idx, u32 target)
-{
-    auto offset = static_cast<i32>(target) - static_cast<i32>(instr_idx) - 1;
-    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::panic(ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW);
-
-    u32 word = current_chunk()->code[instr_idx];
-    current_chunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
 }
 
 ErrorOr<RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, SourceLocation loc)

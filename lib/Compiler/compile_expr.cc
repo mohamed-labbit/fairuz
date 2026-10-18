@@ -9,6 +9,7 @@
 // Compiles Fairuz Expression AST nodes into bytecode.
 //===----------------------------------------------------------------------===//
 
+#include "Compiler/bytecode_emitter.hpp"
 #include "Compiler/compiler.hpp"
 #include "Compiler/opcode.hpp"
 #include "Compiler/register_allocator.hpp"
@@ -166,7 +167,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
             m_bytecode_emitter.discharge(expr_result, dst, loc);
         }
 
-        u32 skip = emit_jump(OpCode::JUMP_IF_TRUE, dst, loc);
+        u32 skip = m_bytecode_emitter.jump(OpCode::JUMP_IF_TRUE, dst, loc);
 
         {
             RegMark mark(m_current);
@@ -174,7 +175,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
             m_bytecode_emitter.discharge(expr_result, dst, loc);
         }
 
-        patch_jump(skip);
+        m_bytecode_emitter.patch_jump(skip);
         return ExprResult::reg(dst);
     }
 
@@ -284,7 +285,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         if (indexed)
             m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, previous, object, index, loc);
         else
-            m_bytecode_emitter.get_named_field(previous, object, 0xFF, member, loc);
+            m_bytecode_emitter.get_named_field(previous, object, member, loc);
         OpCode opcode;
         switch (operation->get_kind()) {
         case AST::ExprKind::OP_ADD: opcode = OpCode::OP_ADD; break;
@@ -304,7 +305,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         if (indexed)
             m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, object, index, result, loc);
         else
-            m_bytecode_emitter.set_named_field(object, 0xFF, result, member, loc);
+            m_bytecode_emitter.set_named_field(object, result, member, loc);
         return ExprResult::reg(result);
     }
 
@@ -350,7 +351,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         if (field_idx >= 0)
             m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg, field_idx, value_reg, loc);
         else
-            m_bytecode_emitter.set_named_field(object_reg, 0xFF, value_reg, intern_string(member_name->spelling), loc);
+            m_bytecode_emitter.set_named_field(object_reg, value_reg, intern_string(member_name->spelling), loc);
         return ExprResult::reg(value_reg);
     }
 
@@ -616,7 +617,7 @@ Compiler::CompileExprResult Compiler::compile_get_impl(AST::GetExpr* e)
     ALLOC_REG(object_reg, loc);
     FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(e->object));
     m_bytecode_emitter.discharge(object_cmp_ret, object_reg, e->object->get_location());
-    PCType pc = m_bytecode_emitter.get_named_field(0, object_reg, 0xFF, static_cast<IndexType>(name_idx), loc);
+    PCType pc = m_bytecode_emitter.get_named_field(0, object_reg, static_cast<IndexType>(name_idx), loc);
     return ExprResult::reloc(pc);
 }
 

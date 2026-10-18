@@ -22,35 +22,35 @@ PCType ByteCodeEmitter::binary(OpCode op, RegType dst, RegType lhs, RegType rhs,
 {
     PCType pc = emit_ABC(op, dst, lhs, rhs, loc);
     u16 ic = m_compiler_ptr->current_chunk()->alloc_ic_slot();
-    nop(ic, loc);
+    emit_cache_payload(ic, loc);
     return pc;
 }
 
-PCType ByteCodeEmitter::get_named_field(RegType dst, RegType obj, RegType name, IndexType ic_idx, SourceLocation loc)
+PCType ByteCodeEmitter::get_named_field(RegType dst, RegType obj, IndexType name_idx, SourceLocation loc)
 {
-    PCType pc = emit_ABC(OpCode::GET_FIELD, dst, obj, name, loc);
-    nop(ic_idx, loc);
+    PCType pc = emit_ABC(OpCode::GET_FIELD, dst, obj, 0xFF, loc);
+    emit_name_payload(name_idx, loc);
     return pc;
 }
 
-PCType ByteCodeEmitter::set_named_field(RegType obj, RegType field, RegType src, IndexType ic_idx, SourceLocation loc)
+PCType ByteCodeEmitter::set_named_field(RegType obj, RegType src, IndexType name_idx, SourceLocation loc)
 {
-    PCType pc = emit_ABC(OpCode::SET_FIELD, obj, field, src, loc);
-    nop(ic_idx, loc);
+    PCType pc = emit_ABC(OpCode::SET_FIELD, obj, 0xFF, src, loc);
+    emit_name_payload(name_idx, loc);
     return pc;
 }
 
 PCType ByteCodeEmitter::invoke(RegType obj, RegType slot, RegType argc, SourceLocation loc)
 {
     PCType pc = emit_ABC(OpCode::INVOKE, obj, slot, argc, loc);
-    nop(m_compiler_ptr->current_chunk()->alloc_ic_slot(), loc);
+    emit_cache_payload(m_compiler_ptr->current_chunk()->alloc_ic_slot(), loc);
     return pc;
 }
 
 PCType ByteCodeEmitter::invoke_named(RegType obj, RegType slot, RegType argc, IndexType idx, SourceLocation loc)
 {
     PCType pc = emit_ABC(OpCode::INVOKE_NAMED, obj, slot, argc, loc);
-    nop(idx, loc);
+    emit_name_payload(idx, loc);
     return pc;
 }
 
@@ -60,7 +60,12 @@ PCType ByteCodeEmitter::ic_call(RegType obj, RegType argc, SourceLocation loc)
     return emit_ABC(OpCode::IC_CALL, obj, argc, slot, loc);
 }
 
-PCType ByteCodeEmitter::nop(IndexType idx, SourceLocation loc)
+PCType ByteCodeEmitter::emit_cache_payload(IndexType idx, SourceLocation loc)
+{
+    return emit_ABC(OpCode::NOP, static_cast<RegType>(idx), 0, 0, loc);
+}
+
+PCType ByteCodeEmitter::emit_name_payload(IndexType idx, SourceLocation loc)
 {
     return emit_ABx(OpCode::NOP, 0, idx, loc);
 }
@@ -68,6 +73,11 @@ PCType ByteCodeEmitter::nop(IndexType idx, SourceLocation loc)
 PCType ByteCodeEmitter::jump_if_false(RegType cond_reg, SourceLocation loc)
 {
     return emit_AsBx(OpCode::JUMP_IF_FALSE, cond_reg, 0, loc);
+}
+
+PCType ByteCodeEmitter::jump(OpCode op, RegType cond, SourceLocation loc)
+{
+    return emit_AsBx(op, cond, 0, loc);
 }
 
 PCType ByteCodeEmitter::return_nil(SourceLocation loc)
@@ -81,7 +91,16 @@ void ByteCodeEmitter::patch_jump(PCType at)
         diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
 }
 
-PCType ByteCodeEmitter::emit_load_value(PCType dst, Value v, SourceLocation loc)
+void ByteCodeEmitter::patch_jump_to(u32 instr_idx, u32 target)
+{
+    int offset = static_cast<int>(target) - static_cast<int>(instr_idx) - 1;
+    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
+        diagnostic::panic(ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW);
+    u32 word = m_compiler_ptr->current_chunk()->code[instr_idx];
+    m_compiler_ptr->current_chunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
+}
+
+PCType ByteCodeEmitter::emit_load_value(RegType dst, Value v, SourceLocation loc)
 {
     if (v.is_nil())
         return emit_ABC(OpCode::LOAD_NIL, dst, dst, 1, loc);

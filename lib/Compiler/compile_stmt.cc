@@ -67,14 +67,14 @@ Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
     FA_COMPILE_DISCARD_TRY(compile_stmt(s->then_stmt));
 
     if (s->else_stmt) {
-        u32 jump_end = emit_jump(OpCode::JUMP, 0, loc);
-        patch_jump(jump_false);
+        u32 jump_end = m_bytecode_emitter.jump(OpCode::JUMP, 0, loc);
+        m_bytecode_emitter.patch_jump(jump_false);
         // A return/break/continue in the then branch does not make else dead.
         m_current->is_dead = incoming_dead;
         FA_COMPILE_DISCARD_TRY(compile_stmt(s->else_stmt));
-        patch_jump(jump_end);
+        m_bytecode_emitter.patch_jump(jump_end);
     } else {
-        patch_jump(jump_false);
+        m_bytecode_emitter.patch_jump(jump_false);
     }
 
     m_current->is_dead = incoming_dead;
@@ -98,7 +98,7 @@ Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
         FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
         u32 continue_target = current_offset();
         m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
-        patch_jump(exit_jump);
+        m_bytecode_emitter.patch_jump(exit_jump);
         pop_loop(current_offset(), continue_target, loc.line);
     }
     m_current->is_dead = incoming_dead;
@@ -149,7 +149,7 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
     m_bytecode_emitter.binary(OpCode::OP_ADD, index_reg, index_reg, step_reg, loc);
     m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
 
-    patch_jump(exit_jump);
+    m_bytecode_emitter.patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.line);
 
     m_current->is_dead = incoming_dead;
@@ -316,7 +316,7 @@ Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
         return raise_compile_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().break_patches.push(emit_jump(OpCode::JUMP, 0, loc));
+    m_current->loop_stack.back().break_patches.push(m_bytecode_emitter.jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
     return { };
 }
@@ -327,7 +327,7 @@ Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
         return raise_compile_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().continue_patches.push(emit_jump(OpCode::JUMP, 0, loc));
+    m_current->loop_stack.back().continue_patches.push(m_bytecode_emitter.jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
     return { };
 }
@@ -618,7 +618,7 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     if (imports_member) {
         /// not using ALLOC_REG to not overshadow the existing 'value_reg'
         TRY_SET(&value_reg, alloc_register(loc));
-        m_bytecode_emitter.get_named_field(value_reg, module_reg, 0xFF,
+        m_bytecode_emitter.get_named_field(value_reg, module_reg,
             static_cast<IndexType>(intern_string(name)), loc);
     }
 

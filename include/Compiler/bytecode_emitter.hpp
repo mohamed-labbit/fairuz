@@ -32,16 +32,19 @@ public:
     }
 
     PCType binary(OpCode op, RegType dst, RegType lhs, RegType rhs, SourceLocation loc);
-    PCType get_named_field(RegType dst, RegType obj, RegType name, IndexType ic_idx, SourceLocation loc);
-    PCType set_named_field(RegType obj, RegType field, RegType src, IndexType ic_idx, SourceLocation loc);
+    PCType get_named_field(RegType dst, RegType obj, IndexType name_idx, SourceLocation loc);
+    PCType set_named_field(RegType obj, RegType src, IndexType name_idx, SourceLocation loc);
     PCType invoke(RegType obj, RegType slot, RegType argc, SourceLocation loc);
     PCType invoke_named(RegType obj, RegType slot, RegType argc, IndexType idx, SourceLocation loc);
     PCType ic_call(RegType obj, RegType argc, SourceLocation loc);
-    PCType nop(IndexType idx, SourceLocation loc);
+    PCType emit_cache_payload(IndexType idx, SourceLocation loc);
+    PCType emit_name_payload(IndexType idx, SourceLocation loc);
     PCType jump_if_false(RegType cond_reg, SourceLocation loc);
+    PCType jump(OpCode op, RegType cond, SourceLocation loc);
     PCType return_nil(SourceLocation loc);
     void patch_jump(PCType at);
-    PCType emit_load_value(PCType dst, Value v, SourceLocation loc);
+    void patch_jump_to(u32 instr_idx, u32 target);
+    PCType emit_load_value(RegType dst, Value v, SourceLocation loc);
     void discharge(ExprResult const& r, RegType dst, SourceLocation loc);
 
     PCType emit_ABC(OpCode op, RegType a, RegType b, RegType c, SourceLocation loc);
