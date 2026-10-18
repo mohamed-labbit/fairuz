@@ -66,6 +66,12 @@ using i32 = int32_t;
 using i64 = int64_t;
 using f64 = double;
 
+/// compiler aliases
+using RegType = u8;
+using InstrType = u32;
+using IndexType = u16;
+using PCType = u32;
+
 #if defined(__GNUC__) || defined(__clang__)
 #    define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #    define LIKELY(x) __builtin_expect(!!(x), 1)
