@@ -11,6 +11,7 @@
 #ifndef FAIRUZ_COMPILER_COMPILER_HPP
 #define FAIRUZ_COMPILER_COMPILER_HPP
 
+#include "Compiler/bytecode_emitter.hpp"
 #include "Compiler/chunk.hpp"
 #include "Compiler/opcode.hpp"
 #include "Compiler/register_allocator.hpp"
@@ -179,7 +180,7 @@ public:
     using CompileStmtResult = ErrorOr<void, RuntimeError>;
 
     explicit Compiler(SourcePtr source)
-        : m_source(std::move(source))
+        : m_source(std::move(source)), m_bytecode_emitter(this)
     {
         assert(m_source != nullptr);
     }
@@ -189,6 +190,7 @@ public:
     static ErrorOr<bool, RuntimeError> compile_function_deferred(Chunk* chunk);
     static ErrorOr<bool, RuntimeError> compile_all(Chunk* chunk);
 
+    Chunk* current_chunk() const { return m_current->chunk; }
 private:
     struct ScopeGuard {
         CompilerState* cs { nullptr };
@@ -231,6 +233,7 @@ private:
 
     SourcePtr m_source;
     CompilerState* m_current { nullptr };
+    ByteCodeEmitter m_bytecode_emitter;
     HashTable<std::pair<StringRef, Chunk*>, u16, PairHash, PairEqual> m_string_cache;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_globals;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_module_names;
@@ -283,7 +286,6 @@ private:
 
     ErrorOr<RegType, RuntimeError> compile_expr(AST::ExprPtr e, RegType* dst = nullptr);
 
-    void discharge(ExprResult const& r, RegType dst, SourceLocation loc);
     ErrorOr<RegType, RuntimeError> any_reg(ExprResult const& r, SourceLocation loc);
     ErrorOr<RegType, RuntimeError> alloc_register(SourceLocation loc);
 
@@ -328,9 +330,6 @@ private:
 
     void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
     void patch_jump_to(u32 instr_idx, u32 target);
-    void emit_load_value(RegType dst, Value v, SourceLocation loc);
-
-    Chunk* current_chunk() const { return m_current->chunk; }
 
     u32 current_offset() const { return current_chunk()->code.size(); }
 

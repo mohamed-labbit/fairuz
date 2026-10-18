@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/compiler.hpp"
+#include "Compiler/opcode.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Macros.hpp"
 #include "compile_macros.hpp"
@@ -17,12 +18,6 @@
 namespace fairuz::runtime {
 
 namespace {
-
-static void patch_a(Chunk* chunk, u32 pc, u8 a)
-{
-    u32 instr = chunk->code[pc];
-    chunk->code[pc] = (instr & 0xFF00FFFFu) | (static_cast<u32>(a) << 16);
-}
 
 static bool is_terminal_top_level_call(AST::StmtPtr s)
 {
@@ -53,7 +48,7 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
             RegMark mark(m_current);
             FA_COMPILE_TRY(expr_result, compile_expr_impl(expr_stmt->expr));
             ANY_REG_BIND(expr_result, loc, src);
-            emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
             state.is_dead = true;
             break;
         }
@@ -65,7 +60,7 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
         loc = stmts.back()->get_location();
 
     if (!state.is_dead)
-        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
+        m_bytecode_emitter.return_nil(loc);
 
     chunk->local_count = state.registers.max_reg();
     state_guard.restore();
@@ -86,54 +81,6 @@ ErrorOr<bool, RuntimeError> Compiler::compile_all(Chunk* chunk)
             return comp_all.error();
     }
     return true;
-}
-
-void Compiler::discharge(ExprResult const& r, RegType dst, SourceLocation loc)
-{
-    switch (r.kind) {
-    case ExprResult::Kind::REG:
-        if (r.reg_ != dst)
-            emit(make_ABC(OpCode::MOVE, dst, r.reg_, 0), loc);
-        return;
-    case ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); return;
-    case ExprResult::Kind::KINT: {
-#if FA_USE_NANBOX
-        /// r.ival only holds 64 bit int, so this is only applicable on NAN-BOXed Value
-        if (r.ival > Value::int_max() || r.ival < Value::int_min()) {
-            emit(make_ABx(OpCode::LOAD_BIG_INT, dst, current_chunk()->add_big_int(r.ival)), loc);
-            return;
-        }
-#endif
-        emit_load_value(dst, Value::from_int(r.ival), loc);
-        return;
-    }
-    case ExprResult::Kind::KFLOAT: emit_load_value(dst, Value::from_real(r.dval), loc); return;
-    case ExprResult::Kind::KBOOL: emit_load_value(dst, Value::from_bool(r.bval), loc); return;
-    case ExprResult::Kind::KNIL: emit_load_value(dst, Value::nil(), loc); return;
-    }
-}
-
-void Compiler::emit_load_value(u8 dst, Value v, SourceLocation loc)
-{
-    if (v.is_nil()) {
-        emit(make_ABC(OpCode::LOAD_NIL, dst, dst, 1), loc);
-        return;
-    }
-
-    if (v.is_bool()) {
-        emit(make_ABC(v.as_bool() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE, dst, 0, 0), loc);
-        return;
-    }
-
-    if (v.is_int()) {
-        i64 iv = v.as_int();
-        if (iv >= -JUMP_OFFSET && iv <= JUMP_OFFSET) {
-            emit(make_ABx(OpCode::LOAD_INT, dst, static_cast<u16>(iv + JUMP_OFFSET)), loc);
-            return;
-        }
-    }
-
-    emit(make_ABx(OpCode::LOAD_CONST, dst, current_chunk()->add_constant(v)), loc);
 }
 
 void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 line)
@@ -169,7 +116,7 @@ ErrorOr<RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, SourceLoca
     if (allocated.has_error())
         return raise_compile_error(allocated.error().errc, loc);
     RegType dst = allocated.value();
-    discharge(r, dst, loc);
+    m_bytecode_emitter.discharge(r, dst, loc);
     return dst;
 }
 

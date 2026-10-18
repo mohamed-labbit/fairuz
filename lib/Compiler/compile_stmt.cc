@@ -11,11 +11,13 @@
 
 #include "Compiler/chunk.hpp"
 #include "Compiler/compiler.hpp"
+#include "Compiler/opcode.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Macros.hpp"
 #include "Parser/ast_builder.hpp"
 #include "compile_macros.hpp"
 #include <cassert>
+#include <codecvt>
 
 namespace fairuz::runtime {
 
@@ -61,7 +63,7 @@ Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
     RegMark mark(m_current);
     FA_COMPILE_TRY(expr_result, compile_expr_impl(s->condition));
     ANY_REG_BIND(expr_result, loc, cond);
-    u32 jump_false = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
+    PCType jump_false = m_bytecode_emitter.jump_if_false(cond, loc);
     FA_COMPILE_DISCARD_TRY(compile_stmt(s->then_stmt));
 
     if (s->else_stmt) {
@@ -92,10 +94,10 @@ Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(s->condition));
         ANY_REG_BIND(expr_result, loc, cond);
-        u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
+        u32 exit_jump = m_bytecode_emitter.jump_if_false(cond, loc);
         FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
         u32 continue_target = current_offset();
-        emit(make_AsBx(OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
+        m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
         patch_jump(exit_jump);
         pop_loop(current_offset(), continue_target, loc.line);
     }
@@ -116,7 +118,7 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
         declare_local("__for_iter", iter_reg);
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(s->iter));
-        discharge(expr_result, iter_reg, loc);
+        m_bytecode_emitter.discharge(expr_result, iter_reg, loc);
     }
 
     ALLOC_REG(len_reg, loc);
@@ -131,23 +133,21 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
     declare_local("__for_cond", cond_reg);
     declare_local("__for_step", step_reg);
 
-    emit(make_ABC(OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
-    emit_load_value(index_reg, Value::from_int(0), loc);
-    emit_load_value(step_reg, Value::from_int(1), loc);
+    m_bytecode_emitter.emit_ABC(OpCode::LIST_LEN, len_reg, iter_reg, 0, loc);
+    m_bytecode_emitter.emit_load_value(index_reg, Value::from_int(0), loc);
+    m_bytecode_emitter.emit_load_value(step_reg, Value::from_int(1), loc);
 
     u32 loop_start = current_offset();
     push_loop(loop_start);
-    emit(make_ABC(OpCode::OP_LT, cond_reg, index_reg, len_reg), loc);
-    emit(make_ABC(OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
+    m_bytecode_emitter.binary(OpCode::OP_LT, cond_reg, index_reg, len_reg, loc);
 
-    u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond_reg, loc);
-    emit(make_ABC(OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
+    u32 exit_jump = m_bytecode_emitter.jump_if_false(cond_reg, loc);
+    m_bytecode_emitter.emit_ABC(OpCode::LIST_GET, target_reg, iter_reg, index_reg, loc);
     FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
 
     u32 continue_target = current_offset();
-    emit(make_ABC(OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
-    emit(make_ABC(OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
-    emit(make_AsBx(OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
+    m_bytecode_emitter.binary(OpCode::OP_ADD, index_reg, index_reg, step_reg, loc);
+    m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
 
     patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.line);
@@ -178,11 +178,11 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     defer_function_body(fn_chunk, f, fn_state);
 
     ALLOC_REG(dst, loc);
-    emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), loc);
+    m_bytecode_emitter.emit_ABx(OpCode::CLOSURE, dst, fn_idx, loc);
 
     if (m_current != nullptr && m_current->is_top_level) {
         u16 name_idx = intern_string(f->name->spelling);
-        emit(make_ABx(OpCode::STORE_GLOBAL, dst, name_idx), loc);
+        m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, dst, name_idx, loc);
     }
 
     declare_local(f->name->spelling, dst);
@@ -214,10 +214,10 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     }
     FA_COMPILE_DISCARD_TRY(compile_stmt(body));
     if (!state.is_dead) {
-        emit(state.is_class_method
-                ? make_ABC(OpCode::RETURN, receiver, 1, 0)
-                : make_ABC(OpCode::RETURN_NIL, 0, 0, 0),
-            node->get_location());
+        if (state.is_class_method)
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver, 1, 0, node->get_location());
+        else
+            m_bytecode_emitter.return_nil(node->get_location());
     }
     state.chunk->local_count = state.registers.max_reg();
     return { };
@@ -270,14 +270,14 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
     SourceLocation loc = s->get_location();
 
     if (!s->has_value()) {
-        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
+        m_bytecode_emitter.return_nil(loc);
         m_current->is_dead = true;
         return { };
     }
 
     AST::ExprPtr value = s->value;
     if (AST::is_nil(value)) {
-        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
+        m_bytecode_emitter.return_nil(loc);
         m_current->is_dead = true;
         return { };
     }
@@ -296,7 +296,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
         if (is_ctor_call) {
             // compile_call_impl didn't emit a RETURN for a non-tail call; do it here.
             ANY_REG_BIND(call_ret.value(), loc, src);
-            emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
         }
         m_current->is_dead = true;
         return { };
@@ -305,7 +305,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
     RegMark mark(m_current);
     FA_COMPILE_TRY(expr_result, compile_expr_impl(value));
     ANY_REG_BIND(expr_result, loc, src);
-    emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
+    m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
     m_current->is_dead = true;
     return { };
 }
@@ -417,7 +417,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         defer_function_body(ch, method, state, class_name);
 
         ALLOC_REG(dst, loc);
-        emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), method_loc);
+        m_bytecode_emitter.emit_ABx(OpCode::CLOSURE, dst, fn_idx, method_loc);
         return std::tuple<RegType, Chunk*> { dst, ch };
     };
 
@@ -563,9 +563,8 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     u16 desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
 
     ALLOC_REG(class_reg, loc);
-    emit(make_ABx(OpCode::NEW_CLASS, class_reg, desc_idx), loc);
-    u16 name_idx = intern_string(class_name);
-    emit(make_ABx(OpCode::STORE_GLOBAL, class_reg, name_idx), loc);
+    m_bytecode_emitter.emit_ABx(OpCode::NEW_CLASS, class_reg, desc_idx, loc);
+    m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, class_reg, intern_string(class_name), loc);
     declare_local(class_name, class_reg);
 
     // ClassDesc registration — unchanged
@@ -613,17 +612,17 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     RegMark mark(m_current);
 
     ALLOC_REG(module_reg, loc);
-    emit(make_ABx(OpCode::IMPORT_MODULE, module_reg, intern_string(module)), loc);
+    m_bytecode_emitter.emit_ABx(OpCode::IMPORT_MODULE, module_reg, intern_string(module), loc);
 
     RegType value_reg = module_reg;
     if (imports_member) {
         /// not using ALLOC_REG to not overshadow the existing 'value_reg'
         TRY_SET(&value_reg, alloc_register(loc));
-        emit(make_ABC(OpCode::GET_FIELD, value_reg, module_reg, 0xFF), loc);
-        emit(make_ABx(OpCode::NOP, 0, intern_string(name)), loc);
+        m_bytecode_emitter.get_named_field(value_reg, module_reg, 0xFF,
+            static_cast<IndexType>(intern_string(name)), loc);
     }
 
-    emit(make_ABx(OpCode::STORE_GLOBAL, value_reg, intern_string(alias)), loc);
+    m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, value_reg, intern_string(alias), loc);
     m_globals[alias] = true;
     if (!imports_member)
         m_module_names[alias] = true;
