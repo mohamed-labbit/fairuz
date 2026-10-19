@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/chunk.hpp"
+#include "Macros.hpp"
 
 #include <iostream>
 
@@ -33,61 +34,80 @@ static inline void print_value(Value v)
     ::printf("?");
 }
 
-u32 Chunk::emit(u32 instr, SourceLocation loc)
+PCType Chunk::emit(InstrType instr, SourceLocation loc)
 {
     locations.push(loc);
     code.push(instr);
     add_line(loc.line);
-    return static_cast<u32>(code.size() - 1);
+    return PCType { code.size() - 1 };
 }
 
-bool Chunk::patch_jump(u32 const instr_idx)
+bool Chunk::patch_jump(PCType const instr_idx)
 {
-    i32 const m_offset = static_cast<i32>(code.size()) - static_cast<i32>(instr_idx) - 1;
-    if (m_offset > JUMP_OFFSET || m_offset < -JUMP_OFFSET)
+    assert(instr_idx.value < code.size());
+    i64 const offset = static_cast<i64>(code.size()) - instr_idx.value - 1;
+    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
         return false;
 
-    OpCode op = instr_op(code[instr_idx]);
-    u8 A = instr_A(code[instr_idx]);
-    code[instr_idx] = make_AsBx(op, A, m_offset);
+    OpCode op = instr_op(code[instr_idx.value]);
+    u8 A = instr_A(code[instr_idx.value]);
+    code[instr_idx.value] = make_AsBx(op, A, offset);
     return true;
 }
 
-u16 Chunk::add_big_int(integer::Data const& v)
+BigIntIndex Chunk::add_big_int(integer::Data const& v)
 {
     for (u32 i = 0, n = big_ints.size(); i < n; i++) {
         if (big_ints[i] == v)
-            return static_cast<u16>(i);
+            return BigIntIndex { static_cast<u16>(i) };
     }
 
     if (big_ints.size() > MAX_CONSTANTS)
         diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
 
     big_ints.push(v);
-    return static_cast<u16>(big_ints.size() - 1);
+    return BigIntIndex { static_cast<u16>(big_ints.size() - 1) };
 }
 
-u16 Chunk::add_constant(Value const v)
+ConstantIndex Chunk::add_constant(Value const v)
 {
     for (u32 i = 0, n = constants.size(); i < n; i++) {
         if (ValueEqual { }(constants[i], v))
-            return static_cast<u16>(i);
+            return ConstantIndex { static_cast<u16>(i) };
     }
 
     if (constants.size() > MAX_CONSTANTS)
         diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
 
     constants.push(v);
-    return static_cast<u16>(constants.size() - 1);
+    return ConstantIndex { static_cast<u16>(constants.size() - 1) };
 }
 
-u8 Chunk::alloc_ic_slot()
+FunctionIndex Chunk::add_function(Chunk* function)
+{
+    if (functions.size() > MAX_CONSTANTS)
+        diagnostic::panic(ErrorCode::TOO_MANY_FUNCTIONS);
+    FunctionIndex index { static_cast<u16>(functions.size()) };
+    functions.push(function);
+    return index;
+}
+
+ClassIndex Chunk::add_class_descriptor(ClassDescriptor&& descriptor)
+{
+    if (class_descriptors.size() > MAX_CONSTANTS)
+        diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
+    ClassIndex index { static_cast<u16>(class_descriptors.size()) };
+    class_descriptors.push(std::move(descriptor));
+    return index;
+}
+
+CacheSlot Chunk::alloc_ic_slot()
 {
     if (ic_slots.size() > MAX_IC_SLOTS)
         diagnostic::panic(ErrorCode::TOO_MANY_INLINE_CACHES);
 
     ic_slots.push(ICSlot());
-    return static_cast<u8>(ic_slots.size() - 1);
+    return CacheSlot { static_cast<u8>(ic_slots.size() - 1) };
 }
 
 u32 Chunk::get_line(u32 const instr_idx) const
@@ -125,7 +145,7 @@ void Chunk::disassemble() const
     ::printf("  code:\n");
 
     for (u32 i = 0; i < static_cast<u32>(code.size()); i++) {
-        u32 ins = code[i];
+        InstrType ins = code[i];
         auto op = static_cast<OpCode>(instr_op(ins));
         auto fmt = opcode_format(op);
         u32 line = get_line(i);
@@ -148,7 +168,7 @@ void Chunk::disassemble() const
                     print_value(constants[idx]);
                 }
             } else if (op == OpCode::LOAD_INT) {
-                ::printf("  ; %d", static_cast<int>(instr_Bx(ins)) - 32767);
+                ::printf("  ; %d", instr_sBx(ins));
             } else if (op == OpCode::CLOSURE) {
                 u16 idx = instr_Bx(ins);
                 if (idx < functions.size())
