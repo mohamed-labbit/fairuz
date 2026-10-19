@@ -5,26 +5,29 @@
 #include "Macros.hpp"
 #include "Support/error.hpp"
 
-namespace fairuz::runtime {
+#include <cassert>
 
-using RegType = u8;
+namespace fairuz::runtime {
 
 class RegisterAllocator {
 private:
-    u8 m_next_reg { 0 };
-    u8 m_max_reg { 0 };
+    // These are counts/checkpoints, including the one-past-last position,
+    // rather than register identities. Never do cursor arithmetic in u8.
+    u16 m_next_reg { 0 };
+    u16 m_max_reg { 0 };
 
 public:
     RegisterAllocator() = default;
 
-    u8 next_reg() const { return m_next_reg; }
-    u8 max_reg() const { return m_max_reg; }
+    u16 next_reg() const { return m_next_reg; }
+    u16 max_reg() const { return m_max_reg; }
 
     ErrorOr<RegType> alloc_register()
     {
         if (m_next_reg >= MAX_REGS)
             return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
-        RegType reg = m_next_reg++;
+        RegType reg { static_cast<u8>(m_next_reg) };
+        ++m_next_reg;
         m_max_reg = m_next_reg > m_max_reg ? m_next_reg : m_max_reg;
         return reg;
     }
@@ -35,19 +38,19 @@ public:
             m_next_reg--;
     }
 
-    void rewind(RegType reg)
+    void rewind(u16 checkpoint)
     {
-        assert(reg <= m_next_reg);
-        m_next_reg = reg;
+        assert(checkpoint <= m_next_reg);
+        m_next_reg = checkpoint;
     }
 
     ErrorOr<void> reserve_register(RegType reg)
     {
-        if (reg >= MAX_REGS)
+        if (reg.value >= MAX_REGS)
             return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
 
-        if (reg >= m_next_reg) {
-            m_next_reg = reg + 1;
+        if (reg.value >= m_next_reg) {
+            m_next_reg = static_cast<u16>(reg.value) + 1;
             if (m_next_reg > m_max_reg)
                 m_max_reg = m_next_reg;
         }
