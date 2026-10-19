@@ -11,6 +11,7 @@
 #ifndef FAIRUZ_MACROS_HPP
 #define FAIRUZ_MACROS_HPP
 
+#include <compare>
 #include <cstdint>
 #include <string>
 
@@ -66,11 +67,34 @@ using i32 = int32_t;
 using i64 = int64_t;
 using f64 = double;
 
-/// compiler aliases
-using RegType = u8;
+// Semantic identities, not integer substitutes. Arithmetic belongs to the
+// owning subsystem; unwrap explicitly at storage and bytecode boundaries.
+template<typename T, typename Tag>
+struct StrongAlias {
+    T value { };
+
+    constexpr StrongAlias() noexcept = default;
+
+    explicit constexpr StrongAlias(T v) noexcept
+        : value(v)
+    {
+    }
+
+    constexpr auto operator<=>(StrongAlias const&) const noexcept = default;
+};
+
+using RegType = StrongAlias<u8, struct RegTypeTag>;
+// Pool indexes are local to a chunk, but not interchangeable between pools.
+using ConstantIndex = StrongAlias<u16, struct ConstantIndexTag>;
+using BigIntIndex = StrongAlias<u16, struct BigIntIndexTag>;
+using FunctionIndex = StrongAlias<u16, struct FunctionIndexTag>;
+using ClassIndex = StrongAlias<u16, struct ClassIndexTag>;
+using PCType = StrongAlias<u32, struct PCTypeTag>;
+using CacheSlot = StrongAlias<u8, struct CacheSlotTag>;
+using MethodSlot = StrongAlias<u8, struct MethodSlotTag>;
+
+// Encoded instruction words have no single operand interpretation.
 using InstrType = u32;
-using IndexType = u16;
-using PCType = u32;
 
 #if defined(__GNUC__) || defined(__clang__)
 #    define UNLIKELY(x) __builtin_expect(!!(x), 0)
