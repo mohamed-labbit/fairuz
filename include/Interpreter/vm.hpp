@@ -41,8 +41,8 @@ struct RuntimeHalt final : public std::runtime_error {
 struct CallFrame {
     ObjFunction* func { nullptr };
     Chunk* chunk { nullptr };
-    u32 ip { 0 };
-    u16 base { 0 };
+    PCType ip { 0 };
+    u16 base { 0 }; // Absolute VM-stack offset, not a constant-pool index.
     u16 local_count { 0 };
     u16 return_slot { 0 };
     u16 caller_stack_top { 0 };
@@ -51,7 +51,7 @@ struct CallFrame {
 
     CallFrame() = default;
 
-    explicit CallFrame(ObjFunction* cl, Chunk* ch, u32 ip, u16 b, u16 lc,
+    explicit CallFrame(ObjFunction* cl, Chunk* ch, PCType ip, u16 b, u16 lc,
         u16 ret_slot, u16 saved_stack_top, GlobalEnvironment* env = nullptr,
         ObjModule* module_obj = nullptr)
         : func(cl)
@@ -250,7 +250,7 @@ private:
     CallFrame& frame() { return top_frame(); }
     CallFrame const& frame() const { return top_frame(); }
     Chunk* chunk() { return top_frame().chunk; }
-    Value& reg(int r) { return m_stack[top_frame().base + r]; }
+    Value& reg(RegType r) { return m_stack[top_frame().base + r.value]; }
 
     CallFrame& top_frame()
     {
