@@ -14,6 +14,7 @@
 #include "Compiler/opcode.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Interpreter/object.hpp"
+#include "Macros.hpp"
 #include "Support/array.hpp"
 #include "Support/string.hpp"
 
@@ -44,7 +45,7 @@ struct Chunk {
     // Empty after successful first-call compilation. Captures definition-time context.
     std::function<ErrorOr<void, RuntimeError>(Chunk*)> deferred_body;
 
-    Array<u32> code;
+    Array<InstrType> code;
     Array<SourceLocation> locations;
     Array<Value> constants;
     // Large literals are parsed once into normalized, non-GC limb constants.
@@ -55,11 +56,8 @@ struct Chunk {
     Array<u64*> global_cache;
     Array<ClassDescriptor> class_descriptors; // new
 
-    u16 add_class_descriptor(ClassDescriptor&& d)
-    {
-        class_descriptors.push(std::move(d));
-        return static_cast<u16>(class_descriptors.size() - 1);
-    }
+    ClassIndex add_class_descriptor(ClassDescriptor&& d);
+    FunctionIndex add_function(Chunk* function);
 
     Chunk() = default;
     ~Chunk() = default;
@@ -70,12 +68,12 @@ struct Chunk {
     Chunk& operator=(Chunk const&) = delete;
     Chunk& operator=(Chunk&&) = default;
 
-    u32 emit(u32 instr, SourceLocation loc);
-    bool patch_jump(u32 const instr_idx);
-    u16 add_constant(Value const v);
-    u16 add_big_int(integer::Data const& v);
-    u16 add_big_int(i64 v) { return add_big_int(integer::from_i64(v)); }
-    u8 alloc_ic_slot();
+    PCType emit(InstrType instr, SourceLocation loc);
+    bool patch_jump(PCType instr_idx);
+    ConstantIndex add_constant(Value const v);
+    BigIntIndex add_big_int(integer::Data const& v);
+    BigIntIndex add_big_int(i64 v) { return add_big_int(integer::from_i64(v)); }
+    CacheSlot alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
     void add_line(u32 line);
