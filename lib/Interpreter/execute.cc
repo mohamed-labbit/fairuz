@@ -9,6 +9,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/chunk.hpp"
+#include "Interpreter/gc.hpp"
+#include "Interpreter/object.hpp"
 #include "Interpreter/vm.hpp"
 #include "Macros.hpp"
 #include "Util/utf8.hpp"
@@ -1173,31 +1175,32 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                 parent = parent_value->as_class();
             }
 
-            std::vector<StringRef> fields;
-            std::vector<StringRef> methods;
-            std::vector<Chunk*> vtable;
+            Array<StringRef, GarbageCollector> fields { &m_gc };
+            Array<StringRef, GarbageCollector> methods { &m_gc };
+            Array<Chunk*, GarbageCollector> vtable { &m_gc };
+
             if (parent != nullptr) {
-                for (auto const& field : parent->field_names)
-                    fields.push_back(field);
-                for (auto const& method : parent->method_names)
-                    methods.push_back(method);
-                for (auto* fn : parent->vtable)
-                    vtable.push_back(fn);
+                for (StringRef const& field : parent->field_names)
+                    fields.push(field);
+                for (StringRef const& method : parent->method_names)
+                    methods.push(method);
+                for (Chunk* fn : parent->vtable)
+                    vtable.push(fn);
             } else {
                 methods.resize(ObjClass::_COUNT);
-                vtable.resize(ObjClass::_COUNT, nullptr);
+                vtable.resize(ObjClass::_COUNT);
             }
 
-            for (u32 i = 0; i < klass_desc.field_names.size(); ++i) {
+            for (u32 i = 0; i < klass_desc.field_count; ++i) {
                 bool duplicate = false;
-                for (auto const& inherited : fields) {
+                for (StringRef const& inherited : fields) {
                     if (inherited == klass_desc.field_names[i]) {
                         duplicate = true;
                         break;
                     }
                 }
                 if (!duplicate)
-                    fields.push_back(klass_desc.field_names[i]);
+                    fields.push(klass_desc.field_names[i]);
             }
 
             for (u32 i = 0; i < klass_desc.vtable_size; ++i) {
@@ -1223,34 +1226,18 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                 }
                 if (target < 0) {
                     target = static_cast<int>(methods.size());
-                    methods.push_back(klass_desc.method_names[i]);
-                    vtable.push_back(nullptr);
+                    methods.push(klass_desc.method_names[i]);
+                    vtable.push(nullptr);
                 }
                 if (static_cast<size_t>(target) >= methods.size()) {
                     methods.resize(static_cast<size_t>(target) + 1);
-                    vtable.resize(static_cast<size_t>(target) + 1, nullptr);
+                    vtable.resize(static_cast<size_t>(target) + 1);
                 }
                 methods[static_cast<size_t>(target)] = klass_desc.method_names[i];
                 vtable[static_cast<size_t>(target)] = method_chunk;
             }
 
-            Array<StringRef, /*_Alloc=*/GarbageCollector> kfield_names {
-                static_cast<u32>(fields.size()), { }, &m_gc
-            };
-            Array<StringRef, /*_Alloc=*/GarbageCollector> kmethod_names {
-                static_cast<u32>(methods.size()), { }, &m_gc
-            };
-            Array<Chunk*, /*_Alloc=*/GarbageCollector> kvtable {
-                static_cast<u32>(vtable.size()), { }, &m_gc
-            };
-            for (u32 i = 0; i < fields.size(); ++i)
-                kfield_names[i] = fields[i];
-            for (u32 i = 0; i < methods.size(); ++i)
-                kmethod_names[i] = methods[i];
-            for (u32 i = 0; i < vtable.size(); ++i)
-                kvtable[i] = vtable[i];
-
-            res = m_gc.make_class(klass_desc.name, kfield_names, kmethod_names, kvtable);
+            res = m_gc.make_class(klass_desc.name, fields, methods, vtable);
             res.as_class()->parent = parent;
             res.as_class()->globals = current_globals();
         }
