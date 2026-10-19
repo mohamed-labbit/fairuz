@@ -10,6 +10,7 @@
 
 #include "Compiler/chunk.hpp"
 #include "Interpreter/vm.hpp"
+#include "Macros.hpp"
 #include "Util/utf8.hpp"
 
 #include <cmath>
@@ -46,12 +47,12 @@
         cur_chunk = f.chunk;         \
         cur_frame_base = f.base;     \
         cur_base = &m_stack[f.base]; \
-        ip = f.ip;                   \
+        ip = f.ip.value;             \
     } while (0)
 
-#define SAVE_IP()        \
-    do {                 \
-        frame().ip = ip; \
+#define SAVE_IP()                   \
+    do {                            \
+        frame().ip = PCType { ip }; \
     } while (0)
 
 #define RECORD_BINARY_IC(lhs, rhs, result)                     \
@@ -155,16 +156,14 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     Chunk* cur_chunk = frame().chunk;
     int cur_frame_base = frame().base;
     Value* cur_base = &m_stack[cur_frame_base];
-    u32 ip = frame().ip;
-
-    using reg_t = u8;
+    u32 ip = frame().ip.value; // Raw cursor for dispatch arithmetic; frames store a typed PC.
 
     BEGIN_DISPATCH();
 
     CASE(LOAD_NIL)
     {
-        reg_t start = instr_B(instr);
-        reg_t count = instr_C(instr);
+        u8 start = instr_B(instr);
+        u8 count = instr_C(instr);
 
         for (u8 i = 0; i < count; i++)
             cur_base[start + i] = Value::nil();
@@ -217,7 +216,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(LOAD_GLOBAL_CACHED)
     {
-        u32 slot_idx = instr_Bx(instr);
+        u16 slot_idx = instr_Bx(instr);
         GlobalEnvironment* env = current_globals();
         if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
             return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
@@ -239,7 +238,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(STORE_GLOBAL_CACHED)
     {
-        u32 slot_idx = instr_Bx(instr);
+        u16 slot_idx = instr_Bx(instr);
         GlobalEnvironment* env = current_globals();
         if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
             return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
@@ -277,7 +276,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             m_stack[m_stack_top++] = Value::nil();
         ObjFunction* module_fn = m_gc.make_obj_function(module->chunk, module->globals);
         SAVE_IP();
-        m_frames[m_frames_top++] = CallFrame(module_fn, module->chunk, 0,
+        m_frames[m_frames_top++] = CallFrame(module_fn, module->chunk, PCType { 0 },
             static_cast<u16>(module_base), static_cast<u16>(module->chunk->local_count),
             static_cast<u16>(result_slot), static_cast<u16>(module_base), module->globals, module);
         intern_chunk_constants(module->chunk);
@@ -840,7 +839,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(FOR_PREP)
     {
-        reg_t base_reg = instr_A(instr);
+        u8 base_reg = instr_A(instr);
         Value init_v = cur_base[base_reg];
         Value limit_v = cur_base[base_reg + 1];
         Value step_v = cur_base[base_reg + 2];
@@ -863,7 +862,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(FOR_STEP)
     {
-        reg_t base_reg = instr_A(instr);
+        u8 base_reg = instr_A(instr);
         Value limit_v = cur_base[base_reg];
         Value step_v = cur_base[base_reg + 1];
         Value control_v = cur_base[base_reg + 2];
@@ -899,8 +898,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(CALL)
     {
-        reg_t fn_reg = instr_A(instr);
-        reg_t argc = instr_B(instr);
+        u8 fn_reg = instr_A(instr);
+        u8 argc = instr_B(instr);
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
         SAVE_IP();
@@ -914,8 +913,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(CALL_TAIL)
     {
-        reg_t fn_reg = instr_A(instr);
-        reg_t argc = instr_B(instr);
+        u8 fn_reg = instr_A(instr);
+        u8 argc = instr_B(instr);
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
 
@@ -967,9 +966,9 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(IC_CALL)
     {
-        reg_t fn_reg = instr_A(instr);
-        reg_t argc = instr_B(instr);
-        reg_t ic_idx = instr_C(instr);
+        u8 fn_reg = instr_A(instr);
+        u8 argc = instr_B(instr);
+        u8 ic_idx = instr_C(instr);
         u32 call_ip = ip - 1;
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
@@ -977,7 +976,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
 
         if (has_slot) {
             auto& slot = cur_chunk->ic_slots[ic_idx];
-            slot.seen_lhs |= static_cast<u8>(value_type_tag(callee));
+            slot.seen_lhs |= static_cast<u16>(value_type_tag(callee));
             slot.hit_count++;
         }
 
@@ -995,7 +994,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         LOAD_FRAME();
 
         if (has_slot) {
-            caller_chunk->ic_slots[ic_idx].seen_ret |= static_cast<u8>(value_type_tag(m_stack[result_slot]));
+            caller_chunk->ic_slots[ic_idx].seen_ret |= static_cast<u16>(value_type_tag(m_stack[result_slot]));
             caller_chunk->code[call_ip] = make_ABC(OpCode::CALL, fn_reg, argc, 0);
         }
 
@@ -1003,8 +1002,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(RETURN)
     {
-        reg_t src = instr_A(instr);
-        reg_t n_ret = instr_B(instr);
+        u8 src = instr_A(instr);
+        u8 n_ret = instr_B(instr);
         Value ret = n_ret > 0 ? cur_base[src] : Value::nil();
         CallFrame finished = frame();
         if (finished.module != nullptr) {
@@ -1161,7 +1160,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         {
             Value& res = RA();
-            u32 desc_idx = instr_Bx(instr);
+            u16 desc_idx = instr_Bx(instr);
             if (UNLIKELY(desc_idx >= cur_chunk->class_descriptors.size()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "class descriptor index out of bounds");
             ClassDescriptor klass_desc = cur_chunk->class_descriptors[desc_idx];
@@ -1270,9 +1269,9 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(INVOKE)
     {
-        reg_t self_reg = instr_A(instr);
-        reg_t slot = instr_B(instr);
-        reg_t argc = instr_C(instr);
+        u8 self_reg = instr_A(instr);
+        u8 slot = instr_B(instr);
+        u8 argc = instr_C(instr);
 
         if (UNLIKELY(ip >= cur_chunk->code.size()
                 || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
@@ -1304,7 +1303,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         {
             Value inst = RA();
-            u32 argc = instr_C(instr);
+            u8 argc = instr_C(instr);
 
             if (UNLIKELY(ip >= cur_chunk->code.size()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing INVOKE_NAMED payload");
@@ -1403,7 +1402,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         }
 
         ObjInstance* inst = obj_v.as_instance();
-        u32 field_idx = instr_C(instr);
+        u8 field_idx = instr_C(instr);
 
         if (field_idx == 0xFF) {
             if (UNLIKELY(ip >= cur_chunk->code.size()
@@ -1444,7 +1443,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "SET_FIELD on non-instance");
 
         ObjInstance* inst = obj_v.as_instance();
-        reg_t field_idx = instr_B(instr);
+        u8 field_idx = instr_B(instr);
 
         if (field_idx == 0xFF) {
             if (UNLIKELY(ip >= cur_chunk->code.size()

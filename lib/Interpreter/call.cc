@@ -87,8 +87,8 @@ ErrorOr<bool, RuntimeError> VM::invoke_method(Chunk* target_chunk, Value self_va
     for (int i = total_argc; i < local_count; i++)
         m_stack[call_base + i] = Value::nil();
 
-    frame().ip = ip;
-    m_frames[m_frames_top] = CallFrame(nullptr, target_chunk, 0,
+    frame().ip = PCType { ip };
+    m_frames[m_frames_top] = CallFrame(nullptr, target_chunk, PCType { 0 },
         static_cast<u16>(call_base), static_cast<u16>(local_count),
         static_cast<u16>(result_slot), static_cast<u16>(caller_stack_top),
         globals == nullptr ? current_globals() : globals);
@@ -127,7 +127,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             for (int i = argc; i < local_count; i++)
                 m_stack[cur_base + i] = Value::nil();
 
-            m_frames[m_frames_top - 1] = CallFrame(fn, fchk, 0,
+            m_frames[m_frames_top - 1] = CallFrame(fn, fchk, PCType { 0 },
                 static_cast<u16>(cur_base), static_cast<u16>(local_count),
                 old_frame.return_slot, old_frame.caller_stack_top, fn->globals);
             m_stack_top = new_top;
@@ -148,7 +148,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             for (int i = argc; i < local_count; i++)
                 m_stack[call_base + i] = Value::nil();
 
-            m_frames[m_frames_top] = CallFrame(fn, fchk, 0,
+            m_frames[m_frames_top] = CallFrame(fn, fchk, PCType { 0 },
                 static_cast<u16>(call_base), static_cast<u16>(local_count),
                 static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), fn->globals);
             m_frames_top++;
@@ -235,14 +235,14 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             m_stack[dest_base + i] = Value::nil();
 
         if (tail && m_frames_top > 0) {
-            m_frames[m_frames_top - 1] = CallFrame(nullptr, ctor_chunk, 0,
+            m_frames[m_frames_top - 1] = CallFrame(nullptr, ctor_chunk, PCType { 0 },
                 static_cast<u16>(dest_base), static_cast<u16>(local_count),
                 old_frame.return_slot, old_frame.caller_stack_top, ctor_chunk->globals);
             m_stack_top = new_top;
         } else {
             if (UNLIKELY(m_frames_top >= MAX_FRAMES))
                 return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
-            m_frames[m_frames_top] = CallFrame(nullptr, ctor_chunk, 0,
+            m_frames[m_frames_top] = CallFrame(nullptr, ctor_chunk, PCType { 0 },
                 static_cast<u16>(dest_base), static_cast<u16>(local_count),
                 static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), ctor_chunk->globals);
             m_frames_top++;
@@ -275,7 +275,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             m_stack[dest_base] = callee;
             for (int i = argc + 1; i < static_cast<int>(target->local_count); ++i)
                 m_stack[dest_base + i] = Value::nil();
-            m_frames[m_frames_top - 1] = CallFrame(nullptr, target, 0,
+            m_frames[m_frames_top - 1] = CallFrame(nullptr, target, PCType { 0 },
                 static_cast<u16>(dest_base), static_cast<u16>(target->local_count),
                 old_frame.return_slot, old_frame.caller_stack_top, target->globals);
             m_stack_top = new_top;
@@ -293,7 +293,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
         for (int i = argc + 1; i < static_cast<int>(target->local_count); ++i)
             m_stack[method_base + i] = Value::nil();
         m_stack_top = new_top;
-        m_frames[m_frames_top++] = CallFrame(nullptr, target, 0,
+        m_frames[m_frames_top++] = CallFrame(nullptr, target, PCType { 0 },
             static_cast<u16>(method_base), static_cast<u16>(target->local_count),
             static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), target->globals);
         return true;
@@ -362,7 +362,7 @@ VM::RuntimeResult VM::call_special_sync(Value receiver, int special_slot)
     int call_base = caller_top + 1;
 
     auto invoke_result = invoke_method(target, receiver, result_slot, call_base, 1,
-        frame().ip, caller_top, target->globals);
+        frame().ip.value, caller_top, target->globals);
     if (invoke_result.has_error())
         return invoke_result.error();
 

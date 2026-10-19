@@ -61,8 +61,7 @@ Compiler::CompileExprResult Compiler::compile_literal_int_impl(AST::IntLiteralEx
 {
     if (!e->large_literal.empty()) {
         auto data = integer::parse(e->large_literal, e->literal_base);
-        PCType pc = m_bytecode_emitter.emit_ABx(
-            OpCode::LOAD_BIG_INT, 0, current_chunk()->add_big_int(data), e->get_location());
+        PCType pc = m_bytecode_emitter.load_big_int({ }, current_chunk()->add_big_int(data), e->get_location());
         return ExprResult::reloc(pc);
     }
     return ExprResult::kint(e->value);
@@ -80,8 +79,8 @@ Compiler::CompileExprResult Compiler::compile_literal_bool_impl(AST::BoolLiteral
 
 Compiler::CompileExprResult Compiler::compile_literal_string_impl(AST::StringLiteralExpr* e)
 {
-    u16 kidx = intern_string(e->str);
-    PCType pc = m_bytecode_emitter.emit_ABx(OpCode::LOAD_CONST, 0, kidx, e->get_location());
+    ConstantIndex kidx = intern_string(e->str);
+    PCType pc = m_bytecode_emitter.load_constant({ }, kidx, e->get_location());
     return ExprResult::reloc(pc);
 }
 
@@ -97,18 +96,21 @@ Compiler::CompileExprResult Compiler::compile_identifier_impl(AST::IdentifierExp
     VarInfo vi = resolve_name(e->spelling);
 
     if (vi.kind == VarInfo::Kind::LOCAL)
-        return ExprResult::reg(vi.index);
+        return ExprResult::reg(vi.reg);
 
     if (int field_idx = current_method_field_index(e->spelling); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
             return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
-        PCType pc = m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg, field_idx, loc);
+        // 0xFF is the named-field sentinel, not a directly encodable slot.
+        PCType pc = field_idx < 0xFF
+            ? m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg.value, field_idx, loc)
+            : m_bytecode_emitter.get_named_field({ }, self->reg, intern_string(e->spelling), loc);
         return ExprResult::reloc(pc);
     }
 
-    u16 kidx = intern_string(e->spelling);
-    PCType pc = m_bytecode_emitter.emit_ABx(OpCode::LOAD_GLOBAL, 0, kidx, loc);
+    ConstantIndex kidx = intern_string(e->spelling);
+    PCType pc = m_bytecode_emitter.load_global({ }, kidx, loc);
     return ExprResult::reloc(pc);
 }
 
@@ -128,7 +130,7 @@ Compiler::CompileExprResult Compiler::compile_unary_impl(AST::UnaryExpr* e)
     RegMark mark(m_current);
     FA_COMPILE_TRY(expr_result, compile_expr_impl(e->operand));
     ANY_REG_BIND(expr_result, loc, src);
-    PCType pc = m_bytecode_emitter.emit_ABC(op, 0, src, 0, loc);
+    PCType pc = m_bytecode_emitter.emit_ABC(op, 0, src.value, 0, loc);
     return ExprResult::reloc(pc);
 }
 
@@ -146,7 +148,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
             m_bytecode_emitter.discharge(expr_result, dst, loc);
         }
 
-        u32 skip = m_bytecode_emitter.jump_if_false(dst, loc);
+        PCType skip = m_bytecode_emitter.jump_if_false(dst, loc);
 
         {
             RegMark mark(m_current);
@@ -167,7 +169,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
             m_bytecode_emitter.discharge(expr_result, dst, loc);
         }
 
-        u32 skip = m_bytecode_emitter.jump(OpCode::JUMP_IF_TRUE, dst, loc);
+        PCType skip = m_bytecode_emitter.jump(OpCode::JUMP_IF_TRUE, dst, loc);
 
         {
             RegMark mark(m_current);
@@ -215,7 +217,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(e->lhs));
         ANY_REG_BIND(expr_result, loc, lhs);
-        PCType pc = m_bytecode_emitter.binary(bc_op, 0, lhs, amount, loc);
+        PCType pc = m_bytecode_emitter.binary_immediate(bc_op, { }, lhs, static_cast<u8>(amount), loc);
         return ExprResult::reloc(pc);
     }
 
@@ -235,7 +237,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     if (swapped)
         std::swap(lhs, rhs);
 
-    PCType pc = m_bytecode_emitter.binary(bc_op, 0, lhs, rhs, loc);
+    PCType pc = m_bytecode_emitter.binary(bc_op, { }, lhs, rhs, loc);
     return ExprResult::reloc(pc);
 }
 
@@ -265,13 +267,13 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             ALLOC_REG(reg, loc);
             FA_COMPILE_TRY(value, compile_expr_impl(expression));
             m_bytecode_emitter.discharge(value, reg, expression->get_location());
-            m_current->registers.rewind(reg + 1);
+            m_current->registers.rewind(static_cast<u16>(reg.value) + 1);
             return reg;
         };
         auto* operation = AST::as_binary(e->value);
         bool indexed = AST::is_index(e->target);
-        RegType object, index = 0, rhs;
-        u16 member = 0;
+        RegType object, index, rhs;
+        ConstantIndex member_idx;
         if (indexed) {
             auto* target = AST::as_index(e->target);
             TRY_SET(&object, capture(target->object));
@@ -279,13 +281,13 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         } else {
             auto* target = AST::as_get(e->target);
             TRY_SET(&object, capture(target->object));
-            member = static_cast<u16>(intern_string(target->member->spelling));
+            member_idx = intern_string(target->member->spelling);
         }
         ALLOC_REG(previous, loc);
         if (indexed)
-            m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, previous, object, index, loc);
+            m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, previous.value, object.value, index.value, loc);
         else
-            m_bytecode_emitter.get_named_field(previous, object, member, loc);
+            m_bytecode_emitter.get_named_field(previous, object, member_idx, loc);
         OpCode opcode;
         switch (operation->get_kind()) {
         case AST::ExprKind::OP_ADD: opcode = OpCode::OP_ADD; break;
@@ -303,9 +305,9 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         TRY_SET(&rhs, capture(operation->rhs));
         m_bytecode_emitter.binary(opcode, result, previous, rhs, loc);
         if (indexed)
-            m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, object, index, result, loc);
+            m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, object.value, index.value, result.value, loc);
         else
-            m_bytecode_emitter.set_named_field(object, result, member, loc);
+            m_bytecode_emitter.set_named_field(object, result, member_idx, loc);
         return ExprResult::reg(result);
     }
 
@@ -322,7 +324,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         FA_COMPILE_TRY(value_expr_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_expr_result, loc, value_reg);
 
-        m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, target_object_reg, index_reg, value_reg, loc);
+        m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, target_object_reg.value, index_reg.value, value_reg.value, loc);
         return ExprResult::reg(value_reg);
     }
 
@@ -348,8 +350,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         FA_COMPILE_TRY(value_expr_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_expr_result, loc, value_reg);
 
-        if (field_idx >= 0)
-            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg, field_idx, value_reg, loc);
+        if (field_idx >= 0 && field_idx < 0xFF)
+            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg.value, field_idx, value_reg.value, loc);
         else
             m_bytecode_emitter.set_named_field(object_reg, value_reg, intern_string(member_name->spelling), loc);
         return ExprResult::reg(value_reg);
@@ -368,7 +370,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             RegMark mark(m_current);
             FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
             ANY_REG_BIND(value_result, loc, src);
-            m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, src, intern_string(name_value), loc);
+            m_bytecode_emitter.store_global(src, intern_string(name_value), loc);
             m_globals[name_value] = true;
             return ExprResult::reg(src);
         }
@@ -391,7 +393,10 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         RegMark mark(m_current);
         FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_result, loc, value_reg);
-        m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg, field_idx, value_reg, loc);
+        if (field_idx < 0xFF)
+            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg.value, field_idx, value_reg.value, loc);
+        else
+            m_bytecode_emitter.set_named_field(self->reg, value_reg, intern_string(name_value), loc);
         return ExprResult::reg(value_reg);
     }
 
@@ -419,7 +424,7 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
     RegMark mark(m_current);
     FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
     ANY_REG_BIND(value_result, loc, src);
-    m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, src, intern_string(name_value), loc);
+    m_bytecode_emitter.store_global(src, intern_string(name_value), loc);
     m_globals[name_value] = true;
     return ExprResult::reg(src);
 }
@@ -436,7 +441,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             ALLOC_REG(arg_reg, loc);
             FA_COMPILE_TRY(arg_cmp_ret, compile_expr_impl(arg));
             m_bytecode_emitter.discharge(arg_cmp_ret, arg_reg, arg->get_location());
-            m_current->registers.rewind(arg_reg + 1);
+            m_current->registers.rewind(static_cast<u16>(arg_reg.value) + 1);
         }
         return { };
     };
@@ -449,7 +454,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
         // object_reg. Method calling convention requires self and explicit
         // arguments to occupy consecutive registers, so discard those
         // temporaries before reserving the self slot and arguments.
-        m_current->registers.rewind(object_reg + 1);
+        m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
         ALLOC_REG(reserved_reg, loc);
         return std::make_tuple(object_reg, reserved_reg);
     };
@@ -472,13 +477,16 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 FA_COMPILE_TRY(regs, compile_object(object, loc));
                 auto [object_reg, _] = regs;
                 FA_COMPILE_DISCARD_TRY(compile_args());
-                u8 argc = static_cast<u8>(e->args.size() + 1);
-                m_bytecode_emitter.invoke(object_reg, slot, argc, loc);
+                auto argc = e->args.size() + 1;
+                if (slot <= 0xFF)
+                    m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
+                else
+                    m_bytecode_emitter.invoke_named(object_reg, argc, intern_string(method_name), loc);
 
                 if (tail && !m_current->is_top_level)
-                    m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg, 1, 0, loc);
+                    m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
 
-                m_current->registers.rewind(object_reg + 1);
+                m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
                 return ExprResult::reg(object_reg);
             }
             // A member stored in a field can itself be callable. When no
@@ -486,7 +494,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             // CALL path instead of rejecting valid higher-order code.
             FA_COMPILE_TRY(callee_cmp_ret, compile_expr_impl(e->callee));
             m_bytecode_emitter.discharge(callee_cmp_ret, fn_reg, loc);
-            m_current->registers.rewind(fn_reg + 1);
+            m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
         } else {
             /// external method call 'obj.method()'
             FA_COMPILE_TRY(regs, compile_object(object, loc));
@@ -494,8 +502,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
 
             if (AST::is_identifier(member)) {
                 /// if it's a simple name then load it from the constant table
-                m_bytecode_emitter.emit_ABx(
-                    OpCode::LOAD_CONST, member_reg, intern_string(AST::as_identifier(member)->spelling), loc);
+                m_bytecode_emitter.load_constant(member_reg, intern_string(AST::as_identifier(member)->spelling), loc);
             } else {
                 /// compile complex member expression
                 FA_COMPILE_TRY(member_cmp_ret, compile_expr_impl(member));
@@ -505,15 +512,14 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             auto args_cmp_ret = compile_args();
             VERIFY_RESULT(args_cmp_ret);
 
-            u8 argc = static_cast<u8>(e->args.size() + 1); // +1 for implicit 'this'
+            auto argc = e->args.size() + 1; // +1 for implicit 'this'
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
-            u16 idx = static_cast<u16>(intern_string(AST::as_identifier(member)->spelling));
-            m_bytecode_emitter.invoke_named(object_reg, 0, argc, idx, loc);
-            // m_bytecode_emitter.invoke_named(object_reg, 0, argc, loc);
+            auto idx = intern_string(AST::as_identifier(member)->spelling);
+            m_bytecode_emitter.invoke_named(object_reg, argc, idx, loc);
             if (tail && !m_current->is_top_level)
-                m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg, 1, 0, loc);
+                m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
             /// move the cursor back where it was before compiling 'member'
-            m_current->registers.rewind(object_reg + 1);
+            m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
             return ExprResult::reg(object_reg);
         }
     } else {
@@ -522,21 +528,21 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
         m_bytecode_emitter.discharge(callee_cmp_ret, fn_reg, loc);
         // A computed callee can leave temporary registers live. Arguments must
         // begin immediately after fn_reg for CALL/IC_CALL.
-        m_current->registers.rewind(fn_reg + 1);
+        m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
     }
 
     auto args_cmp_ret = compile_args();
     VERIFY_RESULT(args_cmp_ret);
 
-    u8 argc = static_cast<u8>(e->args.size());
+    auto argc = e->args.size();
     if (tail && !m_current->is_top_level) {
-        m_bytecode_emitter.emit_ABC(OpCode::CALL_TAIL, fn_reg, argc, 0, loc);
-        m_current->registers.rewind(fn_reg);
+        m_bytecode_emitter.emit_ABC(OpCode::CALL_TAIL, fn_reg.value, argc, 0, loc);
+        m_current->registers.rewind(fn_reg.value);
         return ExprResult::reg(fn_reg);
     }
 
     m_bytecode_emitter.ic_call(fn_reg, argc, loc);
-    m_current->registers.rewind(fn_reg + 1);
+    m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
     return ExprResult::reg(fn_reg);
 }
 
@@ -549,21 +555,21 @@ Compiler::CompileExprResult Compiler::compile_list_impl(AST::ListExpr* e)
 
     ALLOC_REG(dst, loc);
     ALLOC_REG(list_reg, loc);
-    auto cap = static_cast<RegType>(e->size());
-    m_bytecode_emitter.emit_ABC(OpCode::LIST_NEW, list_reg, cap, 0, loc);
+    auto cap = e->size();
+    m_bytecode_emitter.emit_ABC(OpCode::LIST_NEW, list_reg.value, cap, 0, loc);
 
     for (AST::ExprPtr elem : e->elements) {
         ALLOC_REG(reg, loc);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(elem));
         m_bytecode_emitter.discharge(expr_result, reg, loc);
-        m_bytecode_emitter.emit_ABC(OpCode::LIST_APPEND, list_reg, reg, 0, loc);
-        m_current->registers.rewind(reg);
+        m_bytecode_emitter.emit_ABC(OpCode::LIST_APPEND, list_reg.value, reg.value, 0, loc);
+        m_current->registers.rewind(reg.value);
     }
 
     if (list_reg != dst)
-        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst, list_reg, 0, loc);
+        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, list_reg.value, 0, loc);
 
-    m_current->registers.rewind(dst + 1);
+    m_current->registers.rewind(static_cast<u16>(dst.value) + 1);
     return ExprResult::reg(dst);
 }
 
@@ -575,7 +581,7 @@ Compiler::CompileExprResult Compiler::compile_index_impl(AST::IndexExpr* e)
     ANY_REG_BIND(object_expr_result, loc, object_reg);
     FA_COMPILE_TRY(index_expr_result, compile_expr_impl(e->index));
     ANY_REG_BIND(index_expr_result, loc, index_reg);
-    PCType pc = m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, 0, object_reg, index_reg, loc);
+    PCType pc = m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, 0, object_reg.value, index_reg.value, loc);
     return ExprResult::reloc(pc);
 }
 
@@ -585,39 +591,39 @@ Compiler::CompileExprResult Compiler::compile_dict_impl(AST::DictExpr* e)
 
     ALLOC_REG(dst, loc); // reserve the expression's result register FIRST
     ALLOC_REG(fn_reg, loc);
-    u16 kidx = intern_string("قاموس");
-    m_bytecode_emitter.emit_ABx(OpCode::LOAD_GLOBAL, fn_reg, kidx, loc);
+    ConstantIndex kidx = intern_string("قاموس");
+    m_bytecode_emitter.load_global(fn_reg, kidx, loc);
 
     for (auto const& [key, value] : e->content) {
         ALLOC_REG(key_reg, loc);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(key));
         m_bytecode_emitter.discharge(expr_result, key_reg, key->get_location());
-        m_current->registers.rewind(key_reg + 1);
+        m_current->registers.rewind(static_cast<u16>(key_reg.value) + 1);
 
         ALLOC_REG(value_reg, loc);
         FA_COMPILE_TRY(val_expr_result, compile_expr_impl(value));
         m_bytecode_emitter.discharge(val_expr_result, value_reg, value->get_location());
-        m_current->registers.rewind(value_reg + 1);
+        m_current->registers.rewind(static_cast<u16>(value_reg.value) + 1);
     }
 
-    RegType argc = static_cast<RegType>(e->content.size() * 2);
+    u32 argc = e->content.size() * 2;
     m_bytecode_emitter.ic_call(fn_reg, argc, loc);
 
     if (fn_reg != dst)
-        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst, fn_reg, 0, loc);
+        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, fn_reg.value, 0, loc);
 
-    m_current->registers.rewind(dst + 1);
+    m_current->registers.rewind(static_cast<u16>(dst.value) + 1);
     return ExprResult::reg(dst);
 }
 
 Compiler::CompileExprResult Compiler::compile_get_impl(AST::GetExpr* e)
 {
     SourceLocation loc = e->get_location();
-    u32 name_idx = intern_string(e->member->spelling);
+    ConstantIndex name_idx = intern_string(e->member->spelling);
     ALLOC_REG(object_reg, loc);
     FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(e->object));
     m_bytecode_emitter.discharge(object_cmp_ret, object_reg, e->object->get_location());
-    PCType pc = m_bytecode_emitter.get_named_field(0, object_reg, static_cast<IndexType>(name_idx), loc);
+    PCType pc = m_bytecode_emitter.get_named_field({ }, object_reg, name_idx, loc);
     return ExprResult::reloc(pc);
 }
 

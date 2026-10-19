@@ -94,7 +94,7 @@ struct CB {
         auto p = std::make_unique<ObjString>();
         p->str = s;
         strs_.emplace_back(std::move(p));
-        return ch->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(strs_.back().get())));
+        return ch->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(strs_.back().get()))).value;
     }
 
     CB& ldg(u8 r, char const* name) { return ABx(OpCode::LOAD_GLOBAL, r, str(name)); }
@@ -124,7 +124,7 @@ struct CB {
         if (v >= -32767 && v <= 32768) {
             return load_int(r, static_cast<int>(v)); // fits in LOAD_INT
         } else {
-            u16 k = ch->add_constant(Value::from_int(v));
+            u16 k = ch->add_constant(Value::from_int(v)).value;
             return ABx(OpCode::LOAD_CONST, r, k); // spill to constant pool
         }
     }
@@ -269,7 +269,7 @@ TEST(VMLoads, ConstDouble)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Value::from_real(3.14));
+    u16 k = b.ch->add_constant(Value::from_real(3.14)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
@@ -297,7 +297,7 @@ TEST(VMLoads, ConstLargeInt)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Value::from_int(1000000LL));
+    u16 k = b.ch->add_constant(Value::from_int(1000000LL)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
@@ -354,8 +354,8 @@ TEST(VMArith, AddDoubles)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Value::from_real(1.5));
-    u16 k1 = b.ch->add_constant(Value::from_real(2.5));
+    u16 k0 = b.ch->add_constant(Value::from_real(1.5)).value;
+    u16 k1 = b.ch->add_constant(Value::from_real(2.5)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -404,8 +404,8 @@ TEST(VMArith, DivDouble)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Value::from_real(84.0));
-    u16 k1 = b.ch->add_constant(Value::from_real(2.0));
+    u16 k0 = b.ch->add_constant(Value::from_real(84.0)).value;
+    u16 k1 = b.ch->add_constant(Value::from_real(2.0)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -451,7 +451,7 @@ TEST(VMArith, NegDouble)
     VMRunner r;
     CB b;
     b.regs(2);
-    u16 k = b.ch->add_constant(Value::from_real(3.5));
+    u16 k = b.ch->add_constant(Value::from_real(3.5)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
@@ -967,7 +967,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->arity = 1;
     fn->local_count = 4;
 
-    u16 nk = fn->add_constant(str("cd"));
+    u16 nk = fn->add_constant(str("cd")).value;
 
     fn->emit(make_ABx(OpCode::LOAD_INT, 1, BX(0)), { });
     fn->emit(make_ABC(OpCode::OP_EQ, 1, 0, 1), { });
@@ -984,7 +984,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     top->local_count = 3;
     top->functions.push(fn);
 
-    u16 tk = top->add_constant(str("cd"));
+    u16 tk = top->add_constant(str("cd")).value;
     top->emit(make_ABx(OpCode::CLOSURE, 0, 0), { });
     top->emit(make_ABx(OpCode::STORE_GLOBAL, 0, tk), { });
     top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(300)), { });

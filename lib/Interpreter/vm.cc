@@ -180,7 +180,7 @@ VM::RuntimeResult VM::run(Chunk* chunk, Compiler*)
     m_stack[0] = Value::from_obj(reinterpret_cast<ObjHeader*>(fn));
     m_stack_top = static_cast<int>(chunk->local_count) + 2;
 
-    m_frames[m_frames_top] = CallFrame(fn, chunk, 0, 1,
+    m_frames[m_frames_top] = CallFrame(fn, chunk, PCType { 0 }, 1,
         static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
     m_frames_top++;
     intern_chunk_constants(fn->chunk);
@@ -235,7 +235,7 @@ SourceLocation VM::current_location() const
         return { };
 
     CallFrame const& f = top_frame();
-    size_t off = f.ip > 0 ? f.ip - 1 : 0;
+    size_t off = f.ip.value > 0 ? f.ip.value - 1 : 0;
     Chunk const& ch = *f.chunk;
 
     if (off < ch.locations.size())
@@ -265,9 +265,9 @@ void VM::update_ic_binary(Chunk* ch, u32 nop_ip, Value lhs, Value rhs, Value res
 
     if (ic_idx < ch->ic_slots.size()) {
         ICSlot& slot = ch->ic_slots[ic_idx];
-        slot.seen_lhs |= static_cast<u8>(value_type_tag(lhs));
-        slot.seen_rhs |= static_cast<u8>(value_type_tag(rhs));
-        slot.seen_ret |= static_cast<u8>(value_type_tag(result));
+        slot.seen_lhs |= static_cast<u16>(value_type_tag(lhs));
+        slot.seen_rhs |= static_cast<u16>(value_type_tag(rhs));
+        slot.seen_ret |= static_cast<u16>(value_type_tag(result));
         slot.hit_count++;
     }
 }

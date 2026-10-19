@@ -48,7 +48,7 @@ ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts
             RegMark mark(m_current);
             FA_COMPILE_TRY(expr_result, compile_expr_impl(expr_stmt->expr));
             ANY_REG_BIND(expr_result, loc, src);
-            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src.value, 1, 0, loc);
             state.is_dead = true;
             break;
         }
@@ -83,15 +83,15 @@ ErrorOr<bool, RuntimeError> Compiler::compile_all(Chunk* chunk)
     return true;
 }
 
-void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 line)
+void Compiler::pop_loop(PCType loop_exit, PCType continue_target, u32 line)
 {
     (void)line;
     assert(!m_current->loop_stack.empty());
     auto& ctx = m_current->loop_stack.back();
 
-    for (u32 idx : ctx.break_patches)
+    for (PCType idx : ctx.break_patches)
         m_bytecode_emitter.patch_jump_to(idx, loop_exit);
-    for (u32 idx : ctx.continue_patches)
+    for (PCType idx : ctx.continue_patches)
         m_bytecode_emitter.patch_jump_to(idx, continue_target);
 
     m_current->loop_stack.pop();
@@ -136,7 +136,7 @@ Compiler::VarInfo Compiler::resolve_name(StringRef const& name)
 
     return VarInfo {
         .kind = VarInfo::Kind::GLOBAL,
-        .index = 0
+        .reg = RegType { 0 }
     };
 }
 
@@ -179,16 +179,16 @@ int Compiler::current_method_slot(StringRef const& name) const
     return -1;
 }
 
-u32 Compiler::intern_string(StringRef const& str)
+ConstantIndex Compiler::intern_string(StringRef const& str)
 {
     Chunk* chunk = current_chunk();
     auto key = std::make_pair(str, chunk);
-    if (u16* idx = m_string_cache.find_ptr(key))
+    if (ConstantIndex* idx = m_string_cache.find_ptr(key))
         return *idx;
 
     ObjString* obj = get_allocator().allocate_object<ObjString>();
     obj->str = str;
-    u16 idx = chunk->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(obj)));
+    ConstantIndex idx = chunk->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(obj)));
     m_string_cache[key] = idx;
     return idx;
 }

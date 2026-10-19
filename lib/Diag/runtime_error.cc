@@ -31,7 +31,7 @@ FrameTrace::FrameTrace(CallFrame const& frame)
         module_name = std::string(frame.module->name.data(), frame.module->name.len());
     if (frame.chunk != nullptr) {
         source = frame.chunk->source;
-        size_t off = frame.ip > 0 ? frame.ip - 1 : 0;
+        size_t off = frame.ip.value > 0 ? frame.ip.value - 1 : 0;
         if (off < frame.chunk->locations.size())
             loc = frame.chunk->locations[off];
     }

@@ -67,7 +67,7 @@ Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
     FA_COMPILE_DISCARD_TRY(compile_stmt(s->then_stmt));
 
     if (s->else_stmt) {
-        u32 jump_end = m_bytecode_emitter.jump(OpCode::JUMP, 0, loc);
+        PCType jump_end = m_bytecode_emitter.jump(loc);
         m_bytecode_emitter.patch_jump(jump_false);
         // A return/break/continue in the then branch does not make else dead.
         m_current->is_dead = incoming_dead;
@@ -87,17 +87,17 @@ Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
     ScopeGuard scope(m_current);
 
     bool incoming_dead = m_current->is_dead;
-    u32 loop_start = current_offset();
+    PCType loop_start = current_offset();
     push_loop(loop_start);
 
     {
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(s->condition));
         ANY_REG_BIND(expr_result, loc, cond);
-        u32 exit_jump = m_bytecode_emitter.jump_if_false(cond, loc);
+        PCType exit_jump = m_bytecode_emitter.jump_if_false(cond, loc);
         FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
-        u32 continue_target = current_offset();
-        m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
+        PCType continue_target = current_offset();
+        m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, static_cast<i64>(loop_start.value) - current_offset().value - 1, loc);
         m_bytecode_emitter.patch_jump(exit_jump);
         pop_loop(current_offset(), continue_target, loc.line);
     }
@@ -133,21 +133,21 @@ Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
     declare_local("__for_cond", cond_reg);
     declare_local("__for_step", step_reg);
 
-    m_bytecode_emitter.emit_ABC(OpCode::LIST_LEN, len_reg, iter_reg, 0, loc);
+    m_bytecode_emitter.emit_ABC(OpCode::LIST_LEN, len_reg.value, iter_reg.value, 0, loc);
     m_bytecode_emitter.emit_load_value(index_reg, Value::from_int(0), loc);
     m_bytecode_emitter.emit_load_value(step_reg, Value::from_int(1), loc);
 
-    u32 loop_start = current_offset();
+    PCType loop_start = current_offset();
     push_loop(loop_start);
     m_bytecode_emitter.binary(OpCode::OP_LT, cond_reg, index_reg, len_reg, loc);
 
-    u32 exit_jump = m_bytecode_emitter.jump_if_false(cond_reg, loc);
-    m_bytecode_emitter.emit_ABC(OpCode::LIST_GET, target_reg, iter_reg, index_reg, loc);
+    PCType exit_jump = m_bytecode_emitter.jump_if_false(cond_reg, loc);
+    m_bytecode_emitter.emit_ABC(OpCode::LIST_GET, target_reg.value, iter_reg.value, index_reg.value, loc);
     FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
 
-    u32 continue_target = current_offset();
+    PCType continue_target = current_offset();
     m_bytecode_emitter.binary(OpCode::OP_ADD, index_reg, index_reg, step_reg, loc);
-    m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, loop_start - current_offset() - 1, loc);
+    m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, static_cast<i64>(loop_start.value) - current_offset().value - 1, loc);
 
     m_bytecode_emitter.patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.line);
@@ -171,18 +171,17 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     fn_chunk->name = f->name->spelling;
     fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->params.size()) : 0;
 
-    auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
-    current_chunk()->functions.push(fn_chunk);
+    FunctionIndex fn_idx = current_chunk()->add_function(fn_chunk);
 
     CompilerState fn_state { fn_chunk, f->name->spelling, false, m_current };
     defer_function_body(fn_chunk, f, fn_state);
 
     ALLOC_REG(dst, loc);
-    m_bytecode_emitter.emit_ABx(OpCode::CLOSURE, dst, fn_idx, loc);
+    m_bytecode_emitter.closure(dst, fn_idx, loc);
 
     if (m_current != nullptr && m_current->is_top_level) {
-        u16 name_idx = intern_string(f->name->spelling);
-        m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, dst, name_idx, loc);
+        ConstantIndex name_idx = intern_string(f->name->spelling);
+        m_bytecode_emitter.store_global(dst, name_idx, loc);
     }
 
     declare_local(f->name->spelling, dst);
@@ -195,7 +194,7 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     SourceLocation loc = node->get_location();
     CompilerStateGuard state_guard(m_current, &state);
     ScopeGuard scope(m_current);
-    RegType receiver = 0;
+    RegType receiver;
     if (state.is_class_method) {
         TRY_SET(&receiver, alloc_register(loc));
         declare_local(kClassInstanceName, receiver, receiver_class);
@@ -215,7 +214,7 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     FA_COMPILE_DISCARD_TRY(compile_stmt(body));
     if (!state.is_dead) {
         if (state.is_class_method)
-            m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver, 1, 0, node->get_location());
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver.value, 1, 0, node->get_location());
         else
             m_bytecode_emitter.return_nil(node->get_location());
     }
@@ -296,7 +295,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
         if (is_ctor_call) {
             // compile_call_impl didn't emit a RETURN for a non-tail call; do it here.
             ANY_REG_BIND(call_ret.value(), loc, src);
-            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, src.value, 1, 0, loc);
         }
         m_current->is_dead = true;
         return { };
@@ -305,7 +304,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
     RegMark mark(m_current);
     FA_COMPILE_TRY(expr_result, compile_expr_impl(value));
     ANY_REG_BIND(expr_result, loc, src);
-    m_bytecode_emitter.emit_ABC(OpCode::RETURN, src, 1, 0, loc);
+    m_bytecode_emitter.emit_ABC(OpCode::RETURN, src.value, 1, 0, loc);
     m_current->is_dead = true;
     return { };
 }
@@ -316,7 +315,7 @@ Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
         return raise_compile_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().break_patches.push(m_bytecode_emitter.jump(OpCode::JUMP, 0, loc));
+    m_current->loop_stack.back().break_patches.push(m_bytecode_emitter.jump(loc));
     m_current->is_dead = true;
     return { };
 }
@@ -327,7 +326,7 @@ Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
         return raise_compile_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().continue_patches.push(m_bytecode_emitter.jump(OpCode::JUMP, 0, loc));
+    m_current->loop_stack.back().continue_patches.push(m_bytecode_emitter.jump(loc));
     m_current->is_dead = true;
     return { };
 }
@@ -406,8 +405,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         int ex_param_count = method->has_parameters() ? static_cast<int>(method->params.size()) : 0;
         ch->arity = ex_param_count + 1;
 
-        auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
-        current_chunk()->functions.push(ch);
+        FunctionIndex fn_idx = current_chunk()->add_function(ch);
 
         CompilerState state { ch, method->name->spelling, false, m_current };
         state.is_class_method = true;
@@ -417,7 +415,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         defer_function_body(ch, method, state, class_name);
 
         ALLOC_REG(dst, loc);
-        m_bytecode_emitter.emit_ABx(OpCode::CLOSURE, dst, fn_idx, method_loc);
+        m_bytecode_emitter.closure(dst, fn_idx, method_loc);
         return std::tuple<RegType, Chunk*> { dst, ch };
     };
 
@@ -531,8 +529,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     // chunk that compile_method_closure() pushed there.  The parallel between
     // vtable[] (Chunk*) and current_chunk()->functions[] is exact because
     // compile_method_closure() does:
-    //   auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
-    //   current_chunk()->functions.push(ch);
+    //   FunctionIndex fn_idx = current_chunk()->add_function(ch);
     // so we reconstruct those indices here by scanning for each chunk pointer.
     Array<u32> vtable_indices;
     for (u32 i = 0; i < vtable.size(); ++i) {
@@ -560,11 +557,11 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     desc_data.method_names = method_names;
     desc_data.vtable_indices = std::move(vtable_indices);
 
-    u16 desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
+    ClassIndex desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
 
     ALLOC_REG(class_reg, loc);
-    m_bytecode_emitter.emit_ABx(OpCode::NEW_CLASS, class_reg, desc_idx, loc);
-    m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, class_reg, intern_string(class_name), loc);
+    m_bytecode_emitter.new_class(class_reg, desc_idx, loc);
+    m_bytecode_emitter.store_global(class_reg, intern_string(class_name), loc);
     declare_local(class_name, class_reg);
 
     // ClassDesc registration — unchanged
@@ -612,17 +609,17 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     RegMark mark(m_current);
 
     ALLOC_REG(module_reg, loc);
-    m_bytecode_emitter.emit_ABx(OpCode::IMPORT_MODULE, module_reg, intern_string(module), loc);
+    m_bytecode_emitter.import_module(module_reg, intern_string(module), loc);
 
     RegType value_reg = module_reg;
     if (imports_member) {
         /// not using ALLOC_REG to not overshadow the existing 'value_reg'
         TRY_SET(&value_reg, alloc_register(loc));
         m_bytecode_emitter.get_named_field(value_reg, module_reg,
-            static_cast<IndexType>(intern_string(name)), loc);
+            intern_string(name), loc);
     }
 
-    m_bytecode_emitter.emit_ABx(OpCode::STORE_GLOBAL, value_reg, intern_string(alias), loc);
+    m_bytecode_emitter.store_global(value_reg, intern_string(alias), loc);
     m_globals[alias] = true;
     if (!imports_member)
         m_module_names[alias] = true;
