@@ -25,6 +25,7 @@
 #include "Support/string.hpp"
 #include "Support/table.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace fairuz::runtime {
@@ -52,9 +53,9 @@ struct CompilerState {
     RegisterAllocator registers;
 
     struct LoopContext {
-        Array<u32> break_patches;
-        Array<u32> continue_patches;
-        u32 loop_start { 0 };
+        Array<PCType> break_patches;
+        Array<PCType> continue_patches;
+        PCType loop_start { 0 };
     }; // struct LoopContext
     Array<LoopContext> loop_stack;
     CompilerState* enclosing { nullptr };
@@ -91,7 +92,7 @@ struct CompilerStateGuard {
 
 struct RegMark {
     CompilerState* state { nullptr };
-    RegType mark { 0 };
+    u16 mark { 0 };
     size_t locals_mark { 0 };
 
     explicit RegMark(CompilerState* s)
@@ -105,9 +106,9 @@ struct RegMark {
     {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
-        RegType floor = mark;
+        u16 floor = mark;
         for (size_t i = locals_mark; i < state->locals.size(); ++i)
-            floor = std::max<RegType>(floor, state->locals[i].reg + 1);
+            floor = std::max<u16>(floor, static_cast<u16>(state->locals[i].reg.value) + 1);
         state->registers.rewind(floor);
     }
 };
@@ -124,53 +125,75 @@ struct ExprResult {
 
     union {
         RegType reg_;
-        u32 reloc_pc;
+        PCType reloc_pc;
         i64 ival;
         f64 dval;
         bool bval;
     }; // union
 
+    ExprResult()
+        : kind(Kind::KNIL)
+        , ival(0)
+    {
+    }
+
     static ExprResult reg(RegType r)
     {
-        ExprResult e;
-        e.kind = Kind::REG;
-        e.reg_ = r;
-        return e;
+        return ExprResult(r);
     }
-    static ExprResult reloc(u32 p)
+    static ExprResult reloc(PCType p)
     {
-        ExprResult e;
-        e.kind = Kind::RELOC;
-        e.reloc_pc = p;
-        return e;
+        return ExprResult(p);
     }
     static ExprResult kint(i64 v)
     {
-        ExprResult e;
-        e.kind = Kind::KINT;
-        e.ival = v;
-        return e;
+        return ExprResult(v);
     }
     static ExprResult kfloat(f64 v)
     {
-        ExprResult e;
-        e.kind = Kind::KFLOAT;
-        e.dval = v;
-        return e;
+        return ExprResult(v);
     }
     static ExprResult kbool(bool v)
     {
-        ExprResult e;
-        e.kind = Kind::KBOOL;
-        e.bval = v;
-        return e;
+        return ExprResult(v);
     }
     static ExprResult knil()
     {
-        ExprResult e;
-        e.kind = Kind::KNIL;
-        e.ival = 0;
-        return e;
+        return ExprResult();
+    }
+
+private:
+    // Initialize the selected union member directly. Strong identities have
+    // default constructors; assigning into an inactive member is not how we
+    // establish its lifetime.
+    explicit ExprResult(RegType r)
+        : kind(Kind::REG)
+        , reg_(r)
+    {
+    }
+
+    explicit ExprResult(PCType p)
+        : kind(Kind::RELOC)
+        , reloc_pc(p)
+    {
+    }
+
+    explicit ExprResult(i64 v)
+        : kind(Kind::KINT)
+        , ival(v)
+    {
+    }
+
+    explicit ExprResult(f64 v)
+        : kind(Kind::KFLOAT)
+        , dval(v)
+    {
+    }
+
+    explicit ExprResult(bool v)
+        : kind(Kind::KBOOL)
+        , bval(v)
+    {
     }
 }; // struct ExprResult
 
@@ -212,7 +235,7 @@ private:
             while (pop_from > 0 && locals[pop_from - 1].depth > depth)
                 pop_from -= 1;
             if (pop_from < locals.size())
-                cs->registers.rewind(locals[pop_from].reg);
+                cs->registers.rewind(locals[pop_from].reg.value);
             locals.resize(static_cast<u32>(pop_from));
         }
     };
@@ -236,7 +259,7 @@ private:
     SourcePtr m_source;
     CompilerState* m_current { nullptr };
     ByteCodeEmitter m_bytecode_emitter;
-    HashTable<std::pair<StringRef, Chunk*>, u16, PairHash, PairEqual> m_string_cache;
+    HashTable<std::pair<StringRef, Chunk*>, ConstantIndex, PairHash, PairEqual> m_string_cache;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_globals;
     HashTable<StringRef, bool, StringRefHash, StringRefEqual> m_module_names;
     HashTable<StringRef, ClassDescriptor, StringRefHash, StringRefEqual> m_class_registry;
@@ -246,7 +269,7 @@ private:
             LOCAL,
             GLOBAL
         } kind;
-        u8 index { 0 };
+        RegType reg { 0 };
     };
 
     CompileStmtResult compile_stmt(AST::Stmt* s);
@@ -310,16 +333,16 @@ private:
 
     int current_method_slot(StringRef const& name) const;
 
-    void push_loop(u32 loop_start)
+    void push_loop(PCType loop_start)
     {
         m_current->loop_stack.push({ { }, { }, loop_start });
     }
 
-    void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
+    void pop_loop(PCType loop_exit, PCType continue_target, u32 line);
 
-    u32 current_offset() const { return current_chunk()->code.size(); }
+    PCType current_offset() const { return PCType { current_chunk()->code.size() }; }
 
-    u32 intern_string(StringRef const& str);
+    ConstantIndex intern_string(StringRef const& str);
 
     ClassDescriptor const* resolve_receiver_class(AST::ExprPtr e) const;
 
