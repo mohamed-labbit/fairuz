@@ -11,7 +11,10 @@
 #ifndef FAIRUZ_COMPILER_OPCODE_HPP
 #define FAIRUZ_COMPILER_OPCODE_HPP
 
+#include "Macros.hpp"
 #include "Support/string.hpp"
+
+#include <cassert>
 
 namespace fairuz::runtime {
 
@@ -188,41 +191,40 @@ case OpCode::name: return #name;
     }
 }
 
-inline OpCode instr_op(u32 const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
+inline OpCode instr_op(InstrType const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
+// Raw decoding deliberately does not claim that a field is a register or
+// pool index: counts, immediates and payload words share these same bits.
+inline u8 instr_A(InstrType const i) { return static_cast<u8>((i >> 16) & 0xFF); }
+inline u8 instr_B(InstrType const i) { return static_cast<u8>((i >> 8) & 0xFF); }
+inline u8 instr_C(InstrType const i) { return static_cast<u8>(i & 0xFF); }
+inline u16 instr_Bx(InstrType const i) { return static_cast<u16>(i & 0xFFFF); }
+inline i32 instr_sBx(InstrType const i) { return static_cast<i32>(instr_Bx(i)) - JUMP_OFFSET; }
 
-inline u8 instr_A(u32 const i) { return (i >> 16) & 0xFF; }
-
-inline u8 instr_B(u32 const i) { return (i >> 8) & 0xFF; }
-
-inline u8 instr_C(u32 const i) { return i & 0xFF; }
-
-inline u16 instr_Bx(u32 const i) { return i & 0xFFFF; }
-
-inline i16 instr_sBx(u32 const i) { return static_cast<i16>(i & 0xFFFF) - 32767; }
-
-inline u32 make_ABC(OpCode op, u8 A, u8 B, u8 C)
+inline InstrType make_ABC(OpCode op, u8 A, u8 B, u8 C)
 {
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
+        | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
 }
 
-inline u32 make_ABx(OpCode op, u8 A, u16 Bx)
+inline InstrType make_ABx(OpCode op, u8 A, u16 Bx)
 {
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(Bx));
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | static_cast<u32>(Bx);
 }
 
-inline u32 make_AsBx(OpCode op, u8 A, i64 s_bx)
+inline InstrType make_AsBx(OpCode op, u8 A, i64 s_bx)
 {
-    u16 _s_bx = static_cast<u16>(s_bx + JUMP_OFFSET);
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(_s_bx));
+    assert(s_bx >= -JUMP_OFFSET && s_bx <= JUMP_OFFSET);
+    auto _s_bx = static_cast<u16>(s_bx + JUMP_OFFSET);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | static_cast<u32>(_s_bx);
 }
 
-inline u32 make_ABSC(OpCode op, u8 A, u8 B, int8_t s_c)
+inline InstrType make_ABSC(OpCode op, u8 A, u8 B, int8_t s_c)
 {
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
         | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(s_c + 128));
 }
 
-inline int8_t instr_sC(u32 i) { return static_cast<int8_t>(i & 0xFF) - 128; }
+inline int8_t instr_sC(InstrType i) { return static_cast<int8_t>(static_cast<int>(instr_C(i)) - 128); }
 
 enum class InstrFormat : u8 {
     ABC,
@@ -233,9 +235,10 @@ enum class InstrFormat : u8 {
 }; // enum InstrFormat
 
 struct ICSlot {
-    u8 seen_lhs { 0 };
-    u8 seen_rhs { 0 };
-    u8 seen_ret { 0 };
+    // TypeTag includes bits above bit 7 (native/class/instance/module/etc.).
+    u16 seen_lhs { 0 };
+    u16 seen_rhs { 0 };
+    u16 seen_ret { 0 };
     u32 hit_count { 0 };
     void* jit_stub { nullptr };
 
