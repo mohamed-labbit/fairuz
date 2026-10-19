@@ -134,6 +134,8 @@ private:
 };
 
 struct VMRunner {
+    // Low-level harness for bytecode inspection, returned Values/errors, and
+    // repeated execution in one VM. Whole-program tests use test_source::run.
     VM vm;
     Chunk* chunk_ = nullptr;
 
@@ -1021,7 +1023,6 @@ TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 
 TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
-    VMRunner r;
     std::string make_local = "دالة انشئ_محليا():\n"
                              "    س := 2\n"
                              "    ارجع س\n";
@@ -1037,14 +1038,15 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
         make_local,
         read_global,
         main_fn,
-        "رئيسي()\n",
+        "نتيجة := رئيسي()\n"
+        "تاكد(صنف(نتيجة) = \"قائمة\")\n"
+        "تاكد(طول(نتيجة) = 2)\n"
+        "تاكد(صنف(نتيجة[0]) = \"طبيعي\")\n"
+        "تاكد(صنف(نتيجة[1]) = \"طبيعي\")\n"
+        "تاكد(نتيجة[0] = 2)\n"
+        "تاكد(نتيجة[1] = 1)\n",
     };
-    Value v = run_success(r.compile_and_run(ast));
-    ASSERT_TRUE(v.is_list());
-    auto const& elems = v.as_list()->elements;
-    ASSERT_EQ(elems.size(), 2u);
-    EXPECT_EQ(elems[0].as_int(), 2);
-    EXPECT_EQ(elems[1].as_int(), 1);
+    EXPECT_EQ(test_source::run(test_source::join(ast)), ExitStatus::SUCCESS);
 }
 
 TEST(VMICProfile, BinaryOpUpdatesSlot)
@@ -1097,7 +1099,6 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
 
 TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 {
-    VMRunner r;
     std::string read_global = "دالة اقرا_عام():\n"
                               "    ارجع س\n";
 
@@ -1107,29 +1108,29 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
         "طالما (س < حد):\n"
         "    س := (س + 1)\n",
         read_global,
-        "اقرا_عام()\n",
+        "نتيجة := اقرا_عام()\n"
+        "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+        "تاكد(نتيجة = 3)\n",
     };
 
-    Value v = run_success(r.compile_and_run(ast));
-    ASSERT_TRUE(v.is_int());
-    EXPECT_EQ(v.as_int(), 3);
+    EXPECT_EQ(test_source::run(test_source::join(ast)), ExitStatus::SUCCESS);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
-    VMRunner r;
     std::string fib = (std::string("دالة فيبوناتشي(ن):\n") + test_source::indent((std::string((std::string("اذا (ن <= 1):\n"
                                                                                                            "    ارجع ن\n")
                                                                                       + (std::string("غيره:\n") + test_source::indent({ }))))
                            + "ارجع (فيبوناتشي((ن - 1)) + فيبوناتشي((ن - 2)))\n")));
 
-    Array<std::string> ast = { fib, "فيبوناتشي(10)\n" };
-    EXPECT_EQ(run_success(r.compile_and_run(ast)).as_int(), 55);
+    EXPECT_EQ(test_source::run(fib + "نتيجة := فيبوناتشي(10)\n"
+                                     "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                                     "تاكد(نتيجة = 55)\n"),
+        ExitStatus::SUCCESS);
 }
 
 TEST(VMIntegration, SumForLoopOverList)
 {
-    VMRunner r;
     std::string sum = "دالة مجموع():\n"
                       "    عناصر := [1, 2, 3, 4, 5]\n"
                       "    اجمالي := 0\n"
@@ -1137,22 +1138,25 @@ TEST(VMIntegration, SumForLoopOverList)
                       "        اجمالي := (اجمالي + عنصر)\n"
                       "    ارجع اجمالي\n";
 
-    EXPECT_EQ(run_success(r.compile_and_run({ sum, "مجموع()\n" })).as_int(), 15);
+    EXPECT_EQ(test_source::run(sum + "نتيجة := مجموع()\n"
+                                     "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                                     "تاكد(نتيجة = 15)\n"),
+        ExitStatus::SUCCESS);
 }
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
-    VMRunner r;
     std::string test = "دالة اختبار():\n"
                        "    ارجع ((\"hello\" + \", \") + \"world\")\n";
 
-    Value v = run_success(r.compile_and_run({ test, "اختبار()\n" }));
-    EXPECT_EQ(v.as_string()->str, "hello, world");
+    EXPECT_EQ(test_source::run(test + "نتيجة := اختبار()\n"
+                                      "تاكد(صنف(نتيجة) = \"سلسلة\")\n"
+                                      "تاكد(نتيجة = \"hello, world\")\n"),
+        ExitStatus::SUCCESS);
 }
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
-    VMRunner r;
     std::string first = "دالة اول():\n"
                         "    عناصر := []\n"
                         "    مرئي := 99\n"
@@ -1160,12 +1164,14 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
                         "        مرئي := عنصر\n"
                         "    ارجع مرئي\n";
 
-    EXPECT_EQ(run_success(r.compile_and_run({ first, "اول()\n" })).as_int(), 99);
+    EXPECT_EQ(test_source::run(first + "نتيجة := اول()\n"
+                                       "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                                       "تاكد(نتيجة = 99)\n"),
+        ExitStatus::SUCCESS);
 }
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
-    VMRunner r;
     std::string test = "دالة اختبار():\n"
                        "    عناصر := [1, 2, 3, 4, 5]\n"
                        "    اجمالي := 0\n"
@@ -1177,7 +1183,10 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
                        "        اجمالي := (اجمالي + عنصر)\n"
                        "    ارجع اجمالي\n";
 
-    EXPECT_EQ(run_success(r.compile_and_run({ test, "اختبار()\n" })).as_int(), 8);
+    EXPECT_EQ(test_source::run(test + "نتيجة := اختبار()\n"
+                                      "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                                      "تاكد(نتيجة = 8)\n"),
+        ExitStatus::SUCCESS);
 }
 
 TEST(NativeLen, MissingArgumentReturnsError)

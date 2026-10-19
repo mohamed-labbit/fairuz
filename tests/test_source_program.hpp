@@ -1,9 +1,12 @@
-// Source-backed compiler fixtures: write, load, and parse real Fairuz programs.
+// Program execution uses the same protected boundary as the CLI. Explicit
+// Program/compile helpers below are for tests inspecting parser/compiler/VM state.
 #ifndef FAIRUZ_TEST_SOURCE_PROGRAM_HPP
 #define FAIRUZ_TEST_SOURCE_PROGRAM_HPP
 
 #include "Compiler/compiler.hpp"
 #include "Parser/parser.hpp"
+#include "VMRunner.hpp"
+#include "test_config.h"
 #include "test_process.hpp"
 #include "test_runtime.hpp"
 
@@ -69,14 +72,49 @@ inline std::filesystem::path write(std::string const& source)
     return path;
 }
 
-struct Program {
+struct SourceFile {
     std::filesystem::path path;
+
+    explicit SourceFile(std::string const& text)
+        : path(write(text))
+    {
+    }
+
+    ~SourceFile()
+    {
+        std::error_code ignored;
+        std::filesystem::remove(path, ignored);
+    }
+
+    SourceFile(SourceFile const&) = delete;
+    SourceFile& operator=(SourceFile const&) = delete;
+};
+
+inline fairuz::runtime::ExitStatus run_file(std::filesystem::path const& path)
+{
+    fairuz::runtime::RunOptions options {
+        .dump_ast = test_config::print_ast,
+        .dump_bytecode = test_config::dump_bytecode,
+    };
+    auto filename = fairuz::platform::utf8(path);
+    return fairuz::runtime::run_protected(filename.c_str(), options).status;
+}
+
+// Do not return a Value from this helper: the protected runner destroys its
+// private VM/arena before returning. Assert program results inside the source.
+inline fairuz::runtime::ExitStatus run(std::string const& text)
+{
+    SourceFile file(text);
+    return run_file(file.path);
+}
+
+struct Program : SourceFile {
     fairuz::SourcePtr source;
     fairuz::Array<fairuz::AST::StmtPtr> statements;
 
     explicit Program(std::string const& text,
         fairuz::parser::BodyParsing mode = fairuz::parser::BodyParsing::Eager)
-        : path(write(text))
+        : SourceFile(text)
     {
         fairuz::FileManager file(fairuz::platform::utf8(path));
         fairuz::diagnostic::reset();
@@ -84,12 +122,6 @@ struct Program {
         source = fairuz::diagnostic::engine.source();
         fairuz::parser::Parser parser(&file, mode);
         statements = parser.parse_program();
-    }
-
-    ~Program()
-    {
-        std::error_code ignored;
-        std::filesystem::remove(path, ignored);
     }
 
     Program(Program const&) = delete;

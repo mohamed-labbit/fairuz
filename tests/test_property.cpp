@@ -118,11 +118,12 @@ i64 eval_host(ExprSpec const& m_expr)
     return 0;
 }
 
-Value run_fa_expr_source(std::string const& source)
+ExitStatus run_fa_expr_source(std::string const& source, i64 expected)
 {
-    Chunk* chunk = test_source::compile("طبيعي(" + source + ")\n");
-    VM vm;
-    return run_success(vm.run(chunk));
+    std::string program = "نتيجة_الاختبار := طبيعي(" + source + ")\n";
+    program += "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n";
+    program += "تاكد(نتيجة_الاختبار = " + std::to_string(expected) + ")\n";
+    return test_source::run(program);
 }
 
 } // namespace
@@ -137,9 +138,7 @@ TEST(PropertyExpr, RandomArithmeticMatchesHost)
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
 
-        Value parsed_value = run_fa_expr_source(source);
-
-        ASSERT_TRUE(parsed_value.is_int()) << source;
-        EXPECT_EQ(parsed_value.as_int(), expected) << source;
+        EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS)
+            << source << " should evaluate to " << expected;
     }
 }

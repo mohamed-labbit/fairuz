@@ -97,12 +97,12 @@ TEST(RuntimeRecovery, CallbackFailureStopsSideEffectsAndVmCanRunAgain)
 
 TEST(RuntimeRecovery, NativeCallbackReturnsBeforeCallerContinues)
 {
-    test_source::Program program(
-        "قيم := [1، 2]\n"
-        "طول_القيم := __استدعاء__(طول، [قيم])\n"
-        "تاكد(طول_القيم = 2)\n"
-        "طبيعي(طول_القيم + 40)\n");
-    auto* chunk = run_success(program.compile());
-    VM vm;
-    EXPECT_EQ(run_success(vm.run(chunk)).as_int(), 42);
+    EXPECT_EQ(test_source::run(
+                  "قيم := [1، 2]\n"
+                  "طول_القيم := __استدعاء__(طول، [قيم])\n"
+                  "تاكد(طول_القيم = 2)\n"
+                  "نتيجة := طبيعي(طول_القيم + 40)\n"
+                  "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                  "تاكد(نتيجة = 42)\n"),
+        ExitStatus::SUCCESS);
 }

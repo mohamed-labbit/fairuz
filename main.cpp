@@ -8,20 +8,17 @@
 // Implements the Fairuz command-line entry point.
 //===----------------------------------------------------------------------===//
 
-#include "Compiler/compiler.hpp"
 #include "Diag/diagnostic.hpp"
 #include "Diag/runtime_error.hpp"
-#include "Interpreter/vm.hpp"
 #include "Macros.hpp"
 #include "Parser/ast.hpp"
-#include "Parser/ast_printer.hpp"
 #include "Parser/lexer.hpp"
 #include "Parser/parser.hpp"
+#include "VMRunner.hpp"
 #include "tools/formatter.hpp"
 #include "tools/syntax_highlighter.hpp"
 
 #include <cerrno>
-#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -174,13 +171,6 @@ void printSemanticTokens(fairuz::syntax::Result const& result)
     std::cout << "]}\n";
 }
 
-void printAst(fairuz::Array<fairuz::AST::StmtPtr> const& stmts)
-{
-    fairuz::AST::ASTPrinter printer(true);
-    for (u32 i = 0; i < stmts.size(); i++)
-        printer.print(stmts[i]);
-}
-
 } // namespace
 
 ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& file_count, bool check_only)
@@ -299,8 +289,31 @@ int run_main(int argc, char** argv)
 
     if (options.input_path != "-" && !std::filesystem::exists(fairuz::platform::path(options.input_path))) {
         std::cerr << fairuz::Color::RED << "error: " << fairuz::Color::RESET
-                << "Input file not found: " << options.input_path << "\n";
+                  << "Input file not found: " << options.input_path << "\n";
         return static_cast<int>(ExitCode::NoInput);
+    }
+
+    // The CLI owns argument parsing and process exit codes. Program lifetime,
+    // diagnostics and exception containment have one shared owner in the runner.
+    // Formatting and semantic-token generation are separate tool operations.
+    if (!options.format_file && !options.semantic_tokens) {
+        fairuz::runtime::RunOptions run_options {
+            .dump_ast = options.dump_ast,
+            .dump_bytecode = options.dump_bytecode,
+            .print_time = options.print_time,
+            .check_only = options.check_only,
+            .json_diagnostics = options.json_diagnostics,
+        };
+        auto result = fairuz::runtime::run_protected(options.input_path.c_str(), run_options);
+        if (result.status == fairuz::runtime::ExitStatus::SUCCESS)
+            return static_cast<int>(ExitCode::Success);
+        switch (result.failure) {
+        case fairuz::runtime::RunFailure::PROGRAM: return static_cast<int>(ExitCode::DataError);
+        case fairuz::runtime::RunFailure::INPUT_NOT_FOUND: return static_cast<int>(ExitCode::NoInput);
+        case fairuz::runtime::RunFailure::NONE:
+        case fairuz::runtime::RunFailure::INTERNAL: return static_cast<int>(ExitCode::Software);
+        }
+        return static_cast<int>(ExitCode::Software);
     }
 
     fairuz::diagnostic::reset();
@@ -339,73 +352,8 @@ int run_main(int argc, char** argv)
             printSemanticTokens(fairuz::syntax::Highlighter().highlight(source));
             return static_cast<int>(ExitCode::Success);
         }
-        fairuz::lex::FileManager fm(options.input_path);
-        fairuz::diagnostic::set_source(&fm);
-        fairuz::parser::Parser parser(&fm, options.dump_ast ? fairuz::parser::BodyParsing::Eager : fairuz::parser::BodyParsing::Lazy);
-        fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
-
-        if (fairuz::diagnostic::has_errors()) {
-            fairuz::diagnostic::dump();
-            return static_cast<int>(ExitCode::DataError);
-        }
-
-        if (options.dump_ast)
-            printAst(stmts);
-
-        fairuz::runtime::Compiler compiler(fairuz::diagnostic::engine.source());
-        auto compile_result = compiler.compile(stmts);
-        if (compile_result.has_error())
-        {
-            fairuz::runtime::ErrorRenderer().report(compile_result.error());
-            fairuz::diagnostic::dump();
-            return static_cast<int>(ExitCode::DataError);
-        }
-        auto chunk = compile_result.value();
-        if (!chunk) {
-            std::cerr << "Compilation failed: no bytecode was produced\n";
-            return static_cast<int>(ExitCode::Software);
-        }
-        chunk = compile_result.value();
-        if (fairuz::diagnostic::has_errors())
-            return static_cast<int>(ExitCode::DataError);
-        chunk->source_path = options.input_path;
-
-        if (options.check_only) {
-            auto validation = fairuz::runtime::Compiler::compile_all(chunk);
-            if (validation.has_error()) {
-                fairuz::runtime::ErrorRenderer().report(validation.error());
-                fairuz::diagnostic::dump();
-                return static_cast<int>(ExitCode::DataError);
-            }
-        }
-
-        if (options.dump_bytecode)
-            chunk->disassemble();
-
-        if (options.check_only)
-            return static_cast<int>(ExitCode::Success);
-
-        fairuz::runtime::VM vm;
-        auto const start = std::chrono::steady_clock::now();
-        auto result = vm.run(chunk, &compiler);
-        if (result.has_error())
-        {
-            fairuz::runtime::ErrorRenderer render;
-            render.report(result.error());
-            fairuz::diagnostic::dump();
-            return static_cast<int>(result.error().kind == fairuz::ErrorCategory::INTERNAL
-                    ? ExitCode::Software : ExitCode::DataError);
-        }
-        auto const end = std::chrono::steady_clock::now();
-
-        if (options.print_time) {
-            std::chrono::duration<f64> elapsed = end - start;
-            std::cerr << "time: " << elapsed.count() << "s\n";
-        }
-
-        return static_cast<int>(ExitCode::Success);
-    } catch (fairuz::runtime::RuntimeHalt const&) {
-        return static_cast<int>(ExitCode::DataError);
+        // Both tool modes return above. There is no second program pipeline.
+        return static_cast<int>(ExitCode::Software);
     } catch (fairuz::diagnostic::DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (fairuz::FileError const& ex) {

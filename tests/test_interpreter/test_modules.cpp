@@ -19,6 +19,7 @@
 #include "test_config.h"
 
 #include "test_runtime.hpp"
+#include "test_source_program.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -111,7 +112,8 @@ protected:
         return path;
     }
 
-    VM::RuntimeResult run(std::filesystem::path const& path, VM& vm)
+    // Only recovery tests intentionally reuse a VM and inspect its Values/errors.
+    VM::RuntimeResult run_in_vm(std::filesystem::path const& path, VM& vm)
     {
         FileManager source(platform::utf8(path));
         diagnostic::set_source(&source);
@@ -257,13 +259,11 @@ TEST_F(ModuleFixture, ChainedMethodCallsKeepArgumentsContiguous)
         "    صندوق_اختبار := صندوق()\n"
         "    صندوق_اختبار.اضف_قيمة(1).اضف_قيمة(2)\n"
         "    ارجع صندوق_اختبار.اخر()\n"
-        "اختبر()\n");
+        "نتيجة_الاختبار := اختبر()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 2)\n");
 
-    VM vm;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = run_success(run(path, vm)));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 2);
+    EXPECT_EQ(test_source::run_file(path), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, LoadsOnceAndSupportsFromImport)
@@ -278,11 +278,10 @@ TEST_F(ModuleFixture, LoadsOnceAndSupportsFromImport)
         "استورد العداد باسم ثان\n"
         "من العداد استورد عدد\n"
         "تاكد(اول = ثان)\n"
-        "عدد()\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 1);
+        "نتيجة_الاختبار := عدد()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 1)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, ExplicitStdlibDirectoryWinsOverLocalNameCollision)
@@ -300,16 +299,15 @@ TEST_F(ModuleFixture, ExplicitStdlibDirectoryWinsOverLocalNameCollision)
                 "    ارجع 2\n";
     std::ofstream main(project / platform::path("رئيسي.ف"), std::ios::binary);
     main << "من ملفات استورد قيمة\n"
-            "قيمة()\n";
+            "نتيجة_الاختبار := قيمة()\n"
+            "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+            "تاكد(نتيجة_الاختبار = 2)\n";
     local.close();
     standard.close();
     main.close();
 
     EnvironmentGuard configured_stdlib("FAIRUZ_STDLIB", platform::utf8(stdlib));
-    VM vm;
-    Value result = run_success(run(project / platform::path("رئيسي.ف"), vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 2);
+    EXPECT_EQ(test_source::run_file(project / platform::path("رئيسي.ف")), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentOverride)
@@ -324,14 +322,13 @@ TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentO
     {
         std::ofstream main(project / platform::path("رئيسي.ف"), std::ios::binary);
         main << "من ملفات استورد ملف\n"
-                "ملف(\"x\"، \"قراءة\").يعمل()\n";
+                "نتيجة_الاختبار := ملف(\"x\"، \"قراءة\").يعمل()\n"
+                "تاكد(صنف(نتيجة_الاختبار) = \"منطقي\")\n"
+                "تاكد(نتيجة_الاختبار = خطا)\n";
     }
 
     EnvironmentGuard no_override("FAIRUZ_STDLIB");
-    VM vm;
-    Value result = run_success(run(project / platform::path("رئيسي.ف"), vm));
-    ASSERT_TRUE(result.is_bool());
-    EXPECT_FALSE(result.as_bool());
+    EXPECT_EQ(test_source::run_file(project / platform::path("رئيسي.ف")), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
@@ -347,11 +344,10 @@ TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
         "استورد ب\n"
         "دالة الناتج():\n"
         "    ارجع ا.قيمة() + ب.قيمة()\n"
-        "الناتج()\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 30);
+        "نتيجة_الاختبار := الناتج()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 30)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, BreaksImportCyclesWithPartialModules)
@@ -362,11 +358,10 @@ TEST_F(ModuleFixture, BreaksImportCyclesWithPartialModules)
                  "دالة اقرا():\n"
                  "    ارجع ا.قيمة\n");
     auto main = write("رئيسي.ف", "استورد ب\n"
-                                 "ب.اقرا()\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 7);
+                                 "نتيجة_الاختبار := ب.اقرا()\n"
+                                 "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+                                 "تاكد(نتيجة_الاختبار = 7)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
@@ -376,11 +371,10 @@ TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
                     "    ارجع قيمة + سر\n");
     auto main = write("رئيسي.ف", "من اساس استورد زد\n"
                                  "سر := 1000\n"
-                                 "زد(2)\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 42);
+                                 "نتيجة_الاختبار := زد(2)\n"
+                                 "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+                                 "تاكد(نتيجة_الاختبار = 42)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, LazyFunctionsWithSameNameKeepTheirModuleContext)
@@ -398,11 +392,10 @@ TEST_F(ModuleFixture, LazyFunctionsWithSameNameKeepTheirModuleContext)
         "استورد وحدة_يمنى باسم ثان\n"
         "دالة قيمة():\n"
         "    ارجع 1000\n"
-        "طبيعي(اول() + ثان.قيمة())\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 42);
+        "نتيجة_الاختبار := طبيعي(اول() + ثان.قيمة())\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 42)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, SingleInheritancePreservesFieldsAndOverridesMethods)
@@ -425,11 +418,10 @@ TEST_F(ModuleFixture, SingleInheritancePreservesFieldsAndOverridesMethods)
         "كائن := فرع(3)\n"
         "تاكد(كائن.احصل() = 3)\n"
         "تاكد(كائن.وصف() = 2)\n"
-        "كائن.ضاعف()\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 6);
+        "نتيجة_الاختبار := كائن.ضاعف()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 6)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, InheritedMethodRetainsParentModuleEnvironment)
@@ -447,11 +439,10 @@ TEST_F(ModuleFixture, InheritedMethodRetainsParentModuleEnvironment)
         "        ارجع سر\n"
         "كائن := فرع()\n"
         "تاكد(كائن.اخر() = 99)\n"
-        "كائن.قيمة()\n");
-    VM vm;
-    Value result = run_success(run(main, vm));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 9);
+        "نتيجة_الاختبار := كائن.قيمة()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 9)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, MultipleNamesInOneImportStmt)
@@ -464,12 +455,10 @@ TEST_F(ModuleFixture, MultipleNamesInOneImportStmt)
         "    ارجع س * 2\n");
     auto main = write("رئيسي.ف",
         "من قيم_الوحدة استورد قيمة باسم عدد، زد، ضاعف باسم مرتين\n"
-        "مرتين(زد(عدد))\n");
-    VM vm;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = run_success(run(main, vm)));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 28);
+        "نتيجة_الاختبار := مرتين(زد(عدد))\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 28)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, WholeModuleImportsBindDefaultAndExplicitAliases)
@@ -480,12 +469,10 @@ TEST_F(ModuleFixture, WholeModuleImportsBindDefaultAndExplicitAliases)
     auto main = write("رئيسي.ف",
         "استورد قيم_الوحدة\n"
         "استورد قيم_الوحدة باسم قيم\n"
-        "قيم.زد(قيم_الوحدة.زد(40))\n");
-    VM vm;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = run_success(run(main, vm)));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 42);
+        "نتيجة_الاختبار := قيم.زد(قيم_الوحدة.زد(40))\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 42)\n");
+    EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, FailedModuleExecutionCanBeRetriedInSameVM)
@@ -494,12 +481,12 @@ TEST_F(ModuleFixture, FailedModuleExecutionCanBeRetriedInSameVM)
     auto main = write("رئيسي.ف", "استورد معطوب\n"
                                  "معطوب.قيمة()\n");
     VM vm;
-    run_failed(run(main, vm));
+    run_failed(run_in_vm(main, vm));
     write("معطوب.ف", "دالة قيمة():\n"
                      "    ارجع 42\n");
     diagnostic::reset();
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = run_success(run(main, vm)));
+    ASSERT_NO_THROW(result = run_success(run_in_vm(main, vm)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 42);
 }
@@ -511,12 +498,12 @@ TEST_F(ModuleFixture, FailedModuleParseCanBeRetriedInSameVM)
     auto main = write("رئيسي.ف", "استورد معطوب\n"
                                  "معطوب.قيمة()\n");
     VM vm;
-    run_failed(run(main, vm));
+    run_failed(run_in_vm(main, vm));
     write("معطوب.ف", "دالة قيمة():\n"
                      "    ارجع 7\n");
     diagnostic::reset();
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = run_success(run(main, vm)));
+    ASSERT_NO_THROW(result = run_success(run_in_vm(main, vm)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
 }
@@ -528,7 +515,7 @@ TEST_F(ModuleFixture, RuntimeTracebackRetainsEachDefiningSource)
     auto outer = write("outer.ف", "من inner استورد افشل\nدالة نفذ():\n    افشل()\n");
     auto main = write("main.ف", "من outer استورد نفذ\nنفذ()\n");
     VM vm;
-    run_failed(run(main, vm));
+    run_failed(run_in_vm(main, vm));
     auto json = diagnostic::engine.to_json();
     auto frames = json.substr(json.find("\"traceback\""));
     auto main_position = frames.find(platform::utf8(main));
@@ -548,7 +535,7 @@ TEST_F(ModuleFixture, ErrorAfterImportUsesMainSource)
     write("loaded.ف", "قيمة := 1\n");
     auto main = write("main.ف", "استورد loaded\nتاكد(خطا، \"main failure\")\n");
     VM vm;
-    run_failed(run(main, vm));
+    run_failed(run_in_vm(main, vm));
     auto json = diagnostic::engine.to_json();
     EXPECT_NE(json.find("\"path\":\"" + platform::utf8(main) + "\""), std::string::npos);
     EXPECT_EQ(json.find("loaded.ف"), std::string::npos);
