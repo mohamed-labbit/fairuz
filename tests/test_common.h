@@ -39,10 +39,9 @@ static inline bool require_perf()
     return false;
 }
 
-#define REQUIRE_PERF()       \
-    do {                     \
-        if (!require_perf()) \
-            GTEST_SKIP();    \
+#define REQUIRE_PERF()                     \
+    do {                                   \
+        if (!require_perf()) GTEST_SKIP(); \
     } while (0);
 
 #endif // FAIRUZ_TESTS_TEST_COMMON_H

@@ -16,8 +16,7 @@
 
 namespace fairuz {
 
-template<typename K, typename V, typename Hash, typename Equal>
-class HashTable {
+template<typename K, typename V, typename Hash, typename Equal> class HashTable {
     struct Entry {
         K key { };
         V val { };
@@ -36,8 +35,7 @@ class HashTable {
     static u32 next_power_of_two(u32 n)
     {
         u32 m_cap = k_min_capacity;
-        while (m_cap < n)
-            m_cap <<= 1;
+        while (m_cap < n) m_cap <<= 1;
         return m_cap;
     }
 
@@ -47,17 +45,13 @@ class HashTable {
         return m_buckets.size() - 1;
     }
 
-    u32 bucket_index(u64 hash) const
-    {
-        return static_cast<u32>(hash) & mask();
-    }
+    u32 bucket_index(u64 hash) const { return static_cast<u32>(hash) & mask(); }
 
     void reinsert_into(Array<Entry>& dst, Entry const& src)
     {
         u32 dst_mask = dst.size() - 1;
         u32 idx = static_cast<u32>(src.hash) & dst_mask;
-        while (dst[idx].occupied)
-            idx = (idx + 1) & dst_mask;
+        while (dst[idx].occupied) idx = (idx + 1) & dst_mask;
         dst[idx] = src;
     }
 
@@ -68,27 +62,23 @@ class HashTable {
             return;
         }
 
-        if ((m_size + 1) * 100 < m_buckets.size() * k_load_percent)
-            return;
+        if ((m_size + 1) * 100 < m_buckets.size() * k_load_percent) return;
 
         Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
         for (u32 i = 0; i < m_buckets.size(); i++) {
-            if (m_buckets[i].occupied)
-                reinsert_into(grown, m_buckets[i]);
+            if (m_buckets[i].occupied) reinsert_into(grown, m_buckets[i]);
         }
         m_buckets = std::move(grown);
     }
 
     Entry* find_entry(K const& key, u64 hash)
     {
-        if (m_buckets.empty())
-            return nullptr;
+        if (m_buckets.empty()) return nullptr;
 
         u32 idx = bucket_index(hash);
         while (m_buckets[idx].occupied) {
             Entry& entry = m_buckets[idx];
-            if (entry.hash == hash && m_equal(entry.key, key))
-                return &entry;
+            if (entry.hash == hash && m_equal(entry.key, key)) return &entry;
             idx = (idx + 1) & mask();
         }
         return nullptr;
@@ -96,14 +86,12 @@ class HashTable {
 
     Entry const* find_entry(K const& key, u64 hash) const
     {
-        if (m_buckets.empty())
-            return nullptr;
+        if (m_buckets.empty()) return nullptr;
 
         u32 idx = bucket_index(hash);
         while (m_buckets[idx].occupied) {
             Entry const& entry = m_buckets[idx];
-            if (entry.hash == hash && m_equal(entry.key, key))
-                return &entry;
+            if (entry.hash == hash && m_equal(entry.key, key)) return &entry;
             idx = (idx + 1) & mask();
         }
         return nullptr;
@@ -114,11 +102,9 @@ public:
 
     explicit HashTable(std::initializer_list<std::pair<K, V>> list)
     {
-        if (list.size() == 0)
-            return;
+        if (list.size() == 0) return;
 
-        for (std::pair<K, V> const& pair : list)
-            insert_or_assign(pair.first, pair.second);
+        for (std::pair<K, V> const& pair : list) insert_or_assign(pair.first, pair.second);
     }
 
     ~HashTable() { }
@@ -126,8 +112,7 @@ public:
     V& operator[](K const& key)
     {
         auto hash_value = static_cast<u64>(m_hash(key));
-        if (Entry* entry = find_entry(key, hash_value))
-            return entry->val;
+        if (Entry* entry = find_entry(key, hash_value)) return entry->val;
         return insert_or_assign(key, V { });
     }
 
@@ -135,8 +120,7 @@ public:
 
     void clear()
     {
-        for (u32 i = 0; i < m_buckets.size(); i++)
-            m_buckets[i] = Entry { };
+        for (u32 i = 0; i < m_buckets.size(); i++) m_buckets[i] = Entry { };
         m_size = 0;
     }
 
@@ -161,19 +145,16 @@ public:
 
     bool erase(K const& key)
     {
-        if (m_buckets.empty())
-            return false;
+        if (m_buckets.empty()) return false;
 
         u64 hash_value = static_cast<u64>(m_hash(key));
         u32 idx = bucket_index(hash_value);
         while (m_buckets[idx].occupied) {
             Entry& entry = m_buckets[idx];
-            if (entry.hash == hash_value && m_equal(entry.key, key))
-                break;
+            if (entry.hash == hash_value && m_equal(entry.key, key)) break;
             idx = (idx + 1) & mask();
         }
-        if (!m_buckets[idx].occupied)
-            return false;
+        if (!m_buckets[idx].occupied) return false;
 
         m_buckets[idx] = Entry { };
         m_size--;
@@ -202,8 +183,7 @@ public:
         }
 
         u32 idx = bucket_index(hash_value);
-        while (m_buckets[idx].occupied)
-            idx = (idx + 1) & mask();
+        while (m_buckets[idx].occupied) idx = (idx + 1) & mask();
 
         m_buckets[idx].occupied = true;
         m_buckets[idx].hash = hash_value;
@@ -221,8 +201,7 @@ public:
         Iterator& operator++()
         {
             ptr++;
-            while (ptr != end && !ptr->occupied)
-                ptr++;
+            while (ptr != end && !ptr->occupied) ptr++;
 
             return *this;
         }
@@ -237,8 +216,7 @@ public:
         Entry* p = m_buckets.begin();
         Entry* e = m_buckets.end();
 
-        while (p != e && !p->occupied)
-            p++;
+        while (p != e && !p->occupied) p++;
 
         return { p, e };
     }

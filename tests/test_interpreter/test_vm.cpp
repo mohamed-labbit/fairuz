@@ -42,8 +42,7 @@ static inline StringRef sp_method_name(int m)
     case ObjClass::DIV: return "عملية/";
     case ObjClass::MOD: return "عملية%";
     case ObjClass::REPR: return "كتابة";
-    default:
-        return { };
+    default: return { };
     }
 }
 
@@ -114,8 +113,7 @@ struct CB {
     void dump() const
     {
         std::cout << "Disassemebeled chunk:" << '\n';
-        if (ch)
-            ch->disassemble();
+        if (ch) ch->disassemble();
         std::cout << '\n';
     }
 
@@ -171,8 +169,7 @@ TEST(VMLoads, Nil)
     VMRunner r;
     CB b;
     b.regs(1).ABC(OpCode::LOAD_NIL, 0, 0, 1).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_TRUE(run_success(r.run(b)).is_nil());
 }
 
@@ -181,8 +178,7 @@ TEST(VMLoads, NilFillsMultiple)
     VMRunner r;
     CB b;
     b.regs(3).ABC(OpCode::LOAD_NIL, 0, 0, 3).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_TRUE(run_success(r.run(b)).is_nil());
 }
 
@@ -191,8 +187,7 @@ TEST(VMLoads, True)
     VMRunner r;
     CB b;
     b.regs(1).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -202,8 +197,7 @@ TEST(VMLoads, False)
     VMRunner r;
     CB b;
     b.regs(1).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
@@ -223,8 +217,7 @@ TEST(VMLoads, IntZero)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 0);
@@ -235,8 +228,7 @@ TEST(VMLoads, IntNegative)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, -100).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -100);
@@ -247,8 +239,7 @@ TEST(VMLoads, IntMaxEncodable)
     VMRunner r;
     CB b;
     b.regs(1).ABx(OpCode::LOAD_INT, 0, 65535).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 32768);
@@ -259,8 +250,7 @@ TEST(VMLoads, IntMinEncodable)
     VMRunner r;
     CB b;
     b.regs(1).ABx(OpCode::LOAD_INT, 0, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -32767);
@@ -273,8 +263,7 @@ TEST(VMLoads, ConstDouble)
     b.regs(1);
     u16 k = b.ch->add_constant(Value::from_real(3.14)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 3.14);
@@ -287,8 +276,7 @@ TEST(VMLoads, ConstString)
     b.regs(1);
     u16 k = b.str("hello");
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "hello");
@@ -301,8 +289,7 @@ TEST(VMLoads, ConstLargeInt)
     b.regs(1);
     u16 k = b.ch->add_constant(Value::from_int(1000000LL)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 1000000LL);
@@ -321,8 +308,7 @@ TEST(VMMove, Copies)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 77).mov(1, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 77);
@@ -333,8 +319,7 @@ TEST(VMMove, SourceUnchanged)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 55).mov(1, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_EQ(v.as_int(), 55);
 }
@@ -344,8 +329,7 @@ TEST(VMArith, AddIntFastPath)
     VMRunner r;
     CB b;
     b.regs(3).slot().load_int(0, 10).load_int(1, 32).ABC(OpCode::OP_ADD, 2, 0, 1).nop().ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 42);
@@ -359,8 +343,7 @@ TEST(VMArith, AddDoubles)
     u16 k0 = b.ch->add_constant(Value::from_real(1.5)).value;
     u16 k1 = b.ch->add_constant(Value::from_real(2.5)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 4.0);
@@ -374,8 +357,7 @@ TEST(VMArith, AddStringsConcat)
     u16 k0 = b.str("foo");
     u16 k1 = b.str("bar");
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "foobar");
@@ -386,8 +368,7 @@ TEST(VMArith, SubInt)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 100).load_int(1, 58).ABC(OpCode::OP_SUB, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 42);
 }
 
@@ -396,8 +377,7 @@ TEST(VMArith, MulInt)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 6).load_int(1, 7).ABC(OpCode::OP_MUL, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 42);
 }
 
@@ -409,8 +389,7 @@ TEST(VMArith, DivDouble)
     u16 k0 = b.ch->add_constant(Value::from_real(84.0)).value;
     u16 k1 = b.ch->add_constant(Value::from_real(2.0)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_DOUBLE_EQ(run_success(r.run(b)).as_double(), 42.0);
 }
 
@@ -419,8 +398,7 @@ TEST(VMArith, ModPositive)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(OpCode::OP_MOD, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value result = run_success(r.run(b));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
@@ -431,8 +409,7 @@ TEST(VMArith, Pow)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 2).load_int(1, 10).ABC(OpCode::OP_POW, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value result = run_success(r.run(b));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 1024);
@@ -443,8 +420,7 @@ TEST(VMArith, NegInt)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 7).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), -7);
 }
 
@@ -455,16 +431,14 @@ TEST(VMArith, NegDouble)
     b.regs(2);
     u16 k = b.ch->add_constant(Value::from_real(3.5)).value;
     b.ABx(OpCode::LOAD_CONST, 0, k).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_DOUBLE_EQ(run_success(r.run(b)).as_double(), -3.5);
 }
 
 TEST(VMArith, DivByZeroThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "طبيعي(1.0 / 0.0)\n"));
+    auto error = run_failed(runner.compile_and_run("طبيعي(1.0 / 0.0)\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -473,8 +447,7 @@ TEST(VMArith, DivByZeroThrows)
 TEST(VMArith, NegOnStringThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "طبيعي(-\"س\")\n"));
+    auto error = run_failed(runner.compile_and_run("طبيعي(-\"س\")\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -485,8 +458,7 @@ TEST(VMBitwise, And)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(OpCode::OP_BITAND, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1010);
 }
 
@@ -495,8 +467,7 @@ TEST(VMBitwise, Or)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(OpCode::OP_BITOR, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1111);
 }
 
@@ -505,8 +476,7 @@ TEST(VMBitwise, Xor)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(OpCode::OP_BITXOR, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1010);
 }
 
@@ -515,8 +485,7 @@ TEST(VMBitwise, Not)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 0).ABC(OpCode::OP_BITNOT, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), ~i64(0));
 }
 
@@ -525,8 +494,7 @@ TEST(VMBitwise, Shl)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1).ABC(OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 256);
 }
 
@@ -535,8 +503,7 @@ TEST(VMBitwise, Shr)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1024).ABC(OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 128);
 }
 
@@ -545,8 +512,7 @@ TEST(VMBitwise, ShrArithmetic_NegativeInput)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, -8).load_int(1, 1).ABC(OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -4);
@@ -555,8 +521,7 @@ TEST(VMBitwise, ShrArithmetic_NegativeInput)
 TEST(VMBitwise, AndOnDoubleThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "طبيعي(1.0 & 1)\n"));
+    auto error = run_failed(runner.compile_and_run("طبيعي(1.0 & 1)\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -567,8 +532,7 @@ TEST(VMCompare, EqIntsTrue)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -578,8 +542,7 @@ TEST(VMCompare, EqIntsFalse)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 6).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
@@ -598,8 +561,7 @@ TEST(VMCompare, LtTrue)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 3).load_int(1, 7).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -609,8 +571,7 @@ TEST(VMCompare, LtFalseEqual)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
@@ -620,8 +581,7 @@ TEST(VMCompare, LeTrue_Equal)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -631,8 +591,7 @@ TEST(VMCompare, LeFalse)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 6).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
@@ -645,8 +604,7 @@ TEST(VMCompare, EqSameString)
     u16 k0 = b.str("hello");
     u16 k1 = b.str("hello");
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -656,8 +614,7 @@ TEST(VMCompare, NotFalseIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -667,8 +624,7 @@ TEST(VMCompare, NotTrueIsFalse)
     VMRunner r;
     CB b;
     b.regs(2).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
@@ -678,8 +634,7 @@ TEST(VMCompare, NotNilIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).ABC(OpCode::LOAD_NIL, 0, 0, 1).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -689,8 +644,7 @@ TEST(VMCompare, NotZeroIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -703,8 +657,7 @@ TEST(VMCompare, LtStrings)
     u16 ka = b.str("apple");
     u16 kb = b.str("banana");
     b.ABx(OpCode::LOAD_CONST, 0, ka).ABx(OpCode::LOAD_CONST, 1, kb).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
@@ -714,16 +667,14 @@ TEST(VMGlobals, StoreAndLoad)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 123).stg(0, "عام").load_int(0, 0).ldg(1, "عام").ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 123);
 }
 
 TEST(VMGlobals, MissingGlobalReturnsError)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "غير_موجود\n"));
+    auto error = run_failed(runner.compile_and_run("غير_موجود\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -734,8 +685,7 @@ TEST(VMGlobals, Overwrite)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1).stg(0, "س").load_int(0, 2).stg(0, "س").ldg(1, "س").ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 2);
 }
 
@@ -744,8 +694,7 @@ TEST(VMLists, NewEmpty)
     VMRunner r;
     CB b;
     b.regs(2).ABC(OpCode::LIST_NEW, 0, 0, 0).ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 0);
 }
 
@@ -754,11 +703,9 @@ TEST(VMLists, AppendAndLen)
     VMRunner r;
     CB b;
     b.regs(2).ABC(OpCode::LIST_NEW, 0, 3, 0);
-    for (int v : { 10, 20, 30 })
-        b.load_int(1, v).ABC(OpCode::LIST_APPEND, 0, 1, 0);
+    for (int v : { 10, 20, 30 }) b.load_int(1, v).ABC(OpCode::LIST_APPEND, 0, 1, 0);
     b.ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 3);
 }
 
@@ -775,8 +722,7 @@ TEST(VMLists, GetFirst)
         .load_int(1, 0)
         .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 77);
 }
 
@@ -793,8 +739,7 @@ TEST(VMLists, GetLast)
         .load_int(1, 1)
         .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 20);
 }
 
@@ -812,16 +757,14 @@ TEST(VMLists, Set)
         .load_int(1, 0)
         .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 99);
 }
 
 TEST(VMLists, OutOfBoundsThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "طبيعي([][0])\n"));
+    auto error = run_failed(runner.compile_and_run("طبيعي([][0])\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -830,9 +773,8 @@ TEST(VMLists, OutOfBoundsThrows)
 TEST(VMLists, LenOnNonListThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "لكل عنصر في 5:\n"
-        "    اكتب(عنصر)\n"));
+    auto error = run_failed(runner.compile_and_run("لكل عنصر في 5:\n"
+                                                   "    اكتب(عنصر)\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -911,8 +853,7 @@ TEST(VMCalls, CallClosure_TwoArgs)
     top->emit(make_ABx(OpCode::LOAD_INT, 2, BX(4)), { });
     top->emit(make_ABC(OpCode::CALL, 0, 2, 0), { });
     top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
-    if (test_config::dump_bytecode)
-        top->disassemble();
+    if (test_config::dump_bytecode) top->disassemble();
     VMRunner r;
     EXPECT_EQ(run_success(r.run(top)).as_int(), 7);
 }
@@ -920,10 +861,9 @@ TEST(VMCalls, CallClosure_TwoArgs)
 TEST(VMCalls, WrongArgcThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "دالة اجمع(س، ص):\n"
-        "    ارجع س + ص\n"
-        "اجمع(1)\n"));
+    auto error = run_failed(runner.compile_and_run("دالة اجمع(س، ص):\n"
+                                                   "    ارجع س + ص\n"
+                                                   "اجمع(1)\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -932,9 +872,8 @@ TEST(VMCalls, WrongArgcThrows)
 TEST(VMCalls, CallNonFunctionThrows)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "قيمة := 5\n"
-        "قيمة()\n"));
+    auto error = run_failed(runner.compile_and_run("قيمة := 5\n"
+                                                   "قيمة()\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -957,8 +896,7 @@ TEST(VMCalls, ICCallNativeLen)
         .mov(2, 0)
         .ABC(OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 3);
 }
 
@@ -992,8 +930,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(300)), { });
     top->emit(make_ABC(OpCode::CALL, 0, 1, 0), { });
     top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
-    if (test_config::dump_bytecode)
-        top->disassemble();
+    if (test_config::dump_bytecode) top->disassemble();
     VMRunner r;
     Value v = run_success(r.run(std::move(top)));
     EXPECT_EQ(v.as_int(), 0);
@@ -1014,8 +951,7 @@ TEST(VMCalls, StackOverflowDetected)
 TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "مفقود\n"));
+    auto error = run_failed(runner.compile_and_run("مفقود\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -1055,8 +991,7 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     CB b;
     b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
     run_success(r.run(b));
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     auto const& s = r.chunk_->ic_slots[0];
     EXPECT_TRUE(has_tag(TypeTag(s.seen_lhs), TypeTag::INT));
     EXPECT_TRUE(has_tag(TypeTag(s.seen_rhs), TypeTag::INT));
@@ -1069,8 +1004,7 @@ TEST(VMICProfile, SubUpdatesSlot)
     VMRunner r;
     CB b;
     b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     run_success(r.run(b));
     EXPECT_GE(r.chunk_->ic_slots[0].hit_count, 1u);
 }
@@ -1091,8 +1025,7 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
         .nop(0)
         .AsBx(OpCode::LOOP, 0, -6)
         .ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
+    if (test_config::dump_bytecode) b.dump();
     run_success(r.run(b));
     EXPECT_EQ(r.chunk_->ic_slots[0].hit_count, 5u);
 }
@@ -1118,14 +1051,16 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
-    std::string fib = (std::string("دالة فيبوناتشي(ن):\n") + test_source::indent((std::string((std::string("اذا (ن <= 1):\n"
-                                                                                                           "    ارجع ن\n")
-                                                                                      + (std::string("غيره:\n") + test_source::indent({ }))))
-                           + "ارجع (فيبوناتشي((ن - 1)) + فيبوناتشي((ن - 2)))\n")));
+    std::string fib = (std::string("دالة فيبوناتشي(ن):\n")
+        + test_source::indent((std::string((std::string("اذا (ن <= 1):\n"
+                                                        "    ارجع ن\n")
+                                   + (std::string("غيره:\n") + test_source::indent({ }))))
+            + "ارجع (فيبوناتشي((ن - 1)) + فيبوناتشي((ن - 2)))\n")));
 
-    EXPECT_EQ(test_source::run(fib + "نتيجة := فيبوناتشي(10)\n"
-                                     "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
-                                     "تاكد(نتيجة = 55)\n"),
+    EXPECT_EQ(test_source::run(fib
+                  + "نتيجة := فيبوناتشي(10)\n"
+                    "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                    "تاكد(نتيجة = 55)\n"),
         ExitStatus::SUCCESS);
 }
 
@@ -1138,9 +1073,10 @@ TEST(VMIntegration, SumForLoopOverList)
                       "        اجمالي := (اجمالي + عنصر)\n"
                       "    ارجع اجمالي\n";
 
-    EXPECT_EQ(test_source::run(sum + "نتيجة := مجموع()\n"
-                                     "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
-                                     "تاكد(نتيجة = 15)\n"),
+    EXPECT_EQ(test_source::run(sum
+                  + "نتيجة := مجموع()\n"
+                    "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                    "تاكد(نتيجة = 15)\n"),
         ExitStatus::SUCCESS);
 }
 
@@ -1149,9 +1085,10 @@ TEST(VMIntegration, StringConcat_3Parts)
     std::string test = "دالة اختبار():\n"
                        "    ارجع ((\"hello\" + \", \") + \"world\")\n";
 
-    EXPECT_EQ(test_source::run(test + "نتيجة := اختبار()\n"
-                                      "تاكد(صنف(نتيجة) = \"سلسلة\")\n"
-                                      "تاكد(نتيجة = \"hello, world\")\n"),
+    EXPECT_EQ(test_source::run(test
+                  + "نتيجة := اختبار()\n"
+                    "تاكد(صنف(نتيجة) = \"سلسلة\")\n"
+                    "تاكد(نتيجة = \"hello, world\")\n"),
         ExitStatus::SUCCESS);
 }
 
@@ -1164,9 +1101,10 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
                         "        مرئي := عنصر\n"
                         "    ارجع مرئي\n";
 
-    EXPECT_EQ(test_source::run(first + "نتيجة := اول()\n"
-                                       "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
-                                       "تاكد(نتيجة = 99)\n"),
+    EXPECT_EQ(test_source::run(first
+                  + "نتيجة := اول()\n"
+                    "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                    "تاكد(نتيجة = 99)\n"),
         ExitStatus::SUCCESS);
 }
 
@@ -1183,17 +1121,17 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
                        "        اجمالي := (اجمالي + عنصر)\n"
                        "    ارجع اجمالي\n";
 
-    EXPECT_EQ(test_source::run(test + "نتيجة := اختبار()\n"
-                                      "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
-                                      "تاكد(نتيجة = 8)\n"),
+    EXPECT_EQ(test_source::run(test
+                  + "نتيجة := اختبار()\n"
+                    "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                    "تاكد(نتيجة = 8)\n"),
         ExitStatus::SUCCESS);
 }
 
 TEST(NativeLen, MissingArgumentReturnsError)
 {
     VMRunner runner;
-    auto error = run_failed(runner.compile_and_run(
-        "طول()\n"));
+    auto error = run_failed(runner.compile_and_run("طول()\n"));
     ASSERT_NE(error.source, nullptr);
     EXPECT_GT(error.loc.line, 0u);
     EXPECT_LE(error.loc.line, error.source->lines.size());
@@ -1769,8 +1707,7 @@ TEST(NativePow, BasicSquare)
     Value args[] = { Value::from_real(3.0), Value::from_real(2.0) };
     auto result = run_success(vm.pow(2, args));
     Value v = result;
-    if (!v.is_nil())
-        EXPECT_DOUBLE_EQ(v.as_double(), 9.0);
+    if (!v.is_nil()) EXPECT_DOUBLE_EQ(v.as_double(), 9.0);
 }
 
 TEST(NativePow, ZeroExponent)
@@ -1779,8 +1716,7 @@ TEST(NativePow, ZeroExponent)
     Value args[] = { Value::from_real(5.0), Value::from_real(0.0) };
     auto result = run_success(vm.pow(2, args));
     Value v = result;
-    if (!v.is_nil())
-        EXPECT_DOUBLE_EQ(v.as_double(), 1.0);
+    if (!v.is_nil()) EXPECT_DOUBLE_EQ(v.as_double(), 1.0);
 }
 
 TEST(NativePow, NegativeExponent)
@@ -1789,8 +1725,7 @@ TEST(NativePow, NegativeExponent)
     Value args[] = { Value::from_real(2.0), Value::from_real(-1.0) };
     auto result = run_success(vm.pow(2, args));
     Value v = result;
-    if (!v.is_nil())
-        EXPECT_DOUBLE_EQ(v.as_double(), 0.5);
+    if (!v.is_nil()) EXPECT_DOUBLE_EQ(v.as_double(), 0.5);
 }
 
 TEST(NativeSqrt, PerfectSquare)
@@ -2085,13 +2020,10 @@ TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
 static f64 microseconds_since(std::chrono::high_resolution_clock::time_point t0)
 {
     using namespace std::chrono;
-    return static_cast<f64>(
-               duration_cast<nanoseconds>(high_resolution_clock::now() - t0).count())
-        / 1000.0;
+    return static_cast<f64>(duration_cast<nanoseconds>(high_resolution_clock::now() - t0).count()) / 1000.0;
 }
 
-template<typename T>
-static void do_not_optimize(T const& v)
+template<typename T> static void do_not_optimize(T const& v)
 {
     void const volatile* sink = &v;
     (void)sink;
@@ -2106,11 +2038,13 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
     constexpr int N = 1'000'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n"
-                                                                                           "خطوة := 1\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                  "    فهرس := (فهرس + خطوة)\n"
-                                                                                                  "ارجع فهرس\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("فهرس := 0\n"
+                                           "خطوة := 1\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "طالما (فهرس < حد):\n"
+              "    فهرس := (فهرس + خطوة)\n"
+              "ارجع فهرس\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2121,8 +2055,7 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), N);
-    std::printf("  Dispatch IntAdd loop %dk iters:    %.1f µs  (%.2f ns/op)\n",
-        N / 1000, us, us * 1000.0 / N);
+    std::printf("  Dispatch IntAdd loop %dk iters:    %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
 }
 
 // 2. Dispatch throughput — float arithmetic loop
@@ -2132,11 +2065,13 @@ TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
     constexpr int N = 500'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0.0\n"
-                                                                                           "خطوة := 1.0\n")
-                            + (std::string((std::string("حد := ") + test_source::floating(static_cast<f64>(N)))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                                           "    فهرس := (فهرس + خطوة)\n"
-                                                                                                                           "ارجع فهرس\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("فهرس := 0.0\n"
+                                           "خطوة := 1.0\n")
+            + (std::string((std::string("حد := ") + test_source::floating(static_cast<f64>(N)))) + "\n")
+            + "طالما (فهرس < حد):\n"
+              "    فهرس := (فهرس + خطوة)\n"
+              "ارجع فهرس\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2148,8 +2083,7 @@ TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 
     do_not_optimize(result);
     EXPECT_TRUE(result.is_double());
-    std::printf("  Dispatch FloatAdd loop %dk iters:  %.1f µs  (%.2f ns/op)\n",
-        N / 1000, us, us * 1000.0 / N);
+    std::printf("  Dispatch FloatAdd loop %dk iters:  %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2162,8 +2096,9 @@ TEST_F(VMPerfTest, GlobalLookup_1M_Roundtrips)
     constexpr int N = 1'000'000;
 
     std::string decl = "ا := 0\n";
-    std::string while_loop = (std::string("طالما ") + (std::string("(ا < ") + std::to_string(N) + ")") + ":\n"
-                                                                                                         "    ا := (ا + 1)\n");
+    std::string while_loop = (std::string("طالما ") + (std::string("(ا < ") + std::to_string(N) + ")")
+        + ":\n"
+          "    ا := (ا + 1)\n");
 
     VMRunner r;
     r.compile({ decl, while_loop });
@@ -2180,10 +2115,11 @@ TEST_F(VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
-    std::string m_body = (std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                                           "    اجمع(1, 2)\n"
-                                                                                                                           "    فهرس := (فهرس + 1)\n"
-                                                                                                                           "ارجع فهرس\n");
+    std::string m_body = (std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+        + "طالما (فهرس < حد):\n"
+          "    اجمع(1, 2)\n"
+          "    فهرس := (فهرس + 1)\n"
+          "ارجع فهرس\n");
 
     std::string func = (std::string("دالة اختبار():\n") + test_source::indent(m_body));
 
@@ -2200,8 +2136,7 @@ TEST_F(VMPerfTest, CallOverhead_100k_Calls)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), N);
-    std::printf("  Call overhead %dk calls:            %.1f µs  (%.2f ns/call)\n",
-        N / 1000, us, us * 1000.0 / N);
+    std::printf("  Call overhead %dk calls:            %.1f µs  (%.2f ns/call)\n", N / 1000, us, us * 1000.0 / N);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2227,9 +2162,11 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
     f64 tc_us = microseconds_since(t0);
 
     // ── equivalent iterative loop (no calls) ─────────────────────────────
-    std::string loop_fn = (std::string("دالة حلقة():\n") + test_source::indent((std::string((std::string((std::string("ن := ") + std::to_string(DEPTH))) + "\n")) + "طالما (ن != 0):\n"
-                                                                                                                                                                    "    ن := (ن - 1)\n"
-                                                                                                                                                                    "ارجع ن\n")));
+    std::string loop_fn = (std::string("دالة حلقة():\n")
+        + test_source::indent((std::string((std::string((std::string("ن := ") + std::to_string(DEPTH))) + "\n"))
+            + "طالما (ن != 0):\n"
+              "    ن := (ن - 1)\n"
+              "ارجع ن\n")));
 
     VMRunner loop;
     loop.compile({ loop_fn, "حلقة()\n" });
@@ -2242,8 +2179,7 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
     EXPECT_EQ(tc_result.as_int(), 0);
     EXPECT_EQ(loop_result.as_int(), 0);
 
-    ::printf("  Tail-call %d depth:  tc=%.1f µs  loop=%.1f µs  ratio=%.2fx\n",
-        DEPTH, tc_us, loop_us, tc_us / loop_us);
+    ::printf("  Tail-call %d depth:  tc=%.1f µs  loop=%.1f µs  ratio=%.2fx\n", DEPTH, tc_us, loop_us, tc_us / loop_us);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2254,17 +2190,19 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 TEST_F(VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("قائمة_قيم := []\n"
-                                                                                           "فهرس := 0\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                  "    اضف(قائمة_قيم, فهرس)\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "فهرس := 0\n"
-                                                                                                  "مجموع := 0\n"
-                                                                                                  "طالما (فهرس < حد):\n"
-                                                                                                  "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "ارجع مجموع\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("قائمة_قيم := []\n"
+                                           "فهرس := 0\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "طالما (فهرس < حد):\n"
+              "    اضف(قائمة_قيم, فهرس)\n"
+              "    فهرس := (فهرس + 1)\n"
+              "فهرس := 0\n"
+              "مجموع := 0\n"
+              "طالما (فهرس < حد):\n"
+              "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
+              "    فهرس := (فهرس + 1)\n"
+              "ارجع مجموع\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2287,13 +2225,15 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("نص := \"hello world\"\n"
-                                                                                           "فهرس := 0\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "اخير := 0\n"
-                                                                                                  "طالما (فهرس < حد):\n"
-                                                                                                  "    اخير := طول(نص)\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "ارجع اخير\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("نص := \"hello world\"\n"
+                                           "فهرس := 0\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "اخير := 0\n"
+              "طالما (فهرس < حد):\n"
+              "    اخير := طول(نص)\n"
+              "    فهرس := (فهرس + 1)\n"
+              "ارجع اخير\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2307,8 +2247,7 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), 11);
-    std::printf("  NativeCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n",
-        N / 1000, us, us * 1000.0 / N);
+    std::printf("  NativeCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n", N / 1000, us, us * 1000.0 / N);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2324,7 +2263,14 @@ static Array<std::string> make_fib_program(int n, int reps)
                       "        ارجع س\n"
                       "    ارجع (فيبوناتشي((س - 1)) + فيبوناتشي((س - 2)))\n";
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(reps))) + "\n") + "ناتج := 0\n" + (std::string("طالما (فهرس < حد):\n") + test_source::indent((std::string((std::string((std::string("ناتج := ") + (std::string("فيبوناتشي(") + (std::string(std::to_string(n))) + ")"))) + "\n")) + "فهرس := (فهرس + 1)\n"))) + "ارجع ناتج\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(reps))) + "\n") + "ناتج := 0\n"
+            + (std::string("طالما (فهرس < حد):\n")
+                + test_source::indent(
+                    (std::string(
+                         (std::string((std::string("ناتج := ") + (std::string("فيبوناتشي(") + (std::string(std::to_string(n))) + ")"))) + "\n"))
+                        + "فهرس := (فهرس + 1)\n")))
+            + "ارجع ناتج\n")));
 
     return { fib, test, "اختبار()\n" };
 }
@@ -2374,11 +2320,13 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 {
     constexpr int N = 10'000'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n"
-                                                                                           "خطوة := 1\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                  "    فهرس := (فهرس + خطوة)\n"
-                                                                                                  "ارجع فهرس\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("فهرس := 0\n"
+                                           "خطوة := 1\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "طالما (فهرس < حد):\n"
+              "    فهرس := (فهرس + خطوة)\n"
+              "ارجع فهرس\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2390,21 +2338,22 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), N);
-    std::printf("  STRESS IntAdd loop %dM iters:       %.1f µs  (%.2f ns/op)\n",
-        N / 1'000'000, us, us * 1000.0 / N);
+    std::printf("  STRESS IntAdd loop %dM iters:       %.1f µs  (%.2f ns/op)\n", N / 1'000'000, us, us * 1000.0 / N);
 }
 
 TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("نص := \"hello world\"\n"
-                                                                                           "فهرس := 0\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "اخير := 0\n"
-                                                                                                  "طالما (فهرس < حد):\n"
-                                                                                                  "    اخير := طول(نص)\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "ارجع اخير\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("نص := \"hello world\"\n"
+                                           "فهرس := 0\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "اخير := 0\n"
+              "طالما (فهرس < حد):\n"
+              "    اخير := طول(نص)\n"
+              "    فهرس := (فهرس + 1)\n"
+              "ارجع اخير\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2416,25 +2365,26 @@ TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), 11);
-    std::printf("  STRESS native len() %dM calls:      %.1f µs  (%.2f ns/call)\n",
-        N / 1'000'000, us, us * 1000.0 / N);
+    std::printf("  STRESS native len() %dM calls:      %.1f µs  (%.2f ns/call)\n", N / 1'000'000, us, us * 1000.0 / N);
 }
 
 TEST_F(VMPerfTest, List_AppendAndSum_100k)
 {
     constexpr int N = 100'000;
 
-    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("قائمة_قيم := []\n"
-                                                                                           "فهرس := 0\n")
-                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
-                                                                                                  "    اضف(قائمة_قيم, فهرس)\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "فهرس := 0\n"
-                                                                                                  "مجموع := 0\n"
-                                                                                                  "طالما (فهرس < حد):\n"
-                                                                                                  "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
-                                                                                                  "    فهرس := (فهرس + 1)\n"
-                                                                                                  "ارجع مجموع\n")));
+    std::string test = (std::string("دالة اختبار():\n")
+        + test_source::indent((std::string("قائمة_قيم := []\n"
+                                           "فهرس := 0\n")
+            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
+            + "طالما (فهرس < حد):\n"
+              "    اضف(قائمة_قيم, فهرس)\n"
+              "    فهرس := (فهرس + 1)\n"
+              "فهرس := 0\n"
+              "مجموع := 0\n"
+              "طالما (فهرس < حد):\n"
+              "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
+              "    فهرس := (فهرس + 1)\n"
+              "ارجع مجموع\n")));
 
     VMRunner r;
     r.compile({ test, "اختبار()\n" });
@@ -2464,8 +2414,7 @@ TEST_F(VMPerfTest, Fib28_20reps_Hot)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), 317811);
-    std::printf("  STRESS fib(%d) × %d reps hot:       %.1f µs  (%.1f µs/call)\n",
-        FIB_N, REPS, us, us / REPS);
+    std::printf("  STRESS fib(%d) × %d reps hot:       %.1f µs  (%.1f µs/call)\n", FIB_N, REPS, us, us / REPS);
 }
 
 TEST(VMClass, ConstructorRejectsWrongArgumentCount)

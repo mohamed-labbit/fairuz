@@ -32,8 +32,7 @@ int main()
     engine.add_note(id, -12345, "note\n\"\\");
     engine.add_suggestion(id, "suggestion\t\"\\");
     engine.add_frame(id, source, { 1, 2, 3, 0 }, "function\"\nم");
-    for (auto code : all_error_codes)
-        engine.report_deferred(diagnostic::Severity::FATAL, { }, code);
+    for (auto code : all_error_codes) engine.report_deferred(diagnostic::Severity::FATAL, { }, code);
     engine.set_source(std::make_shared<SourceManager>(std::string("bad\xff"), std::string("\xed\xa0\x80")));
     engine.report_deferred(diagnostic::Severity::FATAL, { 1, 1, 1, 0 }, static_cast<ErrorCode>(0xFFFF), std::string("\xc0\xaf"));
     std::cout << engine.to_json();

@@ -27,12 +27,10 @@ public:
 
     ArenaAllocator& get() noexcept { return std::ref<ArenaAllocator>(allocator_); }
 
-    template<typename T, typename... Args>
-    T* allocate(size_t count, Args&&... m_args)
+    template<typename T, typename... Args> T* allocate(size_t count, Args&&... m_args)
     {
         void* mem = allocator_.allocate(count * sizeof(T));
-        if (!mem)
-            return nullptr;
+        if (!mem) return nullptr;
         return new (mem) T(std::forward<Args>(m_args)...);
     }
 };
@@ -72,8 +70,7 @@ class CountingAllocator {
 public:
     size_t bytes { 0 };
 
-    template<typename T>
-    T* allocate_array(u32 count)
+    template<typename T> T* allocate_array(u32 count)
     {
         size_t const allocation_size = static_cast<size_t>(count) * sizeof(T);
         bytes += allocation_size;
@@ -184,11 +181,9 @@ TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; i++)
-        arr[i] = static_cast<int>(i);
+    for (size_t i = 0; i < count; i++) arr[i] = static_cast<int>(i);
 
-    for (size_t i = 0; i < count; i++)
-        EXPECT_EQ(arr[i], static_cast<int>(i));
+    for (size_t i = 0; i < count; i++) EXPECT_EQ(arr[i], static_cast<int>(i));
 }
 
 TEST(ArenaAllocatorTest, AllocateLargeArray)
@@ -199,8 +194,7 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; i++)
-        arr[i] = static_cast<f64>(i) * 1.5;
+    for (size_t i = 0; i < count; i++) arr[i] = static_cast<f64>(i) * 1.5;
 
     EXPECT_EQ(arr[0], 0.0);
     EXPECT_EQ(arr[count - 1], (count - 1) * 1.5);
@@ -340,8 +334,7 @@ TEST(ArenaAllocatorTest, MultipleBlocksRequired)
         *ptr = i;
     }
 
-    for (int i = 0; i < 10; i++)
-        EXPECT_EQ(*ptrs[i], i);
+    for (int i = 0; i < 10; i++) EXPECT_EQ(*ptrs[i], i);
 }
 
 TEST(ArenaAllocatorTest, ManySmallAllocations)
@@ -358,8 +351,7 @@ TEST(ArenaAllocatorTest, ManySmallAllocations)
         ptrs.push_back(ptr);
     }
 
-    for (int i = 0; i < count; i++)
-        EXPECT_EQ(*ptrs[i], i);
+    for (int i = 0; i < count; i++) EXPECT_EQ(*ptrs[i], i);
 }
 
 TEST(ArenaAllocatorTest, MixedSizeAllocations)
@@ -586,8 +578,7 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
 
     for (int i = 0; i < 10; i++) {
         char* p = arena.allocate<char>(1024);
-        if (p == nullptr)
-            throw std::bad_alloc();
+        if (p == nullptr) throw std::bad_alloc();
     }
 
     auto start = std::chrono::high_resolution_clock::now();

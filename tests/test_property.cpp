@@ -32,13 +32,7 @@ namespace {
 inline AST::ASTPrinter ast_printer;
 
 struct ExprSpec {
-    enum class Kind {
-        Lit,
-        Neg,
-        Add,
-        Sub,
-        Mul
-    };
+    enum class Kind { Lit, Neg, Add, Sub, Mul };
 
     Kind kind;
     i64 m_value { 0 };
@@ -66,19 +60,14 @@ ExprSpec make_binary(ExprSpec::Kind kind, ExprSpec lhs, ExprSpec rhs)
 ExprSpec gen_fa_expr(std::mt19937_64& rng, int depth)
 {
     std::uniform_int_distribution<int> lit_dist(0, 9);
-    if (depth <= 0)
-        return make_lit(lit_dist(rng));
+    if (depth <= 0) return make_lit(lit_dist(rng));
 
     std::uniform_int_distribution<int> node_dist(0, 3);
     switch (node_dist(rng)) {
-    case 0:
-        return make_lit(lit_dist(rng));
-    case 1:
-        return make_binary(ExprSpec::Kind::Add, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
-    case 2:
-        return make_binary(ExprSpec::Kind::Sub, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
-    default:
-        return make_binary(ExprSpec::Kind::Mul, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
+    case 0: return make_lit(lit_dist(rng));
+    case 1: return make_binary(ExprSpec::Kind::Add, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
+    case 2: return make_binary(ExprSpec::Kind::Sub, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
+    default: return make_binary(ExprSpec::Kind::Mul, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
     }
 }
 
@@ -86,17 +75,12 @@ std::string to_source(ExprSpec const& m_expr)
 {
     switch (m_expr.kind) {
     case ExprSpec::Kind::Lit:
-        if (m_expr.m_value < 0)
-            return "(0 - " + std::to_string(-m_expr.m_value) + ")";
+        if (m_expr.m_value < 0) return "(0 - " + std::to_string(-m_expr.m_value) + ")";
         return std::to_string(m_expr.m_value);
-    case ExprSpec::Kind::Neg:
-        return "(-" + to_source(*m_expr.m_left) + ")";
-    case ExprSpec::Kind::Add:
-        return "(" + to_source(*m_expr.m_left) + " + " + to_source(*m_expr.m_right) + ")";
-    case ExprSpec::Kind::Sub:
-        return "(" + to_source(*m_expr.m_left) + " - " + to_source(*m_expr.m_right) + ")";
-    case ExprSpec::Kind::Mul:
-        return "(" + to_source(*m_expr.m_left) + " * " + to_source(*m_expr.m_right) + ")";
+    case ExprSpec::Kind::Neg: return "(-" + to_source(*m_expr.m_left) + ")";
+    case ExprSpec::Kind::Add: return "(" + to_source(*m_expr.m_left) + " + " + to_source(*m_expr.m_right) + ")";
+    case ExprSpec::Kind::Sub: return "(" + to_source(*m_expr.m_left) + " - " + to_source(*m_expr.m_right) + ")";
+    case ExprSpec::Kind::Mul: return "(" + to_source(*m_expr.m_left) + " * " + to_source(*m_expr.m_right) + ")";
     }
     return "0";
 }
@@ -104,16 +88,11 @@ std::string to_source(ExprSpec const& m_expr)
 i64 eval_host(ExprSpec const& m_expr)
 {
     switch (m_expr.kind) {
-    case ExprSpec::Kind::Lit:
-        return m_expr.m_value;
-    case ExprSpec::Kind::Neg:
-        return -eval_host(*m_expr.m_left);
-    case ExprSpec::Kind::Add:
-        return eval_host(*m_expr.m_left) + eval_host(*m_expr.m_right);
-    case ExprSpec::Kind::Sub:
-        return eval_host(*m_expr.m_left) - eval_host(*m_expr.m_right);
-    case ExprSpec::Kind::Mul:
-        return eval_host(*m_expr.m_left) * eval_host(*m_expr.m_right);
+    case ExprSpec::Kind::Lit: return m_expr.m_value;
+    case ExprSpec::Kind::Neg: return -eval_host(*m_expr.m_left);
+    case ExprSpec::Kind::Add: return eval_host(*m_expr.m_left) + eval_host(*m_expr.m_right);
+    case ExprSpec::Kind::Sub: return eval_host(*m_expr.m_left) - eval_host(*m_expr.m_right);
+    case ExprSpec::Kind::Mul: return eval_host(*m_expr.m_left) * eval_host(*m_expr.m_right);
     }
     return 0;
 }
@@ -138,7 +117,6 @@ TEST(PropertyExpr, RandomArithmeticMatchesHost)
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
 
-        EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS)
-            << source << " should evaluate to " << expected;
+        EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS) << source << " should evaluate to " << expected;
     }
 }

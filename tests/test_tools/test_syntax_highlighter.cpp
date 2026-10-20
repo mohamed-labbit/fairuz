@@ -21,8 +21,7 @@ namespace {
 Token const* find_token(Result const& result, u32 line, u32 start, std::string const& type)
 {
     for (Token const& token : result.tokens) {
-        if (token.line == line && token.start == start && token.type == type)
-            return &token;
+        if (token.line == line && token.start == start && token.type == type) return &token;
     }
     return nullptr;
 }

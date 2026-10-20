@@ -28,8 +28,7 @@ static constexpr u32 MAX_RENDER_DEPTH = 128;
 static inline StringRef byte_string(std::string_view bytes)
 {
     StringRef result(bytes.size(), '\0');
-    if (!bytes.empty())
-        std::memcpy(result.data(), bytes.data(), bytes.size());
+    if (!bytes.empty()) std::memcpy(result.data(), bytes.data(), bytes.size());
     return result;
 }
 
@@ -52,8 +51,7 @@ static inline std::string hex_string(u8 const* bytes, size_t size)
 
 static inline std::string native_path(Value value)
 {
-    if (!value.is_string())
-        return { };
+    if (!value.is_string()) return { };
     StringRef path = value.as_string()->str;
     return std::string(path.data(), path.len());
 }
@@ -62,13 +60,11 @@ static inline std::string wildcard_regex(std::string const& pattern)
 {
     std::string result = "^";
     for (char ch : pattern) {
-        if (ch == '*')
-            result += ".*";
-        else if (ch == '?')
-            result += '.';
+        if (ch == '*') result += ".*";
+        else if (ch == '?') result += '.';
         else {
-            if (ch == '.' || ch == '+' || ch == '(' || ch == ')' || ch == '[' || ch == ']'
-                || ch == '{' || ch == '}' || ch == '^' || ch == '$' || ch == '|' || ch == '\\')
+            if (ch == '.' || ch == '+' || ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}' || ch == '^' || ch == '$'
+                || ch == '|' || ch == '\\')
                 result.push_back('\\');
             result.push_back(ch);
         }
@@ -81,8 +77,7 @@ static StringRef format_double_string(f64 value)
 {
     char buf[64];
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
-    if (ec == std::errc())
-        return StringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
+    if (ec == std::errc()) return StringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
 
     std::ostringstream oss;
     oss.imbue(std::locale::classic());
@@ -90,8 +85,7 @@ static StringRef format_double_string(f64 value)
     return StringRef(oss.str().c_str());
 }
 
-static void print_runtime_value_impl(Value value,
-    std::unordered_set<ObjHeader*>& active_containers, u32 depth)
+static void print_runtime_value_impl(Value value, std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (value.is_nil()) {
         std::cout << "عدم";
@@ -111,16 +105,13 @@ static void print_runtime_value_impl(Value value,
     if (value.is_obj()) {
         ObjHeader* obj = value.as_obj();
 
-        if ((obj->type == ObjType::LIST || obj->type == ObjType::DICT)
-            && depth >= MAX_RENDER_DEPTH) {
+        if ((obj->type == ObjType::LIST || obj->type == ObjType::DICT) && depth >= MAX_RENDER_DEPTH) {
             std::cout << "<max-depth>";
             return;
         }
 
         switch (obj->type) {
-        case ObjType::STRING:
-            std::cout << reinterpret_cast<ObjString*>(obj)->str;
-            return;
+        case ObjType::STRING: std::cout << reinterpret_cast<ObjString*>(obj)->str; return;
 
         case ObjType::LIST: {
             auto list = reinterpret_cast<ObjList*>(obj);
@@ -130,8 +121,7 @@ static void print_runtime_value_impl(Value value,
             }
             std::cout << '[';
             for (u32 i = 0, n = list->size(); i < n; i++) {
-                if (i > 0)
-                    std::cout << ", ";
+                if (i > 0) std::cout << ", ";
                 Value elem = list->elements[i];
                 if (elem.is_obj() && elem.as_obj()->type == ObjType::STRING) {
                     std::cout << '"';
@@ -179,10 +169,8 @@ static void print_runtime_value_impl(Value value,
         case ObjType::NATIVE: {
             auto nat = reinterpret_cast<ObjNative*>(obj);
             std::cout << "<native ";
-            if (nat->name)
-                std::cout << nat->name->str;
-            else
-                std::cout << "?";
+            if (nat->name) std::cout << nat->name->str;
+            else std::cout << "?";
             std::cout << '>';
             return;
         }
@@ -204,10 +192,8 @@ static void print_runtime_value_impl(Value value,
         case ObjType::INSTANCE: {
             auto instance = reinterpret_cast<ObjInstance*>(obj);
             std::cout << '<';
-            if (instance->klass)
-                std::cout << instance->klass->name;
-            else
-                std::cout << "?";
+            if (instance->klass) std::cout << instance->klass->name;
+            else std::cout << "?";
             std::cout << " instance>";
             return;
         }
@@ -232,8 +218,7 @@ static void print_runtime_value_impl(Value value,
             return;
         }
 
-        case ObjType::_COUNT:
-            break;
+        case ObjType::_COUNT: break;
         }
     }
 
@@ -251,8 +236,7 @@ static inline void print_runtime_value(Value v)
     print_runtime_value_impl(v, active_containers, 0);
 }
 
-static void append_rendered_value(StringRef& out, Value value, bool quote_strings,
-    std::unordered_set<ObjHeader*>& active_containers, u32 depth)
+static void append_rendered_value(StringRef& out, Value value, bool quote_strings, std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (value.is_nil()) {
         out += "nil";
@@ -268,18 +252,14 @@ static void append_rendered_value(StringRef& out, Value value, bool quote_string
     }
     if (value.is_double()) {
         f64 d = value.as_double();
-        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
-            out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
-        else
-            out += format_double_string(d);
+        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15) out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
+        else out += format_double_string(d);
         return;
     }
     if (value.is_string()) {
-        if (quote_strings)
-            out += '"';
+        if (quote_strings) out += '"';
         out += value.as_string()->str;
-        if (quote_strings)
-            out += '"';
+        if (quote_strings) out += '"';
         return;
     }
     if ((value.is_list() || value.is_dict()) && depth >= MAX_RENDER_DEPTH) {
@@ -294,8 +274,7 @@ static void append_rendered_value(StringRef& out, Value value, bool quote_string
         }
         out += '[';
         for (u32 i = 0, n = list->elements.size(); i < n; i++) {
-            if (i > 0)
-                out += ", ";
+            if (i > 0) out += ", ";
             append_rendered_value(out, list->elements[i], true, active_containers, depth + 1);
         }
         out += ']';
@@ -314,8 +293,7 @@ static void append_rendered_value(StringRef& out, Value value, bool quote_string
             append_rendered_value(out, k, k.is_string(), active_containers, depth + 1);
             out += ": ";
             append_rendered_value(out, v, v.is_string(), active_containers, depth + 1);
-            if (i == end)
-                break;
+            if (i == end) break;
             out += ", ";
             i++;
         }

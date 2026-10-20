@@ -20,19 +20,16 @@
 
 /// Only routines related to case dispatch can use macros for maximum efficiency
 /// all other routines should use normal helper functions, unless you know better
-#define DISPATCH()                                                                                      \
-    do {                                                                                                \
-        if (UNLIKELY(m_gc.should_collect()))                                                            \
-            m_gc.collect(this);                                                                         \
-        if (UNLIKELY(ip >= cur_chunk->code.size()))                                                     \
-            return raise_runtime_error(ErrorCode::INVALID_OPCODE, "instruction pointer out of bounds"); \
-        instr = cur_chunk->code[ip];                                                                    \
-        ip++;                                                                                           \
-        SAVE_IP();                                                                                      \
-        u8 opcode = static_cast<u8>(instr_op(instr));                                                   \
-        if (UNLIKELY(opcode >= static_cast<u8>(OpCode::_COUNT)))                                        \
-            return raise_runtime_error(ErrorCode::INVALID_OPCODE);                                      \
-        goto* dispatch_table[opcode];                                                                   \
+#define DISPATCH()                                                                                                                              \
+    do {                                                                                                                                        \
+        if (UNLIKELY(m_gc.should_collect())) m_gc.collect(this);                                                                                \
+        if (UNLIKELY(ip >= cur_chunk->code.size())) return raise_runtime_error(ErrorCode::INVALID_OPCODE, "instruction pointer out of bounds"); \
+        instr = cur_chunk->code[ip];                                                                                                            \
+        ip++;                                                                                                                                   \
+        SAVE_IP();                                                                                                                              \
+        u8 opcode = static_cast<u8>(instr_op(instr));                                                                                           \
+        if (UNLIKELY(opcode >= static_cast<u8>(OpCode::_COUNT))) return raise_runtime_error(ErrorCode::INVALID_OPCODE);                         \
+        goto* dispatch_table[opcode];                                                                                                           \
     } while (0)
 
 #define BEGIN_DISPATCH() DISPATCH()
@@ -57,10 +54,9 @@
         frame().ip = PCType { ip }; \
     } while (0)
 
-#define REQUIRE_NUMBER(v)                                            \
-    do {                                                             \
-        if (!v.is_number())                                          \
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH); \
+#define REQUIRE_NUMBER(v)                                                            \
+    do {                                                                             \
+        if (!v.is_number()) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH); \
     } while (0)
 
 namespace fairuz::runtime {
@@ -74,46 +70,33 @@ using ComparedObjects = std::set<std::pair<ObjHeader const*, ObjHeader const*>>;
 // this checks logical equality rather than pointer equality
 bool values_equal_impl(Value lhs, Value rhs, ComparedObjects& seen)
 {
-    if (lhs.is_int() && rhs.is_int())
-        return integer::compare(lhs, rhs) == 0;
-    if (lhs.is_number() && rhs.is_number())
-        return integer::compare_numbers(lhs, rhs) == 0;
-    if ((lhs.is_obj() && rhs.is_obj()) && (lhs.as_obj() == rhs.as_obj()))
-        return true;
-    if (lhs.is_nil() || rhs.is_nil())
-        return lhs.is_nil() && rhs.is_nil();
-    if (lhs.is_bool() || rhs.is_bool())
-        return lhs.is_bool() && rhs.is_bool() && lhs.as_bool() == rhs.as_bool();
-    if (lhs.is_string() && rhs.is_string())
-        return lhs.as_string()->str == rhs.as_string()->str;
-    if (!lhs.is_obj() || !rhs.is_obj() || lhs.as_obj()->type != rhs.as_obj()->type)
-        return false;
+    if (lhs.is_int() && rhs.is_int()) return integer::compare(lhs, rhs) == 0;
+    if (lhs.is_number() && rhs.is_number()) return integer::compare_numbers(lhs, rhs) == 0;
+    if ((lhs.is_obj() && rhs.is_obj()) && (lhs.as_obj() == rhs.as_obj())) return true;
+    if (lhs.is_nil() || rhs.is_nil()) return lhs.is_nil() && rhs.is_nil();
+    if (lhs.is_bool() || rhs.is_bool()) return lhs.is_bool() && rhs.is_bool() && lhs.as_bool() == rhs.as_bool();
+    if (lhs.is_string() && rhs.is_string()) return lhs.as_string()->str == rhs.as_string()->str;
+    if (!lhs.is_obj() || !rhs.is_obj() || lhs.as_obj()->type != rhs.as_obj()->type) return false;
 
-    auto pair = std::make_pair(static_cast<ObjHeader const*>(lhs.as_obj()),
-        static_cast<ObjHeader const*>(rhs.as_obj()));
-    if (!seen.insert(pair).second)
-        return true;
+    auto pair = std::make_pair(static_cast<ObjHeader const*>(lhs.as_obj()), static_cast<ObjHeader const*>(rhs.as_obj()));
+    if (!seen.insert(pair).second) return true;
 
     if (lhs.is_list()) {
         ObjList* left = lhs.as_list();
         ObjList* right = rhs.as_list();
-        if (left->elements.size() != right->elements.size())
-            return false;
+        if (left->elements.size() != right->elements.size()) return false;
         for (u32 i = 0; i < left->elements.size(); ++i) {
-            if (!values_equal_impl(left->elements[i], right->elements[i], seen))
-                return false;
+            if (!values_equal_impl(left->elements[i], right->elements[i], seen)) return false;
         }
         return true;
     }
     if (lhs.is_dict()) {
         ObjDict* left = lhs.as_dict();
         ObjDict* right = rhs.as_dict();
-        if (left->data.size() != right->data.size())
-            return false;
+        if (left->data.size() != right->data.size()) return false;
         for (auto const& [key, value] : left->data) {
             Value const* other = right->data.find_ptr(key);
-            if (other == nullptr || !values_equal_impl(value, *other, seen))
-                return false;
+            if (other == nullptr || !values_equal_impl(value, *other, seen)) return false;
         }
         return true;
     }
@@ -144,8 +127,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
 #undef X
     };
 
-    if (m_frames_top == 0)
-        return Value::nil();
+    if (m_frames_top == 0) return Value::nil();
 
     u32 instr;
     Chunk* cur_chunk = frame().chunk;
@@ -160,8 +142,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         u8 start = instr_B(instr);
         u8 count = instr_C(instr);
 
-        for (u8 i = 0; i < count; i++)
-            cur_base[start + i] = Value::nil();
+        for (u8 i = 0; i < count; i++) cur_base[start + i] = Value::nil();
 
         DISPATCH();
     }
@@ -178,8 +159,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(LOAD_CONST)
     {
         u16 index = instr_Bx(instr);
-        if (UNLIKELY(index >= cur_chunk->constants.size()))
-            return raise_runtime_error(ErrorCode::INVALID_OPCODE, "constant index out of bounds");
+        if (UNLIKELY(index >= cur_chunk->constants.size())) return raise_runtime_error(ErrorCode::INVALID_OPCODE, "constant index out of bounds");
         RA() = cur_chunk->constants[index];
         DISPATCH();
     }
@@ -197,14 +177,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         {
             u16 index = instr_Bx(instr);
-            if (UNLIKELY(index >= cur_chunk->constants.size()
-                    || !cur_chunk->constants[index].is_string()))
+            if (UNLIKELY(index >= cur_chunk->constants.size() || !cur_chunk->constants[index].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid global-name constant");
             Value name_v = cur_chunk->constants[index];
             StringRef name = name_v.as_string()->str;
             Value const* value = find_global(current_globals(), name);
-            if (value == nullptr)
-                return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
+            if (value == nullptr) return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
             RA() = *value;
         }
         DISPATCH();
@@ -213,8 +191,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u16 slot_idx = instr_Bx(instr);
         GlobalEnvironment* env = current_globals();
-        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
-            return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
+        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size())) return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
         RA() = env->slots[slot_idx];
         DISPATCH();
     }
@@ -222,8 +199,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         {
             u16 index = instr_Bx(instr);
-            if (UNLIKELY(index >= cur_chunk->constants.size()
-                    || !cur_chunk->constants[index].is_string()))
+            if (UNLIKELY(index >= cur_chunk->constants.size() || !cur_chunk->constants[index].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid global-name constant");
             Value name_v = cur_chunk->constants[index];
             StringRef name = name_v.as_string()->str;
@@ -235,8 +211,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u16 slot_idx = instr_Bx(instr);
         GlobalEnvironment* env = current_globals();
-        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
-            return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
+        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size())) return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL);
         env->slots[slot_idx] = RA();
         DISPATCH();
     }
@@ -248,8 +223,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             if (UNLIKELY(index >= cur_chunk->constants.size() || !cur_chunk->constants[index].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid module-name constant");
             auto load_result = load_module(cur_chunk->constants[index].as_string()->str);
-            if (load_result.has_error())
-                return load_result.error();
+            if (load_result.has_error()) return load_result.error();
 
             module = load_result.value();
         }
@@ -265,15 +239,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         int result_slot = cur_frame_base + instr_A(instr);
         int module_base = m_stack_top;
         int new_top = module_base + static_cast<int>(module->chunk->local_count) + 1;
-        if (UNLIKELY(new_top > STACK_SIZE))
-            return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
-        while (m_stack_top < new_top)
-            m_stack[m_stack_top++] = Value::nil();
+        if (UNLIKELY(new_top > STACK_SIZE)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
+        while (m_stack_top < new_top) m_stack[m_stack_top++] = Value::nil();
         ObjFunction* module_fn = m_gc.make_obj_function(module->chunk, module->globals);
         SAVE_IP();
-        m_frames[m_frames_top++] = CallFrame(module_fn, module->chunk, PCType { 0 },
-            static_cast<u16>(module_base), static_cast<u16>(module->chunk->local_count),
-            static_cast<u16>(result_slot), static_cast<u16>(module_base), module->globals, module);
+        m_frames[m_frames_top++] = CallFrame(module_fn, module->chunk, PCType { 0 }, static_cast<u16>(module_base),
+            static_cast<u16>(module->chunk->local_count), static_cast<u16>(result_slot), static_cast<u16>(module_base), module->globals, module);
         intern_chunk_constants(module->chunk);
         LOAD_FRAME();
         DISPATCH();
@@ -287,9 +258,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -312,8 +281,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::ADD, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -327,9 +295,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -344,8 +310,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::SUB, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -359,9 +324,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -376,8 +339,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::MUL, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -391,29 +353,24 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            if (!rhs.is_truthy())
-                return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
+            if (!rhs.is_truthy()) return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
             res = integer::div(lhs, rhs, m_gc);
             update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            if (rhs.as_double_any() == 0.0)
-                return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
+            if (rhs.as_double_any() == 0.0) return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
             res = Value::from_real(lhs.as_double_any() / rhs.as_double_any());
             update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::DIV, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -427,29 +384,24 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            if (!rhs.is_truthy())
-                return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
+            if (!rhs.is_truthy()) return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
             res = integer::div(lhs, rhs, m_gc, true);
             update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            if (rhs.as_double_any() == 0.0)
-                return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
+            if (rhs.as_double_any() == 0.0) return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
             res = Value::from_real(std::fmod(lhs.as_double_any(), rhs.as_double_any()));
             update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::MOD, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -485,22 +437,19 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             ObjClass* self_klass = instance->klass;
 
             int slot = self_klass->method_slot(sp_method_name(ObjClass::NEG));
-            if (UNLIKELY(slot < 0))
-                return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
 
-            if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))
-                return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
+            if (UNLIKELY(slot < 0)) return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
+            if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size())) return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
+
             Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];
             int caller_stack_top = m_stack_top;
             int call_base = caller_stack_top;
 
-            if (UNLIKELY(call_base + 1 >= STACK_SIZE))
-                return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
+            if (UNLIKELY(call_base + 1 >= STACK_SIZE)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
             {
-                auto invoke_result = invoke_method(target_chunk, operand, cur_frame_base + instr_A(instr),
-                    call_base, 1, ip, caller_stack_top, target_chunk->globals);
-                if (invoke_result.has_error())
-                    return invoke_result.error();
+                auto invoke_result = invoke_method(
+                    target_chunk, operand, cur_frame_base + instr_A(instr), call_base, 1, ip, caller_stack_top, target_chunk->globals);
+                if (invoke_result.has_error()) return invoke_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -516,8 +465,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value lhs = RB();
         Value rhs = RC();
 
-        if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!lhs.is_int() || !rhs.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         res = integer::bitwise(lhs, rhs, '&', m_gc);
         DISPATCH();
@@ -528,8 +476,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value lhs = RB();
         Value rhs = RC();
 
-        if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!lhs.is_int() || !rhs.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         res = integer::bitwise(lhs, rhs, '|', m_gc);
         DISPATCH();
@@ -540,8 +487,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value lhs = RB();
         Value rhs = RC();
 
-        if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!lhs.is_int() || !rhs.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         res = integer::bitwise(lhs, rhs, '^', m_gc);
         DISPATCH();
@@ -550,8 +496,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         Value& res = RA();
         Value operand = RB();
-        if (UNLIKELY(!operand.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!operand.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         res = integer::bitwise(operand, Value::from_int(-1), '^', m_gc);
         DISPATCH();
@@ -561,17 +506,14 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         Value& res = RA();
         Value lhs = RB();
-        if (UNLIKELY(!lhs.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!lhs.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         Value count = Value::from_int(instr_C(instr));
         if (instr_op(instr) == OpCode::OP_LSHIFT_REG) {
-            if (!RC().is_int())
-                return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+            if (!RC().is_int()) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
             count = RC();
         }
-        if (integer::compare(count, Value::from_int(0)) < 0)
-            return raise_runtime_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
+        if (integer::compare(count, Value::from_int(0)) < 0) return raise_runtime_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
         res = integer::shift(lhs, count, true, m_gc);
         DISPATCH();
     }
@@ -580,17 +522,14 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         Value& res = RA();
         Value lhs = RB();
-        if (UNLIKELY(!lhs.is_int()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (UNLIKELY(!lhs.is_int())) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
         Value count = Value::from_int(instr_C(instr));
         if (instr_op(instr) == OpCode::OP_RSHIFT_REG) {
-            if (!RC().is_int())
-                return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+            if (!RC().is_int()) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
             count = RC();
         }
-        if (integer::compare(count, Value::from_int(0)) < 0)
-            return raise_runtime_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
+        if (integer::compare(count, Value::from_int(0)) < 0) return raise_runtime_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
         res = integer::shift(lhs, count, false, m_gc);
         DISPATCH();
     }
@@ -598,24 +537,19 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         bool has_overload = false;
-        if (lhs.is_instance())
-            has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::EQ)) >= 0;
-        if (!has_overload && rhs.is_instance())
-            has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::EQ)) >= 0;
+        if (lhs.is_instance()) has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::EQ)) >= 0;
+        if (!has_overload && rhs.is_instance()) has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::EQ)) >= 0;
         if (has_overload) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::EQ, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -629,24 +563,19 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         bool has_overload = false;
-        if (lhs.is_instance())
-            has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::NEQ)) >= 0;
-        if (!has_overload && rhs.is_instance())
-            has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::NEQ)) >= 0;
+        if (lhs.is_instance()) has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::NEQ)) >= 0;
+        if (!has_overload && rhs.is_instance()) has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(ObjClass::NEQ)) >= 0;
         if (has_overload) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::NEQ, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -660,9 +589,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -680,8 +607,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::LT, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -695,9 +621,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -715,8 +639,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::LTE, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -730,9 +653,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -750,8 +671,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::GT, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -765,9 +685,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     {
         u32 payload_ip = ip;
 
-        if (ip < cur_chunk->code.size()
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
-            ++ip;
+        if (ip < cur_chunk->code.size() && instr_op(cur_chunk->code[ip]) == OpCode::NOP) ++ip;
 
         Value& res = RA();
         Value lhs = RB();
@@ -785,8 +703,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::GTE, instr, cur_frame_base, ip);
-                if (op_result.has_error())
-                    return op_result.error();
+                if (op_result.has_error()) return op_result.error();
             }
             LOAD_FRAME();
             DISPATCH();
@@ -801,10 +718,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         RA() = Value::from_bool(!RB().is_truthy());
         DISPATCH();
     }
-    CASE(CONCAT)
-    {
-        DISPATCH();
-    }
+    CASE(CONCAT) { DISPATCH(); }
     CASE(LIST_NEW)
     {
         ObjList* list_obj = m_gc.make_obj_list();
@@ -815,8 +729,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(LIST_APPEND)
     {
         Value& list_v = RA();
-        if (!list_v.is_list())
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting to append on a non list");
+        if (!list_v.is_list()) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting to append on a non list");
 
         list_v.as_list()->elements.push(RB());
         DISPATCH();
@@ -827,15 +740,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value list_v = RB();
         Value index_v = RC();
 
-        if (!list_v.is_list())
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting get on a non list");
-        if (!index_v.is_int())
-            return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR, "attempting get with a non integer index");
+        if (!list_v.is_list()) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting get on a non list");
+        if (!index_v.is_int()) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR, "attempting get with a non integer index");
 
         auto& elems = list_v.as_list()->elements;
         i64 idx = index_v.as_int();
-        if (idx < 0 || idx >= static_cast<i64>(elems.size()))
-            return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        if (idx < 0 || idx >= static_cast<i64>(elems.size())) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
         res = elems[static_cast<u32>(idx)];
         DISPATCH();
@@ -847,16 +757,15 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value new_val = RC();
 
         if (object_v.is_list()) {
-            if (!index_v.is_int())
-                return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            if (!index_v.is_int()) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
             auto& elems = object_v.as_list()->elements;
             i64 idx = index_v.as_int();
 
-            if (idx < 0)
-                idx += static_cast<i64>(elems.size());
+            if (idx < 0) idx += static_cast<i64>(elems.size());
             if (idx < 0 || idx >= static_cast<i64>(elems.size()))
-                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS, "index " + std::to_string(index_v.as_int()) + " for list of length " + std::to_string(elems.size()));
+                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS,
+                    "index " + std::to_string(index_v.as_int()) + " for list of length " + std::to_string(elems.size()));
 
             elems[static_cast<u32>(idx)] = new_val;
         } else {
@@ -868,8 +777,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(LIST_LEN)
     {
         Value list_v = RB();
-        if (!list_v.is_list())
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting len on a non list value");
+        if (!list_v.is_list()) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting len on a non list value");
 
         RA() = Value::from_int(static_cast<i64>(list_v.as_list()->elements.size()));
         DISPATCH();
@@ -881,15 +789,13 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(JUMP_IF_TRUE)
     {
-        if (RA().is_truthy())
-            ip += instr_sBx(instr);
+        if (RA().is_truthy()) ip += instr_sBx(instr);
 
         DISPATCH();
     }
     CASE(JUMP_IF_FALSE)
     {
-        if (!RA().is_truthy())
-            ip += instr_sBx(instr);
+        if (!RA().is_truthy()) ip += instr_sBx(instr);
 
         DISPATCH();
     }
@@ -905,19 +811,15 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value limit_v = cur_base[base_reg + 1];
         Value step_v = cur_base[base_reg + 2];
 
-        if (!init_v.is_int() || !limit_v.is_int() || !step_v.is_int())
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (!init_v.is_int() || !limit_v.is_int() || !step_v.is_int()) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
+        if (!step_v.is_truthy()) return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
 
-        if (!step_v.is_truthy())
-            return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
         cur_base[base_reg] = limit_v;
         cur_base[base_reg + 1] = step_v;
         cur_base[base_reg + 2] = init_v;
-        bool enters = integer::compare(step_v, Value::from_int(0)) > 0
-            ? integer::compare(init_v, limit_v) <= 0
-            : integer::compare(init_v, limit_v) >= 0;
-        if (!enters)
-            ip += instr_sBx(instr);
+        bool enters
+            = integer::compare(step_v, Value::from_int(0)) > 0 ? integer::compare(init_v, limit_v) <= 0 : integer::compare(init_v, limit_v) >= 0;
+        if (!enters) ip += instr_sBx(instr);
 
         DISPATCH();
     }
@@ -931,18 +833,14 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         if (control_v.is_int()) {
             Value control_value = integer::add(control_v, step_v, m_gc);
             cur_base[base_reg + 2] = control_value;
-            bool continues = integer::compare(step_v, Value::from_int(0)) > 0
-                ? integer::compare(control_value, limit_v) <= 0
-                : integer::compare(control_value, limit_v) >= 0;
-            if (continues)
-                ip += instr_sBx(instr);
+            bool continues = integer::compare(step_v, Value::from_int(0)) > 0 ? integer::compare(control_value, limit_v) <= 0
+                                                                              : integer::compare(control_value, limit_v) >= 0;
+            if (continues) ip += instr_sBx(instr);
         } else {
             f64 control = control_v.as_double_any() + step_v.as_double_any();
             cur_base[base_reg + 2] = Value::from_real(control);
-            bool continues = step_v.as_double() > 0.0 ? control <= limit_v.as_double()
-                                                      : control >= limit_v.as_double();
-            if (continues)
-                ip += instr_sBx(instr);
+            bool continues = step_v.as_double() > 0.0 ? control <= limit_v.as_double() : control >= limit_v.as_double();
+            if (continues) ip += instr_sBx(instr);
         }
 
         DISPATCH();
@@ -950,8 +848,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(CLOSURE)
     {
         u16 fn_idx = instr_Bx(instr);
-        if (UNLIKELY(fn_idx >= cur_chunk->functions.size()
-                || cur_chunk->functions[fn_idx] == nullptr))
+        if (UNLIKELY(fn_idx >= cur_chunk->functions.size() || cur_chunk->functions[fn_idx] == nullptr))
             return raise_runtime_error(ErrorCode::INVALID_OPCODE, "function index out of bounds");
         Chunk* fn_chunk = cur_chunk->functions[fn_idx];
         RA() = m_gc.make_function(fn_chunk, current_globals());
@@ -966,8 +863,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         SAVE_IP();
         {
             auto call_result = call_value(callee, argc, base, false);
-            if (call_result.has_error())
-                return call_result.error();
+            if (call_result.has_error()) return call_result.error();
         }
         LOAD_FRAME();
         DISPATCH();
@@ -994,8 +890,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             Value ret = Value::nil();
             {
                 auto call_result = call_native(nat, argc, base);
-                if (call_result.has_error())
-                    return call_result.error();
+                if (call_result.has_error()) return call_result.error();
                 ret = call_result.value();
             }
 
@@ -1004,8 +899,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             m_frames_top -= 1;
             m_stack_top = finished.caller_stack_top;
 
-            if (LIKELY(m_frames_top == 0))
-                return ret;
+            if (LIKELY(m_frames_top == 0)) return ret;
 
             LOAD_FRAME();
             DISPATCH();
@@ -1014,14 +908,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         SAVE_IP();
         {
             auto call_result = call_value(callee, argc, base, true);
-            if (call_result.has_error())
-                return call_result.error();
+            if (call_result.has_error()) return call_result.error();
         }
         // A tail call to a class without a constructor completes synchronously
         // inside call_value().  In the outermost frame there is then no frame
         // for LOAD_FRAME() to read.
-        if (UNLIKELY(m_frames_top == 0))
-            return m_stack[0];
+        if (UNLIKELY(m_frames_top == 0)) return m_stack[0];
         LOAD_FRAME();
         DISPATCH();
     }
@@ -1048,8 +940,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
 
         {
             auto call_result = call_value(callee, argc, base, false);
-            if (call_result.has_error())
-                return call_result.error();
+            if (call_result.has_error()) return call_result.error();
         }
 
         LOAD_FRAME();
@@ -1076,10 +967,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
 
-        if (m_frames_top == stop_frame_depth)
-            return ret;
-        if (LIKELY(m_frames_top == 0))
-            return ret;
+        if (m_frames_top == stop_frame_depth) return ret;
+        if (LIKELY(m_frames_top == 0)) return ret;
 
         LOAD_FRAME();
         DISPATCH();
@@ -1097,10 +986,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
 
-        if (m_frames_top == stop_frame_depth)
-            return ret;
-        if (LIKELY(m_frames_top == 0))
-            return ret;
+        if (m_frames_top == stop_frame_depth) return ret;
+        if (LIKELY(m_frames_top == 0)) return ret;
 
         LOAD_FRAME();
         DISPATCH();
@@ -1118,10 +1005,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
 
-        if (m_frames_top == stop_frame_depth)
-            return ret;
-        if (LIKELY(m_frames_top == 0))
-            return ret;
+        if (m_frames_top == stop_frame_depth) return ret;
+        if (LIKELY(m_frames_top == 0)) return ret;
 
         LOAD_FRAME();
         DISPATCH();
@@ -1133,12 +1018,10 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value idx = RC();
 
         if (obj.is_string()) {
-            if (UNLIKELY(!idx.is_int()))
-                return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            if (UNLIKELY(!idx.is_int())) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
             i64 idx_int = idx.as_int();
-            if (UNLIKELY(idx_int < 0))
-                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            if (UNLIKELY(idx_int < 0)) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
             StringRef const& str = obj.as_string()->str;
 
@@ -1153,36 +1036,31 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                 char_pos++;
             }
 
-            if (UNLIKELY(byte_pos >= str.len()))
-                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            if (UNLIKELY(byte_pos >= str.len())) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
             util::decode_utf8_at(str, byte_pos, &char_bytes);
 
             StringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
             res = m_gc.make_string(ch);
         } else if (obj.is_list()) {
-            if (UNLIKELY(!idx.is_int()))
-                return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            if (UNLIKELY(!idx.is_int())) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
             i64 idx_int = idx.as_int();
             ListType list = obj.as_list()->elements;
             if (UNLIKELY(idx_int >= list.size() || idx_int < 0))
-                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS, "index " + std::to_string(idx_int) + " for list of length " + std::to_string(list.size()));
+                return raise_runtime_error(
+                    ErrorCode::INDEX_OUT_OF_BOUNDS, "index " + std::to_string(idx_int) + " for list of length " + std::to_string(list.size()));
 
             res = obj.as_list()->elements[idx_int];
         } else if (obj.is_dict()) {
             ObjDict* dict_obj = obj.as_dict();
-            if (dict_obj->data.find_ptr(idx) == nullptr)
-                res = Value::nil();
-            else
-                res = dict_obj->data[idx];
+            if (dict_obj->data.find_ptr(idx) == nullptr) res = Value::nil();
+            else res = dict_obj->data[idx];
         } else if (obj.is_instance()) {
-            if (!idx.is_string())
-                return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            if (!idx.is_string()) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
             ObjInstance* inst = obj.as_instance();
             int field_idx = inst->klass->field_index(idx.as_string()->str);
-            if (field_idx < 0)
-                return raise_runtime_error(ErrorCode::UNDEFINED_METHOD); // or a dedicated "no such field" code
+            if (field_idx < 0) return raise_runtime_error(ErrorCode::UNDEFINED_METHOD); // or a dedicated "no such field" code
             res = inst->fields[field_idx];
         } else {
             return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
@@ -1199,12 +1077,10 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         /// NOTE: 'str' is immutable by design, so INDEX_WRITE falls back to return raise_runtime_error
 
         if (obj.is_list()) {
-            if (!idx.is_int())
-                return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            if (!idx.is_int()) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
             i64 idx_int = idx.as_int();
             ObjList* list = obj.as_list();
-            if (idx_int >= list->size() || idx_int < 0)
-                return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            if (idx_int >= list->size() || idx_int < 0) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
             list->elements[idx.as_int()] = val;
         } else if (obj.is_dict()) {
             obj.as_dict()->set(idx, val);
@@ -1239,12 +1115,9 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             Array<Chunk*, GarbageCollector> vtable { &m_gc };
 
             if (parent != nullptr) {
-                for (StringRef const& field : parent->field_names)
-                    fields.push(field);
-                for (StringRef const& method : parent->method_names)
-                    methods.push(method);
-                for (Chunk* fn : parent->vtable)
-                    vtable.push(fn);
+                for (StringRef const& field : parent->field_names) fields.push(field);
+                for (StringRef const& method : parent->method_names) methods.push(method);
+                for (Chunk* fn : parent->vtable) vtable.push(fn);
             } else {
                 methods.resize(ObjClass::_COUNT);
                 vtable.resize(ObjClass::_COUNT);
@@ -1258,17 +1131,14 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                         break;
                     }
                 }
-                if (!duplicate)
-                    fields.push(klass_desc.field_names[i]);
+                if (!duplicate) fields.push(klass_desc.field_names[i]);
             }
 
             for (u32 i = 0; i < klass_desc.vtable_size; ++i) {
                 u32 fn_idx = klass_desc.vtable_indices[i];
-                if (UNLIKELY(fn_idx != ClassDescriptor::NULL_SLOT
-                        && fn_idx >= cur_chunk->functions.size()))
+                if (UNLIKELY(fn_idx != ClassDescriptor::NULL_SLOT && fn_idx >= cur_chunk->functions.size()))
                     return raise_runtime_error(ErrorCode::INVALID_OPCODE, "class method index out of bounds");
-                if (fn_idx == ClassDescriptor::NULL_SLOT || klass_desc.method_names[i].empty())
-                    continue;
+                if (fn_idx == ClassDescriptor::NULL_SLOT || klass_desc.method_names[i].empty()) continue;
                 Chunk* method_chunk = cur_chunk->functions[fn_idx];
                 method_chunk->globals = current_globals();
 
@@ -1306,8 +1176,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(NEW_INSTANCE)
     {
         u16 index = instr_Bx(instr);
-        if (UNLIKELY(index >= cur_chunk->constants.size()
-                || !cur_chunk->constants[index].is_class()))
+        if (UNLIKELY(index >= cur_chunk->constants.size() || !cur_chunk->constants[index].is_class()))
             return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid class constant");
         ObjClass* klass = cur_chunk->constants[index].as_class();
         RA() = m_gc.make_instance(klass);
@@ -1319,15 +1188,13 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         u8 slot = instr_B(instr);
         u8 argc = instr_C(instr);
 
-        if (UNLIKELY(ip >= cur_chunk->code.size()
-                || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
+        if (UNLIKELY(ip >= cur_chunk->code.size() || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
             return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing INVOKE cache payload");
         ++ip; // consume the trailing NOP carrying the IC slot index
 
         Value self_val = cur_base[self_reg];
 
-        if (UNLIKELY(!self_val.is_instance()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
+        if (UNLIKELY(!self_val.is_instance())) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
 
         ObjInstance* inst = self_val.as_instance();
 
@@ -1335,11 +1202,9 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
 
         {
-            auto invoke_result = invoke_method(inst->klass->vtable[slot], self_val,
-                cur_frame_base + self_reg, cur_frame_base + self_reg + 1,
-                argc, ip, m_stack_top, inst->klass->vtable[slot]->globals);
-            if (invoke_result.has_error())
-                return invoke_result.error();
+            auto invoke_result = invoke_method(inst->klass->vtable[slot], self_val, cur_frame_base + self_reg, cur_frame_base + self_reg + 1, argc,
+                ip, m_stack_top, inst->klass->vtable[slot]->globals);
+            if (invoke_result.has_error()) return invoke_result.error();
         }
 
         LOAD_FRAME();
@@ -1351,11 +1216,9 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             Value inst = RA();
             u8 argc = instr_C(instr);
 
-            if (UNLIKELY(ip >= cur_chunk->code.size()))
-                return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing INVOKE_NAMED payload");
+            if (UNLIKELY(ip >= cur_chunk->code.size())) return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing INVOKE_NAMED payload");
             u32 payload = cur_chunk->code[ip++];
-            if (UNLIKELY(instr_op(payload) != OpCode::NOP))
-                return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid INVOKE_NAMED payload");
+            if (UNLIKELY(instr_op(payload) != OpCode::NOP)) return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid INVOKE_NAMED payload");
             u32 name_idx = instr_Bx(payload);
 
             /// there many unchecked operations that may potentially fail here
@@ -1363,8 +1226,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             /// otherwise it should throw an early error, also that index should always contain
             /// a string object and of course the index muse be an int, all of these must be
             /// guaranteed by the compiler before emitting this instruction
-            if (UNLIKELY(name_idx >= cur_chunk->constants.size()
-                    || !cur_chunk->constants[name_idx].is_string()))
+            if (UNLIKELY(name_idx >= cur_chunk->constants.size() || !cur_chunk->constants[name_idx].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid method-name constant");
             StringRef method_name = cur_chunk->constants[name_idx].as_string()->str;
             Value callee = Value::nil();
@@ -1373,7 +1235,8 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                 ObjModule* module = inst.as_module();
                 Value const* value = module->globals == nullptr ? nullptr : module->globals->find(method_name);
                 if (value == nullptr || module->globals->index.find_ptr(method_name) == nullptr)
-                    return raise_runtime_error(ErrorCode::UNDEFINED_GLOBAL, "module has no export '" + std::string(method_name.data(), method_name.len()) + "'");
+                    return raise_runtime_error(
+                        ErrorCode::UNDEFINED_GLOBAL, "module has no export '" + std::string(method_name.data(), method_name.len()) + "'");
                 callee = *value;
                 callable_member = true;
             } else if (inst.is_instance()) {
@@ -1387,31 +1250,25 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                 return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
             }
             if (callable_member) {
-                if (argc == 0)
-                    return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing member-call receiver slot");
+                if (argc == 0) return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing member-call receiver slot");
                 int result_slot = cur_frame_base + instr_A(instr);
                 // Named calls reserve an implicit-self slot. Plain callable
                 // attributes receive only their explicit arguments.
-                for (u32 i = 0; i + 1 < argc; ++i)
-                    m_stack[result_slot + 1 + i] = m_stack[result_slot + 2 + i];
+                for (u32 i = 0; i + 1 < argc; ++i) m_stack[result_slot + 1 + i] = m_stack[result_slot + 2 + i];
                 m_stack[result_slot] = callee;
                 SAVE_IP();
                 auto call_result = call_value(callee, static_cast<int>(argc - 1), result_slot + 1, false);
-                if (call_result.has_error())
-                    return call_result.error();
+                if (call_result.has_error()) return call_result.error();
             } else {
                 ObjInstance* inst_obj = inst.as_instance();
                 int slot = inst_obj->klass->method_slot(method_name);
                 if (slot == -1)
-                    return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL,
-                        "instance class does not define this method: " + std::string(method_name.data()));
+                    return raise_runtime_error(
+                        ErrorCode::TYPE_ERROR_CALL, "instance class does not define this method: " + std::string(method_name.data()));
 
-                auto invoke_result = invoke_method(inst_obj->klass->vtable[slot], inst,
-                    cur_frame_base + instr_A(instr),
-                    cur_frame_base + instr_A(instr) + 1,
-                    static_cast<int>(argc), ip, m_stack_top, inst_obj->klass->vtable[slot]->globals);
-                if (invoke_result.has_error())
-                    return invoke_result.error();
+                auto invoke_result = invoke_method(inst_obj->klass->vtable[slot], inst, cur_frame_base + instr_A(instr),
+                    cur_frame_base + instr_A(instr) + 1, static_cast<int>(argc), ip, m_stack_top, inst_obj->klass->vtable[slot]->globals);
+                if (invoke_result.has_error()) return invoke_result.error();
             }
         }
         LOAD_FRAME();
@@ -1423,8 +1280,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         Value obj_v = RB();
 
         if (obj_v.is_module()) {
-            if (UNLIKELY(instr_C(instr) != 0xFF || ip >= cur_chunk->code.size()
-                    || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
+            if (UNLIKELY(instr_C(instr) != 0xFF || ip >= cur_chunk->code.size() || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "module access requires a name payload");
             u16 name_idx = instr_Bx(cur_chunk->code[ip++]);
             if (UNLIKELY(name_idx >= cur_chunk->constants.size() || !cur_chunk->constants[name_idx].is_string()))
@@ -1441,33 +1297,28 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
 
         if (!UNLIKELY(obj_v.is_instance())) {
             auto type_result = type(1, &obj_v);
-            if (type_result.has_error())
-                return type_result.error();
-            return raise_runtime_error(ErrorCode::UNDEFINED_FIELD,
-                type_result.value().as_string()->str.data() + std::string(" is not a class"));
+            if (type_result.has_error()) return type_result.error();
+            return raise_runtime_error(ErrorCode::UNDEFINED_FIELD, type_result.value().as_string()->str.data() + std::string(" is not a class"));
         }
 
         ObjInstance* inst = obj_v.as_instance();
         u8 field_idx = instr_C(instr);
 
         if (field_idx == 0xFF) {
-            if (UNLIKELY(ip >= cur_chunk->code.size()
-                    || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
+            if (UNLIKELY(ip >= cur_chunk->code.size() || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing GET_FIELD payload");
             u32 payload = cur_chunk->code[ip]; // the NOP immediately after GET_FIELD
             u16 name_idx = instr_Bx(payload);
             ip++; // consume the payload word so DISPATCH doesn't re-decode it as a real op
 
-            if (UNLIKELY(name_idx >= cur_chunk->constants.size()
-                    || !cur_chunk->constants[name_idx].is_string()))
+            if (UNLIKELY(name_idx >= cur_chunk->constants.size() || !cur_chunk->constants[name_idx].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid field-name constant");
             ObjString* name_obj = cur_chunk->constants[name_idx].as_string();
             int slot = inst->klass->field_index(name_obj->str); // needs a runtime-side field_index lookup
 
             if (UNLIKELY(slot < 0)) {
                 RuntimeResult type_result = type(1, &obj_v);
-                if (type_result.has_error())
-                    return type_result.error();
+                if (type_result.has_error()) return type_result.error();
                 return raise_runtime_error(ErrorCode::UNDEFINED_FIELD,
                     type_result.value().as_string()->str.data() + std::string(" does not define ") + name_obj->str.data());
             }
@@ -1476,8 +1327,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             DISPATCH();
         }
 
-        if (UNLIKELY(field_idx >= inst->fields.size()))
-            return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        if (UNLIKELY(field_idx >= inst->fields.size())) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
         res = inst->fields[field_idx];
         DISPATCH();
@@ -1485,35 +1335,29 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     CASE(SET_FIELD)
     {
         Value obj_v = RA();
-        if (UNLIKELY(!obj_v.is_instance()))
-            return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "SET_FIELD on non-instance");
+        if (UNLIKELY(!obj_v.is_instance())) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "SET_FIELD on non-instance");
 
         ObjInstance* inst = obj_v.as_instance();
         u8 field_idx = instr_B(instr);
 
         if (field_idx == 0xFF) {
-            if (UNLIKELY(ip >= cur_chunk->code.size()
-                    || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
+            if (UNLIKELY(ip >= cur_chunk->code.size() || instr_op(cur_chunk->code[ip]) != OpCode::NOP))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "missing SET_FIELD payload");
             u32 payload = cur_chunk->code[ip++];
             u16 name_idx = instr_Bx(payload);
 
-            if (UNLIKELY(name_idx >= cur_chunk->constants.size()
-                    || !cur_chunk->constants[name_idx].is_string()))
+            if (UNLIKELY(name_idx >= cur_chunk->constants.size() || !cur_chunk->constants[name_idx].is_string()))
                 return raise_runtime_error(ErrorCode::INVALID_OPCODE, "invalid field-name constant");
 
             ObjString* name_obj = cur_chunk->constants[name_idx].as_string();
             int slot = inst->klass->field_index(name_obj->str);
-            if (UNLIKELY(slot < 0))
-                return raise_runtime_error(ErrorCode::UNDEFINED_FIELD,
-                    std::string(name_obj->str.data(), name_obj->str.len()));
+            if (UNLIKELY(slot < 0)) return raise_runtime_error(ErrorCode::UNDEFINED_FIELD, std::string(name_obj->str.data(), name_obj->str.len()));
 
             inst->fields[static_cast<u32>(slot)] = RC();
             DISPATCH();
         }
 
-        if (UNLIKELY(field_idx >= inst->fields.size()))
-            return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        if (UNLIKELY(field_idx >= inst->fields.size())) return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
         inst->fields[field_idx] = RC();
         DISPATCH();

@@ -51,8 +51,7 @@ struct CallFrame {
 
     CallFrame() = default;
 
-    explicit CallFrame(ObjFunction* cl, Chunk* ch, PCType ip, u16 b, u16 lc,
-        u16 ret_slot, u16 saved_stack_top, GlobalEnvironment* env = nullptr,
+    explicit CallFrame(ObjFunction* cl, Chunk* ch, PCType ip, u16 b, u16 lc, u16 ret_slot, u16 saved_stack_top, GlobalEnvironment* env = nullptr,
         ObjModule* module_obj = nullptr)
         : func(cl)
         , chunk(ch)
@@ -221,11 +220,9 @@ private:
     FAIRUZ_NODISCARD RuntimeResult call_value_sync(Value callee, ObjList* arguments);
     FAIRUZ_NODISCARD RuntimeResult call_native(ObjNative* nat, int argc, int base);
     FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> call_value(Value callee, int argc, int base, bool tail);
-    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> invoke_method(Chunk* target_chunk, Value self_val, int result_slot,
-        int call_base, int total_argc, u32 return_ip, int caller_stack_top,
-        GlobalEnvironment* globals = nullptr);
-    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> run_instance_op(Value const& lhs, Value const& rhs,
-        int op, u32 instr, int cur_frame_base, u32 ip);
+    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> invoke_method(Chunk* target_chunk, Value self_val, int result_slot, int call_base, int total_argc,
+        u32 return_ip, int caller_stack_top, GlobalEnvironment* globals = nullptr);
+    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> run_instance_op(Value const& lhs, Value const& rhs, int op, u32 instr, int cur_frame_base, u32 ip);
 
     /// Generic helpers
     ObjString* intern(StringRef const& str);
@@ -283,8 +280,7 @@ private:
         case ObjClass::GT: return "اكبر_من";
         case ObjClass::GTE: return "اكبر_او_يساوي";
         case ObjClass::REPR: return "كتابة";
-        default:
-            return { };
+        default: return { };
         }
     }
 }; // class VM

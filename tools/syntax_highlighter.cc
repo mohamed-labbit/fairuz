@@ -54,8 +54,7 @@ public:
                 continue;
             }
             if (cp == '#') {
-                while (m_offset < m_source.len() && current() != '\n')
-                    advance();
+                while (m_offset < m_source.len() && current() != '\n') advance();
                 add(start, start_line, start_column, "comment", tok::TokenType::INVALID);
                 continue;
             }
@@ -65,55 +64,39 @@ public:
                 bool escaped = false;
                 while (m_offset < m_source.len()) {
                     u32 ch = current();
-                    if (ch == '\n')
-                        break;
+                    if (ch == '\n') break;
                     advance();
-                    if (!escaped && ch == quote)
-                        break;
-                    if (!escaped && ch == '\\')
-                        escaped = true;
-                    else
-                        escaped = false;
+                    if (!escaped && ch == quote) break;
+                    if (!escaped && ch == '\\') escaped = true;
+                    else escaped = false;
                 }
                 add(start, start_line, start_column, "string", tok::TokenType::STRING);
                 continue;
             }
             if (IS_IDENT_S(cp)) {
                 advance();
-                while (m_offset < m_source.len() && IS_IDENT_C(current()))
-                    advance();
+                while (m_offset < m_source.len() && IS_IDENT_C(current())) advance();
                 StringRef word = m_source.slice(start, m_offset);
                 auto keyword = tok::lookup_keyword(word);
                 tok::TokenType kind = keyword.value_or(tok::TokenType::NAME);
                 std::string type = "variable";
-                if (kind == tok::TokenType::KW_TRUE || kind == tok::TokenType::KW_FALSE)
-                    type = "boolean";
-                else if (kind == tok::TokenType::KW_NIL)
-                    type = "null";
-                else if (keyword.has_value())
-                    type = "keyword";
+                if (kind == tok::TokenType::KW_TRUE || kind == tok::TokenType::KW_FALSE) type = "boolean";
+                else if (kind == tok::TokenType::KW_NIL) type = "null";
+                else if (keyword.has_value()) type = "keyword";
                 add(start, start_line, start_column, type.c_str(), kind);
                 continue;
             }
             if (IS_DIGIT(cp)) {
                 advance();
                 if (cp == '0' && m_offset < m_source.len()
-                    && (current() == 'x' || current() == 'X'
-                        || current() == 'o' || current() == 'O'
-                        || current() == 'b' || current() == 'B')) {
+                    && (current() == 'x' || current() == 'X' || current() == 'o' || current() == 'O' || current() == 'b' || current() == 'B')) {
                     advance();
-                    while (m_offset < m_source.len()
-                        && (IS_XDIGIT(current()) || current() == '_'))
-                        advance();
+                    while (m_offset < m_source.len() && (IS_XDIGIT(current()) || current() == '_')) advance();
                 } else {
-                    while (m_offset < m_source.len()
-                        && (IS_DIGIT(current()) || current() == '_'))
-                        advance();
+                    while (m_offset < m_source.len() && (IS_DIGIT(current()) || current() == '_')) advance();
                     if (m_offset < m_source.len() && current() == '.') {
                         advance();
-                        while (m_offset < m_source.len()
-                            && (IS_DIGIT(current()) || current() == '_'))
-                            advance();
+                        while (m_offset < m_source.len() && (IS_DIGIT(current()) || current() == '_')) advance();
                     }
                 }
                 add(start, start_line, start_column, "number", tok::TokenType::INTEGER);
@@ -121,8 +104,7 @@ public:
             }
             if (is_operator(cp)) {
                 advance();
-                while (m_offset < m_source.len() && is_operator(current()))
-                    advance();
+                while (m_offset < m_source.len() && is_operator(current())) advance();
                 add(start, start_line, start_column, "operator", tok::TokenType::OP_PLUS);
                 continue;
             }
@@ -155,8 +137,7 @@ private:
 
     static bool is_operator(u32 cp)
     {
-        return cp == '+' || cp == '-' || cp == '*' || cp == '/' || cp == '%'
-            || cp == 0x066a || cp == '&' || cp == '|' || cp == '^' || cp == '~'
+        return cp == '+' || cp == '-' || cp == '*' || cp == '/' || cp == '%' || cp == 0x066a || cp == '&' || cp == '|' || cp == '^' || cp == '~'
             || cp == '<' || cp == '>' || cp == '=' || cp == '!' || cp == ':';
     }
 
@@ -173,13 +154,7 @@ private:
 
     void classify_imports()
     {
-        enum class State {
-            None,
-            FromModule,
-            DirectModule,
-            Member,
-            Alias
-        } state = State::None;
+        enum class State { None, FromModule, DirectModule, Member, Alias } state = State::None;
         bool from_import = false;
         Token* direct_binding = nullptr;
         u32 line = 0;
@@ -195,18 +170,13 @@ private:
                 from_import = true;
                 state = State::FromModule;
                 break;
-            case tok::TokenType::KW_IMPORT:
-                state = from_import ? State::Member : State::DirectModule;
-                break;
-            case tok::TokenType::KW_AS:
-                state = State::Alias;
-                break;
+            case tok::TokenType::KW_IMPORT: state = from_import ? State::Member : State::DirectModule; break;
+            case tok::TokenType::KW_AS: state = State::Alias; break;
             case tok::TokenType::NAME:
                 if (state == State::FromModule) {
                     span.token.type = "namespace";
                 } else if (state == State::DirectModule) {
-                    if (direct_binding)
-                        direct_binding->declaration = false;
+                    if (direct_binding) direct_binding->declaration = false;
                     span.token.type = "namespace";
                     span.token.declaration = true;
                     direct_binding = &span.token;
@@ -215,8 +185,7 @@ private:
                     span.token.declaration = true;
                     state = State::None;
                 } else if (state == State::Alias) {
-                    if (direct_binding)
-                        direct_binding->declaration = false;
+                    if (direct_binding) direct_binding->declaration = false;
                     span.token.type = from_import ? "variable" : "namespace";
                     span.token.declaration = true;
                     state = State::None;
@@ -237,8 +206,7 @@ public:
 
     void program(Array<AST::StmtPtr> const& statements)
     {
-        for (AST::StmtPtr statement : statements)
-            stmt(statement, false);
+        for (AST::StmtPtr statement : statements) stmt(statement, false);
     }
 
 private:
@@ -246,19 +214,16 @@ private:
 
     void mark(AST::ASTNode const* node, char const* type, bool declaration = false)
     {
-        if (!node)
-            return;
+        if (!node) return;
         auto found = m_tokens.find(node->get_location().offset);
-        if (found == m_tokens.end())
-            return;
+        if (found == m_tokens.end()) return;
         found->second->type = type;
         found->second->declaration = declaration;
     }
 
     void target(AST::ExprPtr expression)
     {
-        if (!expression)
-            return;
+        if (!expression) return;
         if (AST::is_identifier(expression)) {
             mark(expression, "variable", true);
         } else if (expression->get_kind() == AST::ExprKind::GET) {
@@ -272,8 +237,7 @@ private:
 
     void expr(AST::ExprPtr expression)
     {
-        if (!expression)
-            return;
+        if (!expression) return;
         switch (expression->get_kind()) {
         case AST::ExprKind::OP_ADD:
         case AST::ExprKind::OP_SUB:
@@ -302,21 +266,16 @@ private:
         case AST::ExprKind::OP_PLUS:
         case AST::ExprKind::OP_NEG:
         case AST::ExprKind::OP_BITNOT:
-        case AST::ExprKind::OP_NOT:
-            expr(AST::as_unary(expression)->operand);
-            break;
+        case AST::ExprKind::OP_NOT: expr(AST::as_unary(expression)->operand); break;
         case AST::ExprKind::CALL: {
             auto* call = AST::as_call(expression);
-            if (AST::is_identifier(call->callee))
-                mark(call->callee, "function");
+            if (AST::is_identifier(call->callee)) mark(call->callee, "function");
             else if (call->callee->get_kind() == AST::ExprKind::GET) {
                 auto* get = AST::as_get(call->callee);
                 expr(get->object);
                 mark(get->member, "method");
-            } else
-                expr(call->callee);
-            for (AST::ExprPtr argument : call->args)
-                expr(argument);
+            } else expr(call->callee);
+            for (AST::ExprPtr argument : call->args) expr(argument);
             break;
         }
         case AST::ExprKind::ASSIGNMENT: {
@@ -326,8 +285,7 @@ private:
             break;
         }
         case AST::ExprKind::LIST:
-            for (AST::ExprPtr item : AST::as_list(expression)->elements)
-                expr(item);
+            for (AST::ExprPtr item : AST::as_list(expression)->elements) expr(item);
             break;
         case AST::ExprKind::DICT:
             for (auto const& item : AST::as_dict(expression)->content) {
@@ -354,19 +312,16 @@ private:
     void function(AST::FuncDefStmt const* value, bool method)
     {
         mark(value->name, method ? "method" : "function", true);
-        for (AST::ExprPtr parameter : value->params)
-            mark(parameter, "parameter", true);
+        for (AST::ExprPtr parameter : value->params) mark(parameter, "parameter", true);
         stmt(value->body, false);
     }
 
     void stmt(AST::StmtPtr statement, bool class_member)
     {
-        if (!statement)
-            return;
+        if (!statement) return;
         switch (statement->get_kind()) {
         case AST::Stmt::Kind::BLOCK:
-            for (AST::StmtPtr child : AST::as_block(statement)->stmts)
-                stmt(child, class_member);
+            for (AST::StmtPtr child : AST::as_block(statement)->stmts) stmt(child, class_member);
             break;
         case AST::Stmt::Kind::EXPR: expr(AST::as_expr_stmt(statement)->expr); break;
         case AST::Stmt::Kind::IF: {
@@ -395,10 +350,8 @@ private:
             auto* value = AST::as_class_def(statement);
             mark(value->name, "class", true);
             mark(value->parent, "class");
-            for (AST::ExprPtr member : value->members)
-                target(member);
-            for (AST::StmtPtr method : value->methods)
-                stmt(method, true);
+            for (AST::ExprPtr member : value->members) target(member);
+            for (AST::StmtPtr method : value->methods) stmt(method, true);
             break;
         }
         default: break;
@@ -414,8 +367,7 @@ Result Highlighter::highlight(StringRef const& source)
     Result result;
     std::unordered_map<u64, Token*> by_offset;
     for (Span& span : spans)
-        if (span.lexical_type == tok::TokenType::NAME)
-            by_offset[span.offset] = &span.token;
+        if (span.lexical_type == tok::TokenType::NAME) by_offset[span.offset] = &span.token;
 
     diagnostic::reset();
     lex::FileManager file;
@@ -433,11 +385,9 @@ Result Highlighter::highlight(StringRef const& source)
 
     result.tokens.reserve(spans.size());
     for (Span& span : spans)
-        if (span.token.length > 0)
-            result.tokens.push_back(std::move(span.token));
-    std::sort(result.tokens.begin(), result.tokens.end(), [](Token const& a, Token const& b) {
-        return a.line != b.line ? a.line < b.line : a.start < b.start;
-    });
+        if (span.token.length > 0) result.tokens.push_back(std::move(span.token));
+    std::sort(result.tokens.begin(), result.tokens.end(),
+        [](Token const& a, Token const& b) { return a.line != b.line ? a.line < b.line : a.start < b.start; });
     return result;
 }
 

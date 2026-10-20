@@ -82,13 +82,10 @@ public:
     {
         // stdout is captured right now -- stash this, print it for real
         // from OnTestEnd once capturing has stopped.
-        if (!result.failed())
-            return;
+        if (!result.failed()) return;
 
         std::ostringstream msg;
-        msg << (result.file_name() ? result.file_name() : "unknown file")
-            << ":" << result.line_number() << "\n"
-            << result.summary();
+        msg << (result.file_name() ? result.file_name() : "unknown file") << ":" << result.line_number() << "\n" << result.summary();
         failures_.push_back(msg.str());
     }
 
@@ -97,30 +94,24 @@ public:
         std::string out = ::testing::internal::GetCapturedStdout();
         std::string err = ::testing::internal::GetCapturedStderr();
 
-        if (!test_info.result()->Failed())
-            return; // passed -- discard captured output, line stays as-is
+        if (!test_info.result()->Failed()) return; // passed -- discard captured output, line stays as-is
 
         any_failed_ = true;
 
         // Break out of single-line mode so this failure gets a permanent
         // block instead of being overwritten by the next progress line.
         std::cout << "\n";
-        if (is_tty_)
-            std::cout << kRed;
+        if (is_tty_) std::cout << kRed;
         std::cout << "[FAILED] " << test_info.test_suite_name() << "." << test_info.name();
-        if (is_tty_)
-            std::cout << kReset;
+        if (is_tty_) std::cout << kReset;
         std::cout << "\n";
 
         for (auto const& failure : failures_)
-            std::cout << failure << "\n"
-                                    "\n";
-        if (!out.empty())
-            std::cout << "----- stdout -----\n"
-                      << out << "\n";
-        if (!err.empty())
-            std::cout << "----- stderr -----\n"
-                      << err << "\n";
+            std::cout << failure
+                      << "\n"
+                         "\n";
+        if (!out.empty()) std::cout << "----- stdout -----\n" << out << "\n";
+        if (!err.empty()) std::cout << "----- stderr -----\n" << err << "\n";
 
         std::cout << std::flush;
     }
@@ -128,33 +119,25 @@ public:
     void OnTestProgramEnd(::testing::UnitTest const& unit_test) override
     {
         std::cout << "\n";
-        if (is_tty_)
-            std::cout << (unit_test.Passed() ? kGreen : kRed);
-        std::string failed_string = unit_test.failed_test_case_count() != 0 ? " failed from "
-                + std::to_string(unit_test.failed_test_suite_count()) + " test suite"
-                                                                            : " failed";
-        std::cout << "==== " << unit_test.successful_test_count() << "/" << unit_test.total_test_count()
-                  << " tests passed from " << unit_test.successful_test_suite_count() << " test suite ("
-                  << unit_test.failed_test_count() << failed_string << ", "
+        if (is_tty_) std::cout << (unit_test.Passed() ? kGreen : kRed);
+        std::string failed_string = unit_test.failed_test_case_count() != 0
+            ? " failed from " + std::to_string(unit_test.failed_test_suite_count()) + " test suite"
+            : " failed";
+        std::cout << "==== " << unit_test.successful_test_count() << "/" << unit_test.total_test_count() << " tests passed from "
+                  << unit_test.successful_test_suite_count() << " test suite (" << unit_test.failed_test_count() << failed_string << ", "
                   << unit_test.skipped_test_count() << " skipped)" << " ====";
-        if (is_tty_)
-            std::cout << kReset;
-        std::cout << "\n"
-                  << std::flush;
+        if (is_tty_) std::cout << kReset;
+        std::cout << "\n" << std::flush;
     }
 
 private:
     void print_progress_line(::testing::TestInfo const& test_info)
     {
         std::ostringstream line;
-        if (is_tty_)
-            line << "\r\033[K" << (any_failed_ ? kRed : kGreen);
-        line << "[" << current_ << "/" << total_ << "] "
-             << test_info.test_suite_name() << "." << test_info.name();
-        if (is_tty_)
-            line << kReset;
-        else
-            line << "\n"; // no overwrite available -- one line per test
+        if (is_tty_) line << "\r\033[K" << (any_failed_ ? kRed : kGreen);
+        line << "[" << current_ << "/" << total_ << "] " << test_info.test_suite_name() << "." << test_info.name();
+        if (is_tty_) line << kReset;
+        else line << "\n"; // no overwrite available -- one line per test
         std::cout << line.str() << std::flush;
     }
 
@@ -177,12 +160,9 @@ int main(int argc, char** argv)
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
-        if (arg == "--print-ast")
-            test_config::print_ast = true;
-        else if (arg == "--dump-bytecode")
-            test_config::dump_bytecode = true;
-        else if (arg == "-v")
-            test_config::verbose = true;
+        if (arg == "--print-ast") test_config::print_ast = true;
+        else if (arg == "--dump-bytecode") test_config::dump_bytecode = true;
+        else if (arg == "-v") test_config::verbose = true;
         else {
             std::cerr << "main: unknown option " << arg << std::endl;
             return 1;
@@ -206,8 +186,7 @@ int main(int argc, char** argv)
     auto const start = std::chrono::steady_clock::now();
     int ret = RUN_ALL_TESTS();
     auto const elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
-    std::cout << "Total test time: " << std::fixed << std::setprecision(3)
-              << elapsed.count() << " seconds\n";
+    std::cout << "Total test time: " << std::fixed << std::setprecision(3) << elapsed.count() << " seconds\n";
     fairuz::g_context = nullptr;
 
     return ret;

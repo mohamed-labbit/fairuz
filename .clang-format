@@ -7,9 +7,12 @@ BasedOnStyle: WebKit
 BraceWrapping:
     AfterFunction: true
 AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
 BreakBeforeBraces: Custom
 BreakBeforeInheritanceComma: true
 BreakConstructorInitializers: BeforeComma
+ColumnLimit: 150
 IndentPPDirectives: AfterHash
 IndentRequiresClause: false
 InsertNewlineAtEOF: true

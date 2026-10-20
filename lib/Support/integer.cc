@@ -29,16 +29,13 @@ constexpr size_t max_limbs = 1u << 19;
 
 void check_size(size_t a, size_t b = 0)
 {
-    if (a > max_limbs || b > max_limbs - a)
-        diagnostic::fatal_error(ErrorCode::ALLOC_FAILED, "integer exceeds the 2^24-bit resource limit");
+    if (a > max_limbs || b > max_limbs - a) diagnostic::fatal_error(ErrorCode::ALLOC_FAILED, "integer exceeds the 2^24-bit resource limit");
 }
 
 void normalize(Data& d)
 {
-    while (!d.limbs.empty() && d.limbs.back() == 0)
-        d.limbs.pop_back();
-    if (d.limbs.empty())
-        d.positive = true;
+    while (!d.limbs.empty() && d.limbs.back() == 0) d.limbs.pop_back();
+    if (d.limbs.empty()) d.positive = true;
 }
 
 struct Operand {
@@ -58,20 +55,17 @@ struct Operand {
             u64 mag = positive ? bits : u64 { 0 } - bits;
             local[0] = static_cast<u32>(mag);
             local[1] = static_cast<u32>(mag >> 32);
-            limbs = View(local, local[1] ? 2 : local[0] ? 1
-                                                        : 0);
+            limbs = View(local, local[1] ? 2 : local[0] ? 1 : 0);
         }
     }
 };
 
 int cmp(View a, View b) noexcept
 {
-    if (a.size() != b.size())
-        return a.size() < b.size() ? -1 : 1;
+    if (a.size() != b.size()) return a.size() < b.size() ? -1 : 1;
 
     for (size_t i = a.size(); i-- > 0;) {
-        if (a[i] != b[i])
-            return a[i] < b[i] ? -1 : 1;
+        if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
     }
 
     return 0;
@@ -91,8 +85,7 @@ Limbs plus(View a, View b)
         carry = total >> 32;
     }
 
-    if (carry)
-        out.push_back(static_cast<u32>(carry));
+    if (carry) out.push_back(static_cast<u32>(carry));
 
     return out;
 }
@@ -109,8 +102,7 @@ Limbs minus(View a, View b)
         borrow = u64(a[i]) < sub;
     }
 
-    while (!out.empty() && !out.back())
-        out.pop_back();
+    while (!out.empty() && !out.back()) out.pop_back();
 
     return out;
 }
@@ -119,16 +111,12 @@ Data signed_add(Operand const& a, Operand const& b, bool subtract)
 {
     bool bp = b.positive != subtract;
 
-    if (a.positive == bp)
-        return { plus(a.limbs, b.limbs), a.positive };
+    if (a.positive == bp) return { plus(a.limbs, b.limbs), a.positive };
 
     int order = cmp(a.limbs, b.limbs);
-    if (!order)
-        return { };
+    if (!order) return { };
 
-    return order > 0
-        ? Data { minus(a.limbs, b.limbs), a.positive }
-        : Data { minus(b.limbs, a.limbs), bp };
+    return order > 0 ? Data { minus(a.limbs, b.limbs), a.positive } : Data { minus(b.limbs, a.limbs), bp };
 }
 
 Data copy(Value v)
@@ -137,18 +125,12 @@ Data copy(Value v)
     return { Limbs(a.limbs.begin(), a.limbs.end()), a.positive };
 }
 
-size_t bits(View a)
-{
-    return a.empty() ? 0 : (a.size() - 1) * 32 + std::bit_width(a.back());
-}
+size_t bits(View a) { return a.empty() ? 0 : (a.size() - 1) * 32 + std::bit_width(a.back()); }
 
 std::pair<Limbs, Limbs> divmod(View a, View b)
 {
-    if (b.empty())
-        diagnostic::fatal_error(ErrorCode::DIVISION_BY_ZERO);
-
-    if (cmp(a, b) < 0)
-        return { { }, Limbs(a.begin(), a.end()) };
+    if (b.empty()) diagnostic::fatal_error(ErrorCode::DIVISION_BY_ZERO);
+    if (cmp(a, b) < 0) return { { }, Limbs(a.begin(), a.end()) };
 
     Limbs q(a.size()), r;
 
@@ -161,8 +143,7 @@ std::pair<Limbs, Limbs> divmod(View a, View b)
             rem = cur % b[0];
         }
 
-        if (rem)
-            r.push_back(static_cast<u32>(rem));
+        if (rem) r.push_back(static_cast<u32>(rem));
     } else {
         check_size(b.size(), 1);
         r.reserve(b.size() + 1);
@@ -176,8 +157,7 @@ std::pair<Limbs, Limbs> divmod(View a, View b)
                 carry = v >> 32;
             }
 
-            if (carry)
-                r.push_back(static_cast<u32>(carry));
+            if (carry) r.push_back(static_cast<u32>(carry));
 
             if (cmp(r, b) >= 0) {
                 r = minus(r, b);
@@ -186,8 +166,7 @@ std::pair<Limbs, Limbs> divmod(View a, View b)
         }
     }
 
-    while (!q.empty() && !q.back())
-        q.pop_back();
+    while (!q.empty() && !q.back()) q.pop_back();
 
     return { std::move(q), std::move(r) };
 }
@@ -210,10 +189,8 @@ Data from_i64(i64 value)
     u64 magnitude = value < 0 ? u64 { 0 } - bits : bits;
     Data d { { }, value >= 0 };
 
-    if (magnitude)
-        d.limbs.push_back(static_cast<u32>(magnitude));
-    if (magnitude >> 32)
-        d.limbs.push_back(static_cast<u32>(magnitude >> 32));
+    if (magnitude) d.limbs.push_back(static_cast<u32>(magnitude));
+    if (magnitude >> 32) d.limbs.push_back(static_cast<u32>(magnitude >> 32));
 
     return d;
 }
@@ -225,13 +202,11 @@ Value finish(Data d, GarbageCollector& gc)
 
     if (d.limbs.size() <= 2) {
         u64 mag = d.limbs.empty() ? 0 : d.limbs[0];
-        if (d.limbs.size() == 2)
-            mag |= u64(d.limbs[1]) << 32;
+        if (d.limbs.size() == 2) mag |= u64(d.limbs[1]) << 32;
 
         u64 bound = d.positive ? u64(Value::int_max()) : u64 { 0 } - u64(Value::int_min());
         if (mag <= bound) {
-            if (!d.positive && mag == (u64 { 1 } << 63))
-                return Value::from_int(INT64_MIN);
+            if (!d.positive && mag == (u64 { 1 } << 63)) return Value::from_int(INT64_MIN);
             return Value::from_int(d.positive ? static_cast<i64>(mag) : -static_cast<i64>(mag));
         }
     }
@@ -246,12 +221,10 @@ Value add(Value lhs, Value rhs, GarbageCollector& gc)
     if (!lhs.is_big_int() && !rhs.is_big_int()) {
 #if defined(__GNUC__) || defined(__clang__)
         i64 result;
-        if (!__builtin_add_overflow(lhs.as_int(), rhs.as_int(), &result))
-            return Value::from_int(result, gc);
+        if (!__builtin_add_overflow(lhs.as_int(), rhs.as_int(), &result)) return Value::from_int(result, gc);
 #else
         i64 a = lhs.as_int(), b = rhs.as_int();
-        if (!((b > 0 && a > INT64_MAX - b) || (b < 0 && a < INT64_MIN - b)))
-            return Value::from_int(a + b, gc);
+        if (!((b > 0 && a > INT64_MAX - b) || (b < 0 && a < INT64_MIN - b))) return Value::from_int(a + b, gc);
 #endif
     }
 
@@ -264,12 +237,10 @@ Value sub(Value lhs, Value rhs, GarbageCollector& gc)
     if (!lhs.is_big_int() && !rhs.is_big_int()) {
 #if defined(__GNUC__) || defined(__clang__)
         i64 result;
-        if (!__builtin_sub_overflow(lhs.as_int(), rhs.as_int(), &result))
-            return Value::from_int(result, gc);
+        if (!__builtin_sub_overflow(lhs.as_int(), rhs.as_int(), &result)) return Value::from_int(result, gc);
 #else
         i64 a = lhs.as_int(), b = rhs.as_int();
-        if (!((b < 0 && a > INT64_MAX + b) || (b > 0 && a < INT64_MIN + b)))
-            return Value::from_int(a - b, gc);
+        if (!((b < 0 && a > INT64_MAX + b) || (b > 0 && a < INT64_MIN + b))) return Value::from_int(a - b, gc);
 #endif
     }
 
@@ -282,14 +253,12 @@ Value mul(Value lhs, Value rhs, GarbageCollector& gc)
 #if defined(__GNUC__) || defined(__clang__)
     if (!lhs.is_big_int() && !rhs.is_big_int()) {
         i64 result;
-        if (!__builtin_mul_overflow(lhs.as_int(), rhs.as_int(), &result))
-            return Value::from_int(result, gc);
+        if (!__builtin_mul_overflow(lhs.as_int(), rhs.as_int(), &result)) return Value::from_int(result, gc);
     }
 #endif
 
     Operand a(lhs), b(rhs);
-    if (a.limbs.empty() || b.limbs.empty())
-        return Value::from_int(0);
+    if (a.limbs.empty() || b.limbs.empty()) return Value::from_int(0);
 
     check_size(a.limbs.size(), b.limbs.size());
     Limbs out(a.limbs.size() + b.limbs.size());
@@ -309,8 +278,7 @@ Value mul(Value lhs, Value rhs, GarbageCollector& gc)
 
 Value neg(Value v, GarbageCollector& gc)
 {
-    if (!v.is_big_int() && v.as_int() != INT64_MIN)
-        return Value::from_int(-v.as_int(), gc);
+    if (!v.is_big_int() && v.as_int() != INT64_MIN) return Value::from_int(-v.as_int(), gc);
 
     Data d = copy(v);
     d.positive = !d.positive;
@@ -319,13 +287,10 @@ Value neg(Value v, GarbageCollector& gc)
 
 int compare(Value lhs, Value rhs) noexcept
 {
-    if (!lhs.is_big_int() && !rhs.is_big_int())
-        return lhs.as_int() < rhs.as_int() ? -1 : lhs.as_int() > rhs.as_int() ? 1
-                                                                              : 0;
+    if (!lhs.is_big_int() && !rhs.is_big_int()) return lhs.as_int() < rhs.as_int() ? -1 : lhs.as_int() > rhs.as_int() ? 1 : 0;
 
     Operand a(lhs), b(rhs);
-    if (a.positive != b.positive)
-        return a.positive ? 1 : -1;
+    if (a.positive != b.positive) return a.positive ? 1 : -1;
 
     int c = cmp(a.limbs, b.limbs);
     return a.positive ? c : -c;
@@ -334,21 +299,17 @@ int compare(Value lhs, Value rhs) noexcept
 bool to_i64(Value v, i64& result) noexcept
 {
     Operand a(v);
-    if (a.limbs.size() > 2)
-        return false;
+    if (a.limbs.size() > 2) return false;
 
     u64 n = a.limbs.empty() ? 0 : a.limbs[0];
 
-    if (a.limbs.size() == 2)
-        n |= u64(a.limbs[1]) << 32;
+    if (a.limbs.size() == 2) n |= u64(a.limbs[1]) << 32;
 
     if (a.positive) {
-        if (n > INT64_MAX)
-            return false;
+        if (n > INT64_MAX) return false;
         result = static_cast<i64>(n);
     } else {
-        if (n > (u64 { 1 } << 63))
-            return false;
+        if (n > (u64 { 1 } << 63)) return false;
         result = n == (u64 { 1 } << 63) ? INT64_MIN : -static_cast<i64>(n);
     }
 
@@ -357,13 +318,11 @@ bool to_i64(Value v, i64& result) noexcept
 
 double to_double(Value v) noexcept
 {
-    if (!v.is_big_int())
-        return static_cast<double>(v.as_int());
+    if (!v.is_big_int()) return static_cast<double>(v.as_int());
 
     Operand a(v);
     double out = 0;
-    for (size_t i = a.limbs.size(); i-- > 0;)
-        out = std::ldexp(out, 32) + a.limbs[i];
+    for (size_t i = a.limbs.size(); i-- > 0;) out = std::ldexp(out, 32) + a.limbs[i];
 
     return a.positive ? out : -out;
 }
@@ -372,54 +331,41 @@ Value div(Value lhs, Value rhs, GarbageCollector& gc, bool remainder)
 {
     if (!lhs.is_big_int() && !rhs.is_big_int()) {
         i64 a = lhs.as_int(), b = rhs.as_int();
-        if (b == 0)
-            diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
+        if (b == 0) diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
 
         /// the pair INT64_MIN and -1 cannot fit the quotient in 64 bits
         if (a == INT64_MIN && b == -1) {
-            if (remainder)
-                return Value::from_int(0);
+            if (remainder) return Value::from_int(0);
             return finish(parse("9223372036854775808", 10), gc);
         }
 
         i64 rem = a % b;
-        if (remainder)
-            return Value::from_int(rem);
-        if (!rem)
-            return Value::from_int(a / b, gc);
+        if (remainder) return Value::from_int(rem);
+        if (!rem) return Value::from_int(a / b, gc);
         return Value::from_real(static_cast<double>(a) / static_cast<double>(b));
     }
 
     Operand a(lhs), b(rhs);
-    if (b.limbs.empty())
-        diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
+    if (b.limbs.empty()) diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
 
     if (b.limbs.size() == 1 && b.limbs[0] == 1) {
-        return remainder
-            ? Value::from_int(0)
-            : finish({ std::vector<u32>(a.limbs.begin(), a.limbs.end()), a.positive == b.positive }, gc);
+        return remainder ? Value::from_int(0) : finish({ std::vector<u32>(a.limbs.begin(), a.limbs.end()), a.positive == b.positive }, gc);
     }
 
     auto [q, r] = divmod(a.limbs, b.limbs);
-    if (remainder)
-        return finish({ std::move(r), a.positive }, gc);
-    if (r.empty())
-        return finish({ std::move(q), a.positive == b.positive }, gc);
+    if (remainder) return finish({ std::move(r), a.positive }, gc);
+    if (r.empty()) return finish({ std::move(q), a.positive == b.positive }, gc);
 
     // Scale both magnitudes to avoid inf/inf for large but finite ratios.
     auto head = [](View v) {
         size_t n = std::min(size_t { 3 }, v.size());
         double x = 0;
-        for (size_t i = v.size(); i-- > v.size() - n;)
-            x = std::ldexp(x, 32) + v[i];
+        for (size_t i = v.size(); i-- > v.size() - n;) x = std::ldexp(x, 32) + v[i];
         return x;
     };
 
-    long exponent = (static_cast<long>(a.limbs.size() > 3
-                             ? a.limbs.size() - 3
-                             : 0)
-                        - static_cast<long>(b.limbs.size() > 3 ? b.limbs.size() - 3 : 0))
-        * 32;
+    long exponent
+        = (static_cast<long>(a.limbs.size() > 3 ? a.limbs.size() - 3 : 0) - static_cast<long>(b.limbs.size() > 3 ? b.limbs.size() - 3 : 0)) * 32;
     double ratio = std::ldexp(head(a.limbs) / head(b.limbs), static_cast<int>(exponent));
     return Value::from_real(a.positive == b.positive ? ratio : -ratio);
 }
@@ -428,8 +374,7 @@ Value bitwise(Value lhs, Value rhs, char op, GarbageCollector& gc)
 {
     if (!lhs.is_big_int() && !rhs.is_big_int()) {
         i64 a = lhs.as_int(), b = rhs.as_int();
-        return Value::from_int(op == '&' ? a & b : op == '|' ? a | b
-                                                             : a ^ b);
+        return Value::from_int(op == '&' ? a & b : op == '|' ? a | b : a ^ b);
     }
 
     Operand a(lhs), b(rhs);
@@ -440,17 +385,13 @@ Value bitwise(Value lhs, Value rhs, char op, GarbageCollector& gc)
     x.resize(n);
     y.resize(n);
 
-    if (!a.positive)
-        twos(x);
-    if (!b.positive)
-        twos(y);
-    for (size_t i = 0; i < n; ++i)
-        x[i] = op == '&' ? x[i] & y[i] : op == '|' ? x[i] | y[i]
-                                                   : x[i] ^ y[i];
+    if (!a.positive) twos(x);
+    if (!b.positive) twos(y);
+
+    for (size_t i = 0; i < n; ++i) x[i] = op == '&' ? x[i] & y[i] : op == '|' ? x[i] | y[i] : x[i] ^ y[i];
 
     bool positive = !(x.back() & 0x80000000u);
-    if (!positive)
-        twos(x);
+    if (!positive) twos(x);
 
     return finish({ std::move(x), positive }, gc);
 }
@@ -458,36 +399,29 @@ Value bitwise(Value lhs, Value rhs, char op, GarbageCollector& gc)
 Value shift(Value value, Value count, bool left, GarbageCollector& gc)
 {
     Operand a(value), c(count);
-    if (!c.positive)
-        diagnostic::fatal_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
+    if (!c.positive) diagnostic::fatal_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
 
     i64 amount;
     if (!to_i64(count, amount)) {
-        if (left && !a.limbs.empty())
-            diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
+        if (left && !a.limbs.empty()) diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
         return Value::from_int(left || a.positive ? 0 : -1);
     }
 
-    if (a.limbs.empty())
-        return Value::from_int(0);
+    if (a.limbs.empty()) return Value::from_int(0);
     if (!value.is_big_int()) {
-        if (!left)
-            return Value::from_int(amount >= 64 ? (a.positive ? 0 : -1) : value.as_int() >> amount);
+        if (!left) return Value::from_int(amount >= 64 ? (a.positive ? 0 : -1) : value.as_int() >> amount);
 #if defined(__GNUC__) || defined(__clang__)
         i64 result;
-        if (amount < 63 && !__builtin_mul_overflow(value.as_int(), i64 { 1 } << amount, &result))
-            return Value::from_int(result, gc);
+        if (amount < 63 && !__builtin_mul_overflow(value.as_int(), i64 { 1 } << amount, &result)) return Value::from_int(result, gc);
 #endif
     }
 
     u64 words = static_cast<u64>(amount) / 32;
     unsigned shift = static_cast<unsigned>(amount % 32);
 
-    if (!left && words >= a.limbs.size())
-        return Value::from_int(a.positive ? 0 : -1);
+    if (!left && words >= a.limbs.size()) return Value::from_int(a.positive ? 0 : -1);
     if (left) {
-        if (words > max_limbs)
-            diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
+        if (words > max_limbs) diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
 
         check_size(a.limbs.size(), static_cast<size_t>(words) + (shift != 0));
         Limbs out(a.limbs.size() + static_cast<size_t>(words) + (shift != 0));
@@ -498,24 +432,20 @@ Value shift(Value value, Value count, bool left, GarbageCollector& gc)
             carry = n >> 32;
         }
 
-        if (shift)
-            out.back() = static_cast<u32>(carry);
+        if (shift) out.back() = static_cast<u32>(carry);
         return finish({ std::move(out), a.positive }, gc);
     }
 
     Limbs out(a.limbs.size() - static_cast<size_t>(words));
     bool discarded = false;
 
-    for (size_t i = 0; i < words; ++i)
-        discarded |= a.limbs[i] != 0;
+    for (size_t i = 0; i < words; ++i) discarded |= a.limbs[i] != 0;
 
-    if (shift)
-        discarded |= (a.limbs[words] & ((u32 { 1 } << shift) - 1)) != 0;
+    if (shift) discarded |= (a.limbs[words] & ((u32 { 1 } << shift) - 1)) != 0;
 
     for (size_t i = 0; i < out.size(); ++i) {
         out[i] = a.limbs[i + words] >> shift;
-        if (shift && i + words + 1 < a.limbs.size())
-            out[i] |= a.limbs[i + words + 1] << (32 - shift);
+        if (shift && i + words + 1 < a.limbs.size()) out[i] |= a.limbs[i + words + 1] << (32 - shift);
     }
 
     if (!a.positive && discarded) {
@@ -528,18 +458,15 @@ Value shift(Value value, Value count, bool left, GarbageCollector& gc)
 
 Value pow(Value base, Value exponent, GarbageCollector& gc)
 {
-    if (compare(exponent, Value::from_int(0)) < 0)
-        return Value::from_real(std::pow(to_double(base), to_double(exponent)));
+    if (compare(exponent, Value::from_int(0)) < 0) return Value::from_real(std::pow(to_double(base), to_double(exponent)));
 
     Operand e(exponent);
     Value out = Value::from_int(1);
     size_t n = bits(e.limbs);
 
     for (size_t i = 0; i < n; ++i) {
-        if ((e.limbs[i / 32] >> (i % 32)) & 1)
-            out = mul(out, base, gc);
-        if (i + 1 < n)
-            base = mul(base, base, gc);
+        if ((e.limbs[i / 32] >> (i % 32)) & 1) out = mul(out, base, gc);
+        if (i + 1 < n) base = mul(base, base, gc);
     }
 
     return out;
@@ -557,25 +484,21 @@ Data parse(StringRef const& text, int base)
     auto c_1 = text.len() >= pos + 2 ? text.at(pos) : ' ';
     auto c_2 = text.len() >= pos + 2 ? text.at(pos + 1) : ' ';
 
-    if (c_1 == '0' && (c_2 == 'x' || c_2 == 'X' || c_2 == 'b' || c_2 == 'B' || c_2 == 'o' || c_2 == 'O'))
-        pos += 2;
+    if (c_1 == '0' && (c_2 == 'x' || c_2 == 'X' || c_2 == 'b' || c_2 == 'B' || c_2 == 'o' || c_2 == 'O')) pos += 2;
 
     while (pos < text.len()) {
         u64 bytes;
         u32 cp = util::decode_utf8_at(text, pos, &bytes);
         pos += bytes;
-        if (cp == '_' || cp == '\'')
-            continue;
+        if (cp == '_' || cp == '\'') continue;
 
-        int digit = cp >= '0' && cp <= '9'
-            ? cp - '0'
-            : util::is_arab_digit(cp) ? util::arab_digit_to_canon(cp)
-            : cp >= 'a' && cp <= 'f'  ? cp - 'a' + 10
-            : cp >= 'A' && cp <= 'F'  ? cp - 'A' + 10
-                                      : -1;
+        int digit = cp >= '0' && cp <= '9' ? cp - '0'
+            : util::is_arab_digit(cp)      ? util::arab_digit_to_canon(cp)
+            : cp >= 'a' && cp <= 'f'       ? cp - 'a' + 10
+            : cp >= 'A' && cp <= 'F'       ? cp - 'A' + 10
+                                           : -1;
 
-        if (digit < 0 || digit >= base)
-            diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL);
+        if (digit < 0 || digit >= base) diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL);
 
         u64 carry = digit;
         for (auto& limb : d.limbs) {
@@ -612,38 +535,31 @@ Data double_data(double value)
 
 Value from_double(double value, GarbageCollector& gc)
 {
-    if (!std::isfinite(value))
-        diagnostic::fatal_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+    if (!std::isfinite(value)) diagnostic::fatal_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
     return finish(double_data(value), gc);
 }
 
 int compare_numbers(Value lhs, Value rhs)
 {
-    if (lhs.is_int() && rhs.is_int())
-        return compare(lhs, rhs);
+    if (lhs.is_int() && rhs.is_int()) return compare(lhs, rhs);
 
     if (lhs.is_double() && rhs.is_double()) {
         double a = lhs.as_double(), b = rhs.as_double();
-        return std::isnan(a) || std::isnan(b) ? 2 : a < b ? -1
-            : a > b                                       ? 1
-                                                          : 0;
+        return std::isnan(a) || std::isnan(b) ? 2 : a < b ? -1 : a > b ? 1 : 0;
     }
 
     bool reversed = lhs.is_double();
     Value iv = reversed ? rhs : lhs;
     double f = reversed ? lhs.as_double() : rhs.as_double();
-    if (std::isnan(f))
-        return 2;
+    if (std::isnan(f)) return 2;
 
     int c;
-    if (std::isinf(f))
-        c = f > 0 ? -1 : 1;
+    if (std::isinf(f)) c = f > 0 ? -1 : 1;
     else {
         Data d = double_data(f);
         Operand a(iv);
         c = a.positive != d.positive ? (a.positive ? 1 : -1) : (a.positive ? cmp(a.limbs, d.limbs) : -cmp(a.limbs, d.limbs));
-        if (!c && f != std::trunc(f))
-            c = f > 0 ? -1 : 1;
+        if (!c && f != std::trunc(f)) c = f > 0 ? -1 : 1;
     }
 
     return reversed ? -c : c;
@@ -651,12 +567,10 @@ int compare_numbers(Value lhs, Value rhs)
 
 std::string to_string(Value value)
 {
-    if (!value.is_big_int())
-        return std::to_string(value.as_int());
+    if (!value.is_big_int()) return std::to_string(value.as_int());
 
     Data d = copy(value);
-    if (d.limbs.empty())
-        return "0";
+    if (d.limbs.empty()) return "0";
 
     std::string out;
     while (!d.limbs.empty()) {
@@ -668,12 +582,10 @@ std::string to_string(Value value)
         }
 
         out.push_back(static_cast<char>('0' + rem));
-        while (!d.limbs.empty() && !d.limbs.back())
-            d.limbs.pop_back();
+        while (!d.limbs.empty() && !d.limbs.back()) d.limbs.pop_back();
     }
 
-    if (!d.positive)
-        out.push_back('-');
+    if (!d.positive) out.push_back('-');
 
     std::reverse(out.begin(), out.end());
     return out;

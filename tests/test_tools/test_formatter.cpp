@@ -29,8 +29,7 @@ std::string format_source(std::string const& source)
     file.buffer() = source;
     parser::Parser parser(&file);
     (void)parser.parse_program();
-    if (diagnostic::has_errors())
-        throw std::runtime_error("Invalid test source");
+    if (diagnostic::has_errors()) throw std::runtime_error("Invalid test source");
     auto result = Formatter().format(StringRef(file.buffer().c_str()));
     return result.empty() ? "" : std::string(result.data(), result.len());
 }
@@ -46,11 +45,10 @@ void expect_format(std::string const& source, std::string const& expected)
 
 TEST(Formatter, PreservesLoopsAssertionsImportsAndAugmentedAssignment)
 {
-    expect_format(
-        "من رياضيات استورد جذر باسم جذري\n"
-        "لكل عنصر في [1,2]:\n"
-        "  عنصر+=1\n"
-        "  تاكد عنصر>0, 'positive'\n",
+    expect_format("من رياضيات استورد جذر باسم جذري\n"
+                  "لكل عنصر في [1,2]:\n"
+                  "  عنصر+=1\n"
+                  "  تاكد عنصر>0, 'positive'\n",
         "من رياضيات استورد جذر باسم جذري\n"
         "لكل عنصر في [1، 2]:\n"
         "    عنصر += 1\n"
@@ -59,13 +57,12 @@ TEST(Formatter, PreservesLoopsAssertionsImportsAndAugmentedAssignment)
 
 TEST(Formatter, PreservesInlineBlockBodies)
 {
-    expect_format(
-        "اذا صحيح:اكتب(1)\n"
-        "غيره:اكتب(2)\n"
-        "طالما س<2:س+=1\n"
-        "لكل س في [1,2]:اكتب(س)\n"
-        "دالة ضعف(س):ارجع س*2\n"
-        "نوع علبة:دالة بداية(س):هذا.قيمة:=س\n",
+    expect_format("اذا صحيح:اكتب(1)\n"
+                  "غيره:اكتب(2)\n"
+                  "طالما س<2:س+=1\n"
+                  "لكل س في [1,2]:اكتب(س)\n"
+                  "دالة ضعف(س):ارجع س*2\n"
+                  "نوع علبة:دالة بداية(س):هذا.قيمة:=س\n",
         "اذا صحيح: اكتب(1)\n"
         "غيره: اكتب(2)\n"
         "طالما س < 2: س += 1\n"
@@ -99,12 +96,11 @@ TEST(Formatter, PreservesCommentsBlankLinesAndCommentOnlyFiles)
 
 TEST(Formatter, PreservesRawLiteralsAndGrouping)
 {
-    expect_format(
-        "ص:=0.0000001\n"
-        "ك:=100000000000.0\n"
-        "ن:=0xFF\n"
-        "س:='\\u0645 # \\t \\' \\\\'\n"
-        "اكتب((1+2)*3, 1-(2-3), -(-2))\n",
+    expect_format("ص:=0.0000001\n"
+                  "ك:=100000000000.0\n"
+                  "ن:=0xFF\n"
+                  "س:='\\u0645 # \\t \\' \\\\'\n"
+                  "اكتب((1+2)*3, 1-(2-3), -(-2))\n",
         "ص := 0.0000001\n"
         "ك := 100000000000.0\n"
         "ن := 0xFF\n"
@@ -115,31 +111,27 @@ TEST(Formatter, PreservesRawLiteralsAndGrouping)
 TEST(Formatter, PreservesLongArabicStringsAndExpressionsWithoutUnsafeWrapping)
 {
     std::string value;
-    for (int i = 0; i < 80; ++i)
-        value += "مرحباً";
+    for (int i = 0; i < 80; ++i) value += "مرحباً";
     auto source = "دالة مثال():\n"
                   "    ارجع \""
         + value + "\"\n";
     expect_format(source, source);
     std::string expression = "ن := 1";
-    for (int i = 0; i < 80; ++i)
-        expression += " + 1";
+    for (int i = 0; i < 80; ++i) expression += " + 1";
     expression += '\n';
     expect_format(expression, expression);
 }
 
 TEST(Formatter, WrapsLongCallsAndCollectionsAtSafeCommas)
 {
-    expect_format(
-        "نتيجة:=اجمع(العدد_الأول_الطويل,العدد_الثاني_الطويل,العدد_الثالث_الطويل,العدد_الرابع_الطويل)\n",
+    expect_format("نتيجة:=اجمع(العدد_الأول_الطويل,العدد_الثاني_الطويل,العدد_الثالث_الطويل,العدد_الرابع_الطويل)\n",
         "نتيجة := اجمع(\n"
         "    العدد_الأول_الطويل،\n"
         "    العدد_الثاني_الطويل،\n"
         "    العدد_الثالث_الطويل،\n"
         "    العدد_الرابع_الطويل\n"
         ")\n");
-    expect_format(
-        "قيم:=[11111111111111111111,22222222222222222222,33333333333333333333,44444444444444444444]\n",
+    expect_format("قيم:=[11111111111111111111,22222222222222222222,33333333333333333333,44444444444444444444]\n",
         "قيم := [\n"
         "    11111111111111111111،\n"
         "    22222222222222222222،\n"
@@ -150,13 +142,12 @@ TEST(Formatter, WrapsLongCallsAndCollectionsAtSafeCommas)
 
 TEST(Formatter, HonorsFormatControlComments)
 {
-    expect_format(
-        "س:=\"# fmt: off\"\n"
-        "# fmt: off\n"
-        "ا  :=[ 1,2 ]\n"
-        "# fmt: on\n"
-        "ب:=[3,4] # fmt: skip\n"
-        "ج:=[5,6]\n",
+    expect_format("س:=\"# fmt: off\"\n"
+                  "# fmt: off\n"
+                  "ا  :=[ 1,2 ]\n"
+                  "# fmt: on\n"
+                  "ب:=[3,4] # fmt: skip\n"
+                  "ج:=[5,6]\n",
         "س := \"# fmt: off\"\n"
         "# fmt: off\n"
         "ا  :=[ 1,2 ]\n"
@@ -167,11 +158,10 @@ TEST(Formatter, HonorsFormatControlComments)
 
 TEST(Formatter, WrapsLongNestedCallInsideExistingMultilineGroup)
 {
-    expect_format(
-        "نتيجة := خارج(\n"
-        "    داخل(الوسيط_الأول_الطويل_للغاية، الوسيط_الثاني_الطويل_للغاية، الوسيط_الثالث_الطويل_للغاية)،\n"
-        "    ١\n"
-        ")\n",
+    expect_format("نتيجة := خارج(\n"
+                  "    داخل(الوسيط_الأول_الطويل_للغاية، الوسيط_الثاني_الطويل_للغاية، الوسيط_الثالث_الطويل_للغاية)،\n"
+                  "    ١\n"
+                  ")\n",
         "نتيجة := خارج(\n"
         "    داخل(\n"
         "        الوسيط_الأول_الطويل_للغاية،\n"
@@ -184,9 +174,8 @@ TEST(Formatter, WrapsLongNestedCallInsideExistingMultilineGroup)
 
 TEST(Formatter, PreservesTrailingCommasAndSuffixesWhenWrapping)
 {
-    expect_format(
-        "دالة احسب(الوسيط_الأول_الطويل_للغاية,الوسيط_الثاني_الطويل_للغاية,الوسيط_الثالث_الطويل_للغاية,):\n"
-        "  ارجع الوسيط_الأول_الطويل_للغاية\n",
+    expect_format("دالة احسب(الوسيط_الأول_الطويل_للغاية,الوسيط_الثاني_الطويل_للغاية,الوسيط_الثالث_الطويل_للغاية,):\n"
+                  "  ارجع الوسيط_الأول_الطويل_للغاية\n",
         "دالة احسب(\n"
         "    الوسيط_الأول_الطويل_للغاية،\n"
         "    الوسيط_الثاني_الطويل_للغاية،\n"
@@ -199,8 +188,7 @@ TEST(Formatter, CountsUnicodeCharactersInsteadOfUtf8BytesForLineWidth)
 {
     std::string source = "نتيجة := اجمع(";
     for (int i = 0; i < 3; ++i) {
-        if (i)
-            source += "، ";
+        if (i) source += "، ";
         source += "الوسيط_العربي_الطويل";
     }
     source += ")\n";
@@ -209,17 +197,16 @@ TEST(Formatter, CountsUnicodeCharactersInsteadOfUtf8BytesForLineWidth)
 
 TEST(Formatter, FormatsMultilineContainersAndNestedComments)
 {
-    expect_format(
-        "دالة مثال():\n"
-        "  ن:={\n"
-        "'س':[\n"
-        "1, # first\n"
-        "# second\n"
-        "2\n"
-        "],\n"
-        "'ع':3\n"
-        "}\n"
-        "  ارجع ن\n",
+    expect_format("دالة مثال():\n"
+                  "  ن:={\n"
+                  "'س':[\n"
+                  "1, # first\n"
+                  "# second\n"
+                  "2\n"
+                  "],\n"
+                  "'ع':3\n"
+                  "}\n"
+                  "  ارجع ن\n",
         "دالة مثال():\n"
         "    ن := {\n"
         "        'س': [\n"
@@ -265,8 +252,7 @@ TEST(Formatter, FormatsEveryLibraryAndExampleIdempotently)
     size_t count = 0;
     for (auto directory : { "stdlib", "examples" }) {
         for (auto const& entry : std::filesystem::recursive_directory_iterator(root / directory)) {
-            if (!entry.is_regular_file() || entry.path().extension() != platform::path(".ف"))
-                continue;
+            if (!entry.is_regular_file() || entry.path().extension() != platform::path(".ف")) continue;
             SCOPED_TRACE(platform::utf8(entry.path()));
             std::ifstream input(entry.path(), std::ios::binary);
             std::string source { std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>() };

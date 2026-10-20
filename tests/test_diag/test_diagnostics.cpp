@@ -72,8 +72,7 @@ TEST(DiagnosticsTest, FatalSeverityCanBeRecordedAnnotatedAndRenderedWithoutAbort
 TEST(DiagnosticsTest, SaturationDoesNotDiscardFatalDiagnostics)
 {
     diagnostic::DiagnosticEngine engine;
-    for (u32 i = 0; i < engine.LIMIT; ++i)
-        engine.report_deferred(diagnostic::Severity::ERROR, { }, ErrorCode::UNEXPECTED_TOKEN);
+    for (u32 i = 0; i < engine.LIMIT; ++i) engine.report_deferred(diagnostic::Severity::ERROR, { }, ErrorCode::UNEXPECTED_TOKEN);
     EXPECT_EQ(engine.report_deferred(diagnostic::Severity::ERROR, { }, ErrorCode::UNEXPECTED_TOKEN), engine.INVALID_ID);
     EXPECT_NE(engine.report_deferred(diagnostic::Severity::FATAL, { }, ErrorCode::INTERNAL_ERROR), engine.INVALID_ID);
     EXPECT_EQ(engine.error_count(), engine.LIMIT + 1);

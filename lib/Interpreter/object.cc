@@ -17,11 +17,9 @@ namespace fairuz::runtime {
 
 Value const* GlobalEnvironment::find(StringRef const& name) const
 {
-    if (u32 const* slot = index.find_ptr(name))
-        return *slot < slots.size() ? &slots[*slot] : nullptr;
+    if (u32 const* slot = index.find_ptr(name)) return *slot < slots.size() ? &slots[*slot] : nullptr;
     if (builtins != nullptr) {
-        if (auto* value = builtins->find(name))
-            return value;
+        if (auto* value = builtins->find(name)) return value;
     }
     return fallback == nullptr ? nullptr : fallback->find(name);
 }
@@ -42,9 +40,7 @@ StringRef ObjFunction::name() const { return chunk->name; }
 u32 ObjFunction::arity() const { return chunk->arity; }
 
 ObjClass::ObjClass(
-    Array<StringRef, /*_Alloc=*/GarbageCollector> f,
-    Array<StringRef, /*_Alloc=*/GarbageCollector> m,
-    Array<Chunk*, /*_Alloc=*/GarbageCollector> vt)
+    Array<StringRef, /*_Alloc=*/GarbageCollector> f, Array<StringRef, /*_Alloc=*/GarbageCollector> m, Array<Chunk*, /*_Alloc=*/GarbageCollector> vt)
     : field_names(f)
     , method_names(m)
     , vtable(vt)
@@ -53,10 +49,8 @@ ObjClass::ObjClass(
 
 void ObjClass::build_indices()
 {
-    for (u32 i = 0, n = field_names.size(); i < n; i++)
-        field_index_map[field_names[i]] = i;
-    for (u32 i = 0, n = method_names.size(); i < n; i++)
-        method_slot_map[method_names[i]] = i;
+    for (u32 i = 0, n = field_names.size(); i < n; i++) field_index_map[field_names[i]] = i;
+    for (u32 i = 0, n = method_names.size(); i < n; i++) method_slot_map[method_names[i]] = i;
 }
 
 int ObjClass::field_index(StringRef field_name) const

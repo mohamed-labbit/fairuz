@@ -20,16 +20,13 @@
 
 namespace fairuz {
 
-template<class Allocator>
-class StringRefImpl;
+template<class Allocator> class StringRefImpl;
 
 namespace detail {
 
-template<class Allocator>
-Allocator* resolve_allocator(Allocator* allocator)
+template<class Allocator> Allocator* resolve_allocator(Allocator* allocator)
 {
-    if (allocator != nullptr)
-        return allocator;
+    if (allocator != nullptr) return allocator;
     if constexpr (std::is_same_v<Allocator, ArenaAllocator>) {
         return &get_allocator();
     } else {
@@ -40,10 +37,8 @@ Allocator* resolve_allocator(Allocator* allocator)
 
 } // namespace detail
 
-template<class Allocator = ArenaAllocator>
-class StringBase {
-    template<class>
-    friend class StringRefImpl;
+template<class Allocator = ArenaAllocator> class StringBase {
+    template<class> friend class StringRefImpl;
 
 private:
     union Storage {
@@ -75,8 +70,7 @@ public:
 
     ~StringBase()
     {
-        if (is_heap())
-            m_storage.heap.ptr = nullptr;
+        if (is_heap()) m_storage.heap.ptr = nullptr;
     }
 
     StringBase(StringBase const&) = delete;
@@ -114,13 +108,11 @@ public:
 namespace detail {
 
 // One singleton per Allocator instantiation.
-template<class Allocator>
-StringBase<Allocator>* empty_string_singleton() noexcept;
+template<class Allocator> StringBase<Allocator>* empty_string_singleton() noexcept;
 
 } // namespace detail
 
-template<class Allocator = ArenaAllocator>
-class StringRefImpl {
+template<class Allocator = ArenaAllocator> class StringRefImpl {
 private:
     StringBase<Allocator>* m_string_data { nullptr };
     size_t m_offset { 0 };
@@ -163,21 +155,16 @@ public:
 
     [[nodiscard]] bool operator==(StringRefImpl const& other) const noexcept
     {
-        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
-            return true;
-        if (m_length != other.m_length)
-            return false;
-        if (m_string_data == nullptr || !other.m_string_data)
-            return m_length == 0;
+        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length) return true;
+        if (m_length != other.m_length) return false;
+        if (m_string_data == nullptr || !other.m_string_data) return m_length == 0;
         return ::memcmp(data(), other.data(), m_length) == 0;
     }
 
     [[nodiscard]] bool operator==(char const* other) const noexcept
     {
-        if (m_string_data == nullptr || other == nullptr)
-            return m_length == 0;
-        if (m_length != ::strlen(other))
-            return false;
+        if (m_string_data == nullptr || other == nullptr) return m_length == 0;
+        if (m_length != ::strlen(other)) return false;
         return ::memcmp(data(), other, m_length) == 0;
     }
 
@@ -185,12 +172,9 @@ public:
 
     [[nodiscard]] bool operator<(StringRefImpl const& other) const noexcept
     {
-        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
-            return false;
-        if (m_string_data == nullptr)
-            return other.m_length > 0;
-        if (other.m_string_data == nullptr)
-            return false;
+        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length) return false;
+        if (m_string_data == nullptr) return other.m_length > 0;
+        if (other.m_string_data == nullptr) return false;
 
         size_t const min_len = std::min(m_length, other.m_length);
         int const cmp = ::memcmp(data(), other.data(), min_len);
@@ -219,10 +203,8 @@ public:
     StringRefImpl operator+(StringRefImpl const& rhs) const
     {
         size_t const r_len = rhs.len();
-        if (empty())
-            return StringRefImpl(rhs);
-        if (r_len == 0)
-            return *this;
+        if (empty()) return StringRefImpl(rhs);
+        if (r_len == 0) return *this;
 
         size_t const new_len = m_length + r_len;
         StringBase<Allocator>* result = m_allocator->template allocate_object<StringBase<Allocator>>(new_len, m_allocator);
@@ -237,16 +219,14 @@ public:
 
     StringRefImpl operator+(char const* rhs) const
     {
-        if (rhs == nullptr || !rhs[0])
-            return *this;
+        if (rhs == nullptr || !rhs[0]) return *this;
         StringRefImpl rhs_str(rhs, m_allocator);
         return *this + rhs_str;
     }
 
     friend StringRefImpl operator+(char const* lhs, StringRefImpl const& rhs)
     {
-        if (lhs == nullptr || !lhs[0])
-            return StringRefImpl(rhs);
+        if (lhs == nullptr || !lhs[0]) return StringRefImpl(rhs);
         StringRefImpl lhs_str(lhs, rhs.m_allocator);
         return lhs_str + rhs;
     }
@@ -284,8 +264,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, StringRefImpl const& str)
     {
-        if (!str.empty())
-            os.write(str.data(), static_cast<std::streamsize>(str.len()));
+        if (!str.empty()) os.write(str.data(), static_cast<std::streamsize>(str.len()));
 
         return os;
     }
@@ -307,14 +286,10 @@ public:
     StringRefImpl slice(size_t start, size_t end = SIZE_MAX) const;
     StringRefImpl substr(size_t start, size_t end = SIZE_MAX) const
     {
-        if (m_length == 0)
-            return StringRefImpl(static_cast<size_t>(0), m_allocator);
-        if (start > m_length)
-            return StringRefImpl(static_cast<size_t>(0), m_allocator);
-        if (end > m_length || end == SIZE_MAX)
-            end = m_length;
-        if (end < start)
-            return StringRefImpl(static_cast<size_t>(0), m_allocator);
+        if (m_length == 0) return StringRefImpl(static_cast<size_t>(0), m_allocator);
+        if (start > m_length) return StringRefImpl(static_cast<size_t>(0), m_allocator);
+        if (end > m_length || end == SIZE_MAX) end = m_length;
+        if (end < start) return StringRefImpl(static_cast<size_t>(0), m_allocator);
         return substr_copy(start, end);
     }
     StringRefImpl substr_copy(size_t start, size_t end = SIZE_MAX) const;
@@ -323,10 +298,8 @@ public:
 
     void ensure_unique()
     {
-        if (m_string_data == nullptr)
-            return;
-        if (LIKELY(m_string_data->reference_count() == 1))
-            return;
+        if (m_string_data == nullptr) return;
+        if (LIKELY(m_string_data->reference_count() == 1)) return;
         detach();
     }
 
@@ -379,14 +352,10 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
     if (len <= 16) {
         if (len >= 4) {
-            a = (static_cast<u64>(wy_read4(p)) << 32)
-                | wy_read4(p + ((len >> 3) << 2));
-            b = (static_cast<u64>(wy_read4(p + len - 4)) << 32)
-                | wy_read4(p + len - 4 - ((len >> 3) << 2));
+            a = (static_cast<u64>(wy_read4(p)) << 32) | wy_read4(p + ((len >> 3) << 2));
+            b = (static_cast<u64>(wy_read4(p + len - 4)) << 32) | wy_read4(p + len - 4 - ((len >> 3) << 2));
         } else if (len > 0) {
-            a = (static_cast<u64>(p[0]) << 16)
-                | (static_cast<u64>(p[len >> 1]) << 8)
-                | p[len - 1];
+            a = (static_cast<u64>(p[0]) << 16) | (static_cast<u64>(p[len >> 1]) << 8) | p[len - 1];
             b = 0;
         }
     } else {
@@ -439,26 +408,19 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
 } // namespace detail
 
-template<class Allocator = ArenaAllocator>
-struct StringRefHashImpl {
+template<class Allocator = ArenaAllocator> struct StringRefHashImpl {
     u64 seed { 0 };
 
     size_t operator()(StringRefImpl<Allocator> const& str) const noexcept
     {
-        if (str.empty())
-            return 0;
+        if (str.empty()) return 0;
 
-        return static_cast<size_t>(detail::wyhash(
-            reinterpret_cast<u8 const*>(str.data()), str.len(), seed));
+        return static_cast<size_t>(detail::wyhash(reinterpret_cast<u8 const*>(str.data()), str.len(), seed));
     }
 }; // struct StringRefHash
 
-template<class Allocator = ArenaAllocator>
-struct StringRefEqualImpl {
-    bool operator()(StringRefImpl<Allocator> const& lhs, StringRefImpl<Allocator> const& rhs) const noexcept
-    {
-        return lhs == rhs;
-    }
+template<class Allocator = ArenaAllocator> struct StringRefEqualImpl {
+    bool operator()(StringRefImpl<Allocator> const& lhs, StringRefImpl<Allocator> const& rhs) const noexcept { return lhs == rhs; }
 }; // struct StringRefEqual
 
 using StringRef = StringRefImpl<>;
@@ -469,12 +431,8 @@ using StringRefEqual = StringRefEqualImpl<>;
 
 namespace std {
 
-template<class Allocator>
-struct hash<fairuz::StringRefImpl<Allocator>> {
-    size_t operator()(fairuz::StringRefImpl<Allocator> const& str) const noexcept
-    {
-        return fairuz::StringRefHashImpl<Allocator> { }(str);
-    }
+template<class Allocator> struct hash<fairuz::StringRefImpl<Allocator>> {
+    size_t operator()(fairuz::StringRefImpl<Allocator> const& str) const noexcept { return fairuz::StringRefHashImpl<Allocator> { }(str); }
 }; // struct hash
 
 } // namespace std

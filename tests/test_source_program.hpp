@@ -23,8 +23,7 @@ inline std::string join(fairuz::Array<std::string> const& pieces, std::string co
 {
     std::string text;
     for (auto const& piece : pieces) {
-        if (!text.empty())
-            text += separator;
+        if (!text.empty()) text += separator;
         text += piece;
     }
     return text;
@@ -32,12 +31,10 @@ inline std::string join(fairuz::Array<std::string> const& pieces, std::string co
 
 inline std::string indent(std::string text)
 {
-    if (text.empty())
-        text = "عدم\n";
+    if (text.empty()) text = "عدم\n";
     std::istringstream input(text);
     std::string result, line;
-    while (std::getline(input, line))
-        result += "    " + line + "\n";
+    while (std::getline(input, line)) result += "    " + line + "\n";
     return result;
 }
 
@@ -46,8 +43,7 @@ inline std::string floating(double value)
     std::ostringstream out;
     out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
     auto text = out.str();
-    if (text.find_first_of(".eE") == std::string::npos)
-        text += ".0";
+    if (text.find_first_of(".eE") == std::string::npos) text += ".0";
     return text;
 }
 
@@ -62,13 +58,11 @@ inline std::filesystem::path write(std::string const& source)
 {
     static std::atomic<unsigned long> serial { 0 };
     auto path = std::filesystem::temp_directory_path()
-        / ("fairuz_source_" + std::to_string(test_process::process_id())
-            + "_" + std::to_string(serial++) + ".fa");
+        / ("fairuz_source_" + std::to_string(test_process::process_id()) + "_" + std::to_string(serial++) + ".fa");
     std::ofstream output(path, std::ios::binary);
     output << source;
     output.close();
-    if (!output)
-        throw std::runtime_error("Could not write test source: " + path.string());
+    if (!output) throw std::runtime_error("Could not write test source: " + path.string());
     return path;
 }
 
@@ -112,8 +106,7 @@ struct Program : SourceFile {
     fairuz::SourcePtr source;
     fairuz::Array<fairuz::AST::StmtPtr> statements;
 
-    explicit Program(std::string const& text,
-        fairuz::parser::BodyParsing mode = fairuz::parser::BodyParsing::Eager)
+    explicit Program(std::string const& text, fairuz::parser::BodyParsing mode = fairuz::parser::BodyParsing::Eager)
         : SourceFile(text)
     {
         fairuz::FileManager file(fairuz::platform::utf8(path));
@@ -129,8 +122,7 @@ struct Program : SourceFile {
 
     auto compile()
     {
-        if (fairuz::diagnostic::has_errors())
-            throw std::runtime_error("Test source did not parse: " + path.string());
+        if (fairuz::diagnostic::has_errors()) throw std::runtime_error("Test source did not parse: " + path.string());
         fairuz::runtime::Compiler compiler(source);
         return compiler.compile(statements);
     }

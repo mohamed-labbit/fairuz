@@ -23,17 +23,13 @@ namespace fairuz::runtime {
 
 FrameTrace::FrameTrace(CallFrame const& frame)
 {
-    if (frame.func != nullptr)
-        function_name = std::string(frame.func->name().data(), frame.func->name().len());
-    else if (frame.chunk != nullptr)
-        function_name = std::string(frame.chunk->name.data(), frame.chunk->name.len());
-    if (frame.module != nullptr)
-        module_name = std::string(frame.module->name.data(), frame.module->name.len());
+    if (frame.func != nullptr) function_name = std::string(frame.func->name().data(), frame.func->name().len());
+    else if (frame.chunk != nullptr) function_name = std::string(frame.chunk->name.data(), frame.chunk->name.len());
+    if (frame.module != nullptr) module_name = std::string(frame.module->name.data(), frame.module->name.len());
     if (frame.chunk != nullptr) {
         source = frame.chunk->source;
         size_t off = frame.ip.value > 0 ? frame.ip.value - 1 : 0;
-        if (off < frame.chunk->locations.size())
-            loc = frame.chunk->locations[off];
+        if (off < frame.chunk->locations.size()) loc = frame.chunk->locations[off];
     }
 }
 

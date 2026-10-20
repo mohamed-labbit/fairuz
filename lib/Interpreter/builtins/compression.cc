@@ -22,14 +22,12 @@ namespace {
 
 bool gzip_compress(std::string_view input, int level, std::string& output)
 {
-    if (input.size() > std::numeric_limits<uInt>::max())
-        return false;
+    if (input.size() > std::numeric_limits<uInt>::max()) return false;
 
     z_stream stream { };
     stream.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(input.data()));
     stream.avail_in = static_cast<uInt>(input.size());
-    if (deflateInit2(&stream, level, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK)
-        return false;
+    if (deflateInit2(&stream, level, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
 
     output.clear();
     std::array<char, 16384> buffer { };
@@ -50,14 +48,12 @@ bool gzip_compress(std::string_view input, int level, std::string& output)
 
 bool gzip_decompress(std::string_view input, size_t maximum, std::string& output)
 {
-    if (input.size() > std::numeric_limits<uInt>::max())
-        return false;
+    if (input.size() > std::numeric_limits<uInt>::max()) return false;
 
     z_stream stream { };
     stream.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(input.data()));
     stream.avail_in = static_cast<uInt>(input.size());
-    if (inflateInit2(&stream, 15 + 16) != Z_OK)
-        return false;
+    if (inflateInit2(&stream, 15 + 16) != Z_OK) return false;
 
     output.clear();
     std::array<char, 16384> buffer { };
@@ -72,8 +68,7 @@ bool gzip_decompress(std::string_view input, size_t maximum, std::string& output
         }
         output.append(buffer.data(), produced);
 
-        if (status == Z_STREAM_END)
-            return inflateEnd(&stream) == Z_OK;
+        if (status == Z_STREAM_END) return inflateEnd(&stream) == Z_OK;
         if (status != Z_OK || (stream.avail_in == 0 && produced == 0)) {
             inflateEnd(&stream);
             return false;
@@ -85,15 +80,11 @@ bool gzip_decompress(std::string_view input, size_t maximum, std::string& output
 
 VM::RuntimeResult VM::compress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_string() || !argv[1].is_string()
-        || !argv[2].is_int() || string_bytes(argv[0]) != "gzip")
+    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_int() || string_bytes(argv[0]) != "gzip")
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     i64 level = argv[2].as_int();
-    if (level < 0 || level > 9)
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (level < 0 || level > 9) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string output;
     if (!gzip_compress(string_bytes(argv[1]), static_cast<int>(level), output))
         return raise_runtime_error(ErrorCode::RUNTIME_ERROR, "compress failed");
@@ -102,15 +93,11 @@ VM::RuntimeResult VM::compress(int argc, Value* argv)
 
 VM::RuntimeResult VM::decompress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_string() || !argv[1].is_string()
-        || !argv[2].is_int() || string_bytes(argv[0]) != "gzip" || argv[2].as_int() <= 0)
+    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_int() || string_bytes(argv[0]) != "gzip" || argv[2].as_int() <= 0)
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string output;
-    if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output))
-        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output)) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(output));
 }
 

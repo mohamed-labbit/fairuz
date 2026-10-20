@@ -28,8 +28,7 @@ TEST(RuntimeResultHelpers, UnexpectedErrorReportsFatalFailureWithoutUnwrapping)
     testing::TestPartResultArray failures;
     unsigned caller_line = 0;
     {
-        testing::ScopedFakeTestPartResultReporter reporter(
-            testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        testing::ScopedFakeTestPartResultReporter reporter(testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
         caller_line = __LINE__ + 1;
         EXPECT_THROW(run_success(VM::RuntimeResult(error)), testing::AssertionException);
     }
@@ -44,8 +43,7 @@ TEST(RuntimeResultHelpers, UnexpectedSuccessReportsFatalFailureWithoutFabricatin
     testing::TestPartResultArray failures;
     unsigned caller_line = 0;
     {
-        testing::ScopedFakeTestPartResultReporter reporter(
-            testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        testing::ScopedFakeTestPartResultReporter reporter(testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
         caller_line = __LINE__ + 1;
         EXPECT_THROW(run_failed(VM::RuntimeResult(Value::nil())), testing::AssertionException);
     }
@@ -70,14 +68,13 @@ TEST(RuntimeRecovery, NativeHostFailureHasNoInventedSourceAndDoesNotReport)
 
 TEST(RuntimeRecovery, CallbackFailureStopsSideEffectsAndVmCanRunAgain)
 {
-    test_source::Program failing(
-        "قيم := [1]\n"
-        "دالة افشل():\n"
-        "    اضف(قيم، 2)\n"
-        "    عطل(\"callback failed\")\n"
-        "    اضف(قيم، 3)\n"
-        "__استدعاء__(افشل، [])\n"
-        "اضف(قيم، 4)\n");
+    test_source::Program failing("قيم := [1]\n"
+                                 "دالة افشل():\n"
+                                 "    اضف(قيم، 2)\n"
+                                 "    عطل(\"callback failed\")\n"
+                                 "    اضف(قيم، 3)\n"
+                                 "__استدعاء__(افشل، [])\n"
+                                 "اضف(قيم، 4)\n");
     auto* failed_chunk = run_success(failing.compile());
     test_source::Program succeeding("طول(قيم)\n");
     auto* success_chunk = run_success(succeeding.compile());
@@ -97,12 +94,11 @@ TEST(RuntimeRecovery, CallbackFailureStopsSideEffectsAndVmCanRunAgain)
 
 TEST(RuntimeRecovery, NativeCallbackReturnsBeforeCallerContinues)
 {
-    EXPECT_EQ(test_source::run(
-                  "قيم := [1، 2]\n"
-                  "طول_القيم := __استدعاء__(طول، [قيم])\n"
-                  "تاكد(طول_القيم = 2)\n"
-                  "نتيجة := طبيعي(طول_القيم + 40)\n"
-                  "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
-                  "تاكد(نتيجة = 42)\n"),
+    EXPECT_EQ(test_source::run("قيم := [1، 2]\n"
+                               "طول_القيم := __استدعاء__(طول، [قيم])\n"
+                               "تاكد(طول_القيم = 2)\n"
+                               "نتيجة := طبيعي(طول_القيم + 40)\n"
+                               "تاكد(صنف(نتيجة) = \"طبيعي\")\n"
+                               "تاكد(نتيجة = 42)\n"),
         ExitStatus::SUCCESS);
 }

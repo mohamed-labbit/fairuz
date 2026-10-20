@@ -458,10 +458,8 @@ inline constexpr u8 ml_arabic_ctype[256] = {
 
 [[nodiscard]] inline u8 ml_ctype(u32 cp) noexcept
 {
-    if (cp < 128)
-        return ml_ascii_ctype[cp];
-    if ((cp >> 8) == 0x06)
-        return ml_arabic_ctype[cp & 0xFF];
+    if (cp < 128) return ml_ascii_ctype[cp];
+    if ((cp >> 8) == 0x06) return ml_arabic_ctype[cp & 0xFF];
     return 0x00; // all other codepoints: not classified
 }
 

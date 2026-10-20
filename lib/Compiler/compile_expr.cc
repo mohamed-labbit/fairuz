@@ -31,11 +31,8 @@ namespace fairuz::runtime {
 
 Compiler::CompileExprResult Compiler::compile_expr_impl(AST::ExprPtr e)
 {
-    if (AST::is_unary(e))
-        return compile_unary_impl(AST::as_unary(e));
-
-    if (AST::is_binary(e))
-        return compile_binary_impl(AST::as_binary(e));
+    if (AST::is_unary(e)) return compile_unary_impl(AST::as_unary(e));
+    if (AST::is_binary(e)) return compile_binary_impl(AST::as_binary(e));
 
     switch (e->get_kind()) {
     case AST::ExprKind::INT_LITERAL: return compile_literal_int_impl(AST::as_literal_int(e));
@@ -50,8 +47,7 @@ Compiler::CompileExprResult Compiler::compile_expr_impl(AST::ExprPtr e)
     case AST::ExprKind::DICT: return compile_dict_impl(AST::as_dict(e));
     case AST::ExprKind::INDEX_READ: return compile_index_impl(as_index(e));
     case AST::ExprKind::GET: return compile_get_impl(as_get(e));
-    default:
-        return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
+    default: return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
     }
 
     return ExprResult::knil();
@@ -67,15 +63,9 @@ Compiler::CompileExprResult Compiler::compile_literal_int_impl(AST::IntLiteralEx
     return ExprResult::kint(e->value);
 }
 
-Compiler::CompileExprResult Compiler::compile_literal_float_impl(AST::FloatLiteralExpr* e)
-{
-    return ExprResult::kfloat(e->value);
-}
+Compiler::CompileExprResult Compiler::compile_literal_float_impl(AST::FloatLiteralExpr* e) { return ExprResult::kfloat(e->value); }
 
-Compiler::CompileExprResult Compiler::compile_literal_bool_impl(AST::BoolLiteralExpr* e)
-{
-    return ExprResult::kbool(e->value);
-}
+Compiler::CompileExprResult Compiler::compile_literal_bool_impl(AST::BoolLiteralExpr* e) { return ExprResult::kbool(e->value); }
 
 Compiler::CompileExprResult Compiler::compile_literal_string_impl(AST::StringLiteralExpr* e)
 {
@@ -95,17 +85,14 @@ Compiler::CompileExprResult Compiler::compile_identifier_impl(AST::IdentifierExp
     SourceLocation loc = e->get_location();
     VarInfo vi = resolve_name(e->spelling);
 
-    if (vi.kind == VarInfo::Kind::LOCAL)
-        return ExprResult::reg(vi.reg);
+    if (vi.kind == VarInfo::Kind::LOCAL) return ExprResult::reg(vi.reg);
 
     if (int field_idx = current_method_field_index(e->spelling); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
-        if (self == nullptr)
-            return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
+        if (self == nullptr) return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
         // 0xFF is the named-field sentinel, not a directly encodable slot.
-        PCType pc = field_idx < 0xFF
-            ? m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg.value, field_idx, loc)
-            : m_bytecode_emitter.get_named_field({ }, self->reg, intern_string(e->spelling), loc);
+        PCType pc = field_idx < 0xFF ? m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg.value, field_idx, loc)
+                                     : m_bytecode_emitter.get_named_field({ }, self->reg, intern_string(e->spelling), loc);
         return ExprResult::reloc(pc);
     }
 
@@ -123,8 +110,7 @@ Compiler::CompileExprResult Compiler::compile_unary_impl(AST::UnaryExpr* e)
     case AST::ExprKind::OP_NEG: op = OpCode::OP_NEG; break;
     case AST::ExprKind::OP_BITNOT: op = OpCode::OP_BITNOT; break;
     case AST::ExprKind::OP_NOT: op = OpCode::OP_NOT; break;
-    default:
-        return raise_compile_error(ErrorCode::UNKNOWN_UNARY_OPERATOR, e->get_location());
+    default: return raise_compile_error(ErrorCode::UNKNOWN_UNARY_OPERATOR, e->get_location());
     }
 
     RegMark mark(m_current);
@@ -202,17 +188,15 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     case AST::ExprKind::OP_BITXOR: bc_op = OpCode::OP_BITXOR; break;
     case AST::ExprKind::OP_LSHIFT: bc_op = OpCode::OP_LSHIFT; break;
     case AST::ExprKind::OP_RSHIFT: bc_op = OpCode::OP_RSHIFT; break;
-    default:
-        return raise_compile_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
+    default: return raise_compile_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
     if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal_int(e->rhs)
-        && AST::as_literal_int(e->rhs)->large_literal.empty()
-        && AST::as_literal_int(e->rhs)->value >= 0 && AST::as_literal_int(e->rhs)->value <= 255) {
+        && AST::as_literal_int(e->rhs)->large_literal.empty() && AST::as_literal_int(e->rhs)->value >= 0
+        && AST::as_literal_int(e->rhs)->value <= 255) {
         auto* amount_expr = AST::as_literal_int(e->rhs);
         i64 amount = amount_expr->value;
-        if (amount < 0 || amount > 255)
-            return raise_compile_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
+        if (amount < 0 || amount > 255) return raise_compile_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(e->lhs));
@@ -222,10 +206,8 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     }
 
     // Nonliteral shift counts live in registers, unlike the immediate forms.
-    if (bc_op == OpCode::OP_LSHIFT)
-        bc_op = OpCode::OP_LSHIFT_REG;
-    else if (bc_op == OpCode::OP_RSHIFT)
-        bc_op = OpCode::OP_RSHIFT_REG;
+    if (bc_op == OpCode::OP_LSHIFT) bc_op = OpCode::OP_LSHIFT_REG;
+    else if (bc_op == OpCode::OP_RSHIFT) bc_op = OpCode::OP_RSHIFT_REG;
 
     RegMark mark(m_current);
 
@@ -234,8 +216,7 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     FA_COMPILE_TRY(rhs_ret, compile_expr_impl(e->rhs));
     ANY_REG_BIND(rhs_ret, loc, rhs);
 
-    if (swapped)
-        std::swap(lhs, rhs);
+    if (swapped) std::swap(lhs, rhs);
 
     PCType pc = m_bytecode_emitter.binary(bc_op, { }, lhs, rhs, loc);
     return ExprResult::reloc(pc);
@@ -243,14 +224,11 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
 
 bool Compiler::is_declaration(AST::AssignExpr const* e) const
 {
-    if (!AST::is_identifier(e->target))
-        return false;
+    if (!AST::is_identifier(e->target)) return false;
 
     auto name = AST::as_identifier(e->target);
-    if (lookup_local(name->spelling))
-        return false;
-    if (m_globals.find_ptr(name->spelling) != nullptr)
-        return false;
+    if (lookup_local(name->spelling)) return false;
+    if (m_globals.find_ptr(name->spelling) != nullptr) return false;
     return true;
 }
 
@@ -284,10 +262,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             member_idx = intern_string(target->member->spelling);
         }
         ALLOC_REG(previous, loc);
-        if (indexed)
-            m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, previous.value, object.value, index.value, loc);
-        else
-            m_bytecode_emitter.get_named_field(previous, object, member_idx, loc);
+        if (indexed) m_bytecode_emitter.emit_ABC(OpCode::INDEX_READ, previous.value, object.value, index.value, loc);
+        else m_bytecode_emitter.get_named_field(previous, object, member_idx, loc);
         OpCode opcode;
         switch (operation->get_kind()) {
         case AST::ExprKind::OP_ADD: opcode = OpCode::OP_ADD; break;
@@ -304,10 +280,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         }
         TRY_SET(&rhs, capture(operation->rhs));
         m_bytecode_emitter.binary(opcode, result, previous, rhs, loc);
-        if (indexed)
-            m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, object.value, index.value, result.value, loc);
-        else
-            m_bytecode_emitter.set_named_field(object, result, member_idx, loc);
+        if (indexed) m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, object.value, index.value, result.value, loc);
+        else m_bytecode_emitter.set_named_field(object, result, member_idx, loc);
         return ExprResult::reg(result);
     }
 
@@ -337,11 +311,9 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
 
         if (auto desc = resolve_receiver_class(get_expr->object)) {
             auto it = std::find(desc->field_names.begin(), desc->field_names.end(), member_name->spelling);
-            if (it != desc->field_names.end())
-                field_idx = std::distance(desc->field_names.begin(), it);
+            if (it != desc->field_names.end()) field_idx = std::distance(desc->field_names.begin(), it);
         }
-        if (field_idx < 0 && is_this_reference(get_expr->object))
-            field_idx = current_method_field_index(member_name->spelling);
+        if (field_idx < 0 && is_this_reference(get_expr->object)) field_idx = current_method_field_index(member_name->spelling);
 
         RegMark mark(m_current);
 
@@ -350,23 +322,19 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         FA_COMPILE_TRY(value_expr_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_expr_result, loc, value_reg);
 
-        if (field_idx >= 0 && field_idx < 0xFF)
-            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg.value, field_idx, value_reg.value, loc);
-        else
-            m_bytecode_emitter.set_named_field(object_reg, value_reg, intern_string(member_name->spelling), loc);
+        if (field_idx >= 0 && field_idx < 0xFF) m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg.value, field_idx, value_reg.value, loc);
+        else m_bytecode_emitter.set_named_field(object_reg, value_reg, intern_string(member_name->spelling), loc);
         return ExprResult::reg(value_reg);
     }
 
     // Name assignment: write into an existing local, create a local inside a
     // function/method, or store a top-level name globally.
-    if (!AST::is_identifier(e->target))
-        return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
+    if (!AST::is_identifier(e->target)) return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
     StringRef const& name_value = AST::as_identifier(e->target)->spelling;
 
     if (is_declaration(e)) {
-        if (m_current->is_top_level && m_current->scope_depth == 0
-            && infer_constructed_class(e->value).empty()) {
+        if (m_current->is_top_level && m_current->scope_depth == 0 && infer_constructed_class(e->value).empty()) {
             RegMark mark(m_current);
             FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
             ANY_REG_BIND(value_result, loc, src);
@@ -387,24 +355,20 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
     // the local normally (for example, `x := x` in an initializer).
     if (int field_idx = current_method_field_index(name_value); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
-        if (self == nullptr)
-            return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
+        if (self == nullptr) return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
         RegMark mark(m_current);
         FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_result, loc, value_reg);
-        if (field_idx < 0xFF)
-            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg.value, field_idx, value_reg.value, loc);
-        else
-            m_bytecode_emitter.set_named_field(self->reg, value_reg, intern_string(name_value), loc);
+        if (field_idx < 0xFF) m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg.value, field_idx, value_reg.value, loc);
+        else m_bytecode_emitter.set_named_field(self->reg, value_reg, intern_string(name_value), loc);
         return ExprResult::reg(value_reg);
     }
 
     if (LocalVar const* local = lookup_local(name_value)) {
         RegType dst = local->reg;
         for (auto& variable : m_current->locals) {
-            if (variable.reg == dst)
-                variable.known_class = { };
+            if (variable.reg == dst) variable.known_class = { };
         }
         auto result = compile_expr(e->value, &dst);
         VERIFY_RESULT(result);
@@ -478,13 +442,10 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 auto [object_reg, _] = regs;
                 FA_COMPILE_DISCARD_TRY(compile_args());
                 auto argc = e->args.size() + 1;
-                if (slot <= 0xFF)
-                    m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
-                else
-                    m_bytecode_emitter.invoke_named(object_reg, argc, intern_string(method_name), loc);
+                if (slot <= 0xFF) m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
+                else m_bytecode_emitter.invoke_named(object_reg, argc, intern_string(method_name), loc);
 
-                if (tail && !m_current->is_top_level)
-                    m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
+                if (tail && !m_current->is_top_level) m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
 
                 m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
                 return ExprResult::reg(object_reg);
@@ -516,8 +477,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
             auto idx = intern_string(AST::as_identifier(member)->spelling);
             m_bytecode_emitter.invoke_named(object_reg, argc, idx, loc);
-            if (tail && !m_current->is_top_level)
-                m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
+            if (tail && !m_current->is_top_level) m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
             /// move the cursor back where it was before compiling 'member'
             m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
             return ExprResult::reg(object_reg);
@@ -550,8 +510,7 @@ Compiler::CompileExprResult Compiler::compile_list_impl(AST::ListExpr* e)
 {
     SourceLocation loc = e->get_location();
 
-    if (e->size() > 0xFF)
-        return raise_compile_error(ErrorCode::TOO_MANY_LIST_ELEMENTS, loc);
+    if (e->size() > 0xFF) return raise_compile_error(ErrorCode::TOO_MANY_LIST_ELEMENTS, loc);
 
     ALLOC_REG(dst, loc);
     ALLOC_REG(list_reg, loc);
@@ -566,8 +525,7 @@ Compiler::CompileExprResult Compiler::compile_list_impl(AST::ListExpr* e)
         m_current->registers.rewind(reg.value);
     }
 
-    if (list_reg != dst)
-        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, list_reg.value, 0, loc);
+    if (list_reg != dst) m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, list_reg.value, 0, loc);
 
     m_current->registers.rewind(static_cast<u16>(dst.value) + 1);
     return ExprResult::reg(dst);
@@ -609,8 +567,7 @@ Compiler::CompileExprResult Compiler::compile_dict_impl(AST::DictExpr* e)
     u32 argc = e->content.size() * 2;
     m_bytecode_emitter.ic_call(fn_reg, argc, loc);
 
-    if (fn_reg != dst)
-        m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, fn_reg.value, 0, loc);
+    if (fn_reg != dst) m_bytecode_emitter.emit_ABC(OpCode::MOVE, dst.value, fn_reg.value, 0, loc);
 
     m_current->registers.rewind(static_cast<u16>(dst.value) + 1);
     return ExprResult::reg(dst);
@@ -631,8 +588,7 @@ ErrorOr<RegType, RuntimeError> Compiler::compile_expr(AST::ExprPtr e, RegType* d
 {
     if (dst != nullptr) {
         auto result = reserve_register(*dst);
-        if (result.has_error())
-            return raise_compile_error(result.error().get_code(), e->get_location());
+        if (result.has_error()) return raise_compile_error(result.error().get_code(), e->get_location());
     }
 
     SourceLocation loc = e->get_location();

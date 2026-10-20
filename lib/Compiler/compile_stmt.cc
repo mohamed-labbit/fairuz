@@ -23,8 +23,7 @@ namespace fairuz::runtime {
 
 Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
 {
-    if (m_current->is_dead)
-        return { };
+    if (m_current->is_dead) return { };
 
     switch (s->get_kind()) {
     case AST::Stmt::Kind::EXPR: return compile_expr_stmt(AST::as_expr_stmt(s));
@@ -39,8 +38,7 @@ Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
     case AST::Stmt::Kind::BLOCK: return compile_block(as_block(s));
     case AST::Stmt::Kind::CLASS_DEF: return compile_class_def(as_class_def(s));
     case AST::Stmt::Kind::IMPORT: return compile_import(as_import(s));
-    case AST::Stmt::Kind::INVALID:
-        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
+    case AST::Stmt::Kind::INVALID: return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
     }
     return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 }
@@ -162,8 +160,7 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return raise_compile_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
 
-    if (current_chunk()->functions.size() > MAX_CONSTANTS)
-        return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
+    if (current_chunk()->functions.size() > MAX_CONSTANTS) return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
 
     Chunk* fn_chunk = make_chunk();
     fn_chunk->source = current_chunk()->source;
@@ -188,8 +185,7 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     return { };
 }
 
-Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt const* node,
-    CompilerState& state, StringRef receiver_class)
+Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class)
 {
     SourceLocation loc = node->get_location();
     CompilerStateGuard state_guard(m_current, &state);
@@ -207,32 +203,26 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     if (AST::is_function_stub(body)) {
         AST::ASTBuilder builder;
         auto parsed = builder.materialize(*AST::as_function_stub(body));
-        if (parsed.has_error())
-            return raise_compile_error(parsed.error());
+        if (parsed.has_error()) return raise_compile_error(parsed.error());
         body = parsed.value();
     }
     FA_COMPILE_DISCARD_TRY(compile_stmt(body));
     if (!state.is_dead) {
-        if (state.is_class_method)
-            m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver.value, 1, 0, node->get_location());
-        else
-            m_bytecode_emitter.return_nil(node->get_location());
+        if (state.is_class_method) m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver.value, 1, 0, node->get_location());
+        else m_bytecode_emitter.return_nil(node->get_location());
     }
     state.chunk->local_count = state.registers.max_reg();
     return { };
 }
 
-void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
-    CompilerState state, StringRef receiver_class)
+void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class)
 {
     // AST nodes and their spellings live in the same arena as chunks. Capture
     // compiler tables by value so neither stack state nor the original Compiler
     // needs to survive (in particular, for imported modules).
     state.chunk = nullptr;
     state.enclosing = nullptr;
-    chunk->deferred_body = [node, state, receiver_class,
-                               globals = m_globals, modules = m_module_names,
-                               classes = m_class_registry](Chunk* target) {
+    chunk->deferred_body = [node, state, receiver_class, globals = m_globals, modules = m_module_names, classes = m_class_registry](Chunk* target) {
         Compiler compiler(target->source);
         compiler.m_globals = globals;
         compiler.m_module_names = modules;
@@ -245,8 +235,7 @@ void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
 
 ErrorOr<bool, RuntimeError> Compiler::compile_function_deferred(Chunk* chunk)
 {
-    if (!chunk->deferred_body)
-        return true;
+    if (!chunk->deferred_body) return true;
 
     diagnostic::SourceScope source_scope(chunk->source);
     // Compile transactionally: a failed attempt must leave a callable stub,
@@ -258,8 +247,7 @@ ErrorOr<bool, RuntimeError> Compiler::compile_function_deferred(Chunk* chunk)
     compiled.globals = chunk->globals;
     compiled.arity = chunk->arity;
     auto result = chunk->deferred_body(&compiled);
-    if (result.has_error())
-        return result.error();
+    if (result.has_error()) return result.error();
     *chunk = std::move(compiled);
     return true;
 }
@@ -283,8 +271,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
 
     if (AST::is_call(value) && !m_current->is_top_level) {
         auto* call_expr = as_call(value);
-        bool is_ctor_call = !AST::is_get(call_expr->callee)
-            && AST::is_identifier(call_expr->callee)
+        bool is_ctor_call = !AST::is_get(call_expr->callee) && AST::is_identifier(call_expr->callee)
             && m_class_registry.find_ptr(AST::as_identifier(call_expr->callee)->spelling) != nullptr;
 
         RegMark mark(m_current);
@@ -311,8 +298,7 @@ Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
 
 Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
 {
-    if (m_current->loop_stack.empty())
-        return raise_compile_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
+    if (m_current->loop_stack.empty()) return raise_compile_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().break_patches.push(m_bytecode_emitter.jump(loc));
@@ -322,8 +308,7 @@ Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
 
 Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
 {
-    if (m_current->loop_stack.empty())
-        return raise_compile_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
+    if (m_current->loop_stack.empty()) return raise_compile_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().continue_patches.push(m_bytecode_emitter.jump(loc));
@@ -340,16 +325,14 @@ Compiler::CompileStmtResult Compiler::compile_block(AST::BlockStmt* s)
     }
 
     SourceLocation loc = { 1, 1, 0 };
-    if (!s->stmts.empty() && s->stmts.back())
-        loc = s->stmts.back()->get_location();
+    if (!s->stmts.empty() && s->stmts.back()) loc = s->stmts.back()->get_location();
     return { };
 }
 
 Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 {
     SourceLocation loc = s->get_location();
-    if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return raise_compile_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
+    if (!m_current->is_top_level || m_current->scope_depth != 0) return raise_compile_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
 
     StringRef class_name = AST::as_identifier(s->name)->spelling;
     StringRef parent_name;
@@ -387,16 +370,14 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
                     break;
                 }
             }
-            if (!inherited)
-                field_names.push(fname);
+            if (!inherited) field_names.push(fname);
         }
     }
 
     auto compile_method_closure = [&](AST::FuncDefStmt const* method) -> ErrorOr<std::tuple<RegType, Chunk*>, RuntimeError> {
         SourceLocation method_loc = method->get_location();
 
-        if (current_chunk()->functions.size() > MAX_CONSTANTS)
-            return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
+        if (current_chunk()->functions.size() > MAX_CONSTANTS) return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
 
         Chunk* ch = make_chunk();
         ch->source = current_chunk()->source;
@@ -424,36 +405,21 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     // fixed-slot layout — both the slot-resolution pass and the vtable
     // build below must agree with it.
     auto special_slot_for = [](StringRef const& name) -> int {
-        if (name == "بداية")
-            return ObjClass::INIT;
-        if (name == "نداء")
-            return ObjClass::CALL;
-        if (name == "عملية+")
-            return ObjClass::ADD;
-        if (name == "عملية-")
-            return ObjClass::SUB;
-        if (name == "عملية*")
-            return ObjClass::MUL;
-        if (name == "عملية/")
-            return ObjClass::DIV;
-        if (name == "عملية%" || name == "عملية٪")
-            return ObjClass::MOD;
-        if (name == "سالب")
-            return ObjClass::NEG;
-        if (name == "يساوي")
-            return ObjClass::EQ;
-        if (name == "لا_يساوي")
-            return ObjClass::NEQ;
-        if (name == "اصغر_من")
-            return ObjClass::LT;
-        if (name == "اصغر_او_يساوي")
-            return ObjClass::LTE;
-        if (name == "اكبر_من")
-            return ObjClass::GT;
-        if (name == "اكبر_او_يساوي")
-            return ObjClass::GTE;
-        if (name == "كتابة")
-            return ObjClass::REPR;
+        if (name == "بداية") return ObjClass::INIT;
+        if (name == "نداء") return ObjClass::CALL;
+        if (name == "عملية+") return ObjClass::ADD;
+        if (name == "عملية-") return ObjClass::SUB;
+        if (name == "عملية*") return ObjClass::MUL;
+        if (name == "عملية/") return ObjClass::DIV;
+        if (name == "عملية%" || name == "عملية٪") return ObjClass::MOD;
+        if (name == "سالب") return ObjClass::NEG;
+        if (name == "يساوي") return ObjClass::EQ;
+        if (name == "لا_يساوي") return ObjClass::NEQ;
+        if (name == "اصغر_من") return ObjClass::LT;
+        if (name == "اصغر_او_يساوي") return ObjClass::LTE;
+        if (name == "اكبر_من") return ObjClass::GT;
+        if (name == "اكبر_او_يساوي") return ObjClass::GTE;
+        if (name == "كتابة") return ObjClass::REPR;
         return -1;
     };
 
@@ -466,8 +432,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     Array<int> method_slots;     // parallel to `methods`: final vtable slot per method
 
     for (AST::StmtPtr m : s->methods) {
-        if (m->get_kind() != AST::Stmt::Kind::FUNC)
-            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
+        if (m->get_kind() != AST::Stmt::Kind::FUNC) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = as_function_def(m);
         StringRef method_name = method->name->spelling;
@@ -480,8 +445,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
             }
         }
 
-        if (seen)
-            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, method->get_location());
+        if (seen) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, method->get_location());
 
         seen_names.push(method_name);
 
@@ -518,8 +482,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         VERIFY_RESULT(result);
         auto [reg, chunk] = result.value();
 
-        if (chunk == nullptr)
-            continue;
+        if (chunk == nullptr) continue;
 
         vtable[static_cast<u32>(method_slots[i])] = chunk;
     }
@@ -567,8 +530,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     // ClassDesc registration — unchanged
     ClassDescriptor cdesc;
     cdesc.name = class_name;
-    if (s->parent == nullptr || parent_desc != nullptr)
-        cdesc.field_names = field_names;
+    if (s->parent == nullptr || parent_desc != nullptr) cdesc.field_names = field_names;
     cdesc.method_names = method_names;
 
     m_class_registry[class_name] = std::move(cdesc);
@@ -577,8 +539,7 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 
 Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
 {
-    if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
+    if (!m_current->is_top_level || m_current->scope_depth != 0) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
     SourceLocation loc = s->get_location();
     StringRef const& module = s->get_module();
@@ -586,14 +547,11 @@ Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
     Array<StringRef> const& aliases = s->get_aliases();
     if (!s->imports_member()) {
         // Whole-module imports have no member names, but still bind one alias.
-        if (aliases.size() != 1)
-            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
+        if (aliases.size() != 1) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
         return compile_import_single(module, { }, aliases[0], loc, false);
     }
-    if (names.size() != aliases.size())
-        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
-    for (size_t i = 0; i < names.size(); ++i)
-        TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
+    if (names.size() != aliases.size()) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
+    for (size_t i = 0; i < names.size(); ++i) TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
 
     return { };
 }
@@ -615,14 +573,12 @@ Compiler::CompileStmtResult Compiler::compile_import_single(
     if (imports_member) {
         /// not using ALLOC_REG to not overshadow the existing 'value_reg'
         TRY_SET(&value_reg, alloc_register(loc));
-        m_bytecode_emitter.get_named_field(value_reg, module_reg,
-            intern_string(name), loc);
+        m_bytecode_emitter.get_named_field(value_reg, module_reg, intern_string(name), loc);
     }
 
     m_bytecode_emitter.store_global(value_reg, intern_string(alias), loc);
     m_globals[alias] = true;
-    if (!imports_member)
-        m_module_names[alias] = true;
+    if (!imports_member) m_module_names[alias] = true;
     return { };
 }
 
@@ -631,8 +587,7 @@ ClassDescriptor const* Compiler::resolve_receiver_class(AST::ExprPtr e) const
     // Ordinary bindings can change class across branches and loop backedges.
     // Without flow analysis their declaration-time class is not a slot proof.
     // Only the implicit method receiver has a stable class layout here.
-    if (!is_this_reference(e))
-        return nullptr;
+    if (!is_this_reference(e)) return nullptr;
 
     StringRef const name = AST::as_identifier(e)->spelling;
 
@@ -640,8 +595,7 @@ ClassDescriptor const* Compiler::resolve_receiver_class(AST::ExprPtr e) const
     // current method's field table (or named lookup for dynamic layouts).
     if (LocalVar const* local = lookup_local(name)) {
         if (!local->known_class.empty()) {
-            if (auto* d = m_class_registry.find_ptr(local->known_class))
-                return d;
+            if (auto* d = m_class_registry.find_ptr(local->known_class)) return d;
         }
     }
 

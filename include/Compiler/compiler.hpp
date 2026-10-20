@@ -85,8 +85,7 @@ struct CompilerStateGuard {
 
     void restore()
     {
-        if (current != previous)
-            current = previous;
+        if (current != previous) current = previous;
     }
 };
 
@@ -107,21 +106,13 @@ struct RegMark {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
         u16 floor = mark;
-        for (size_t i = locals_mark; i < state->locals.size(); ++i)
-            floor = std::max<u16>(floor, static_cast<u16>(state->locals[i].reg.value) + 1);
+        for (size_t i = locals_mark; i < state->locals.size(); ++i) floor = std::max<u16>(floor, static_cast<u16>(state->locals[i].reg.value) + 1);
         state->registers.rewind(floor);
     }
 };
 
 struct ExprResult {
-    enum class Kind : u8 {
-        REG,
-        RELOC,
-        KINT,
-        KFLOAT,
-        KBOOL,
-        KNIL
-    } kind;
+    enum class Kind : u8 { REG, RELOC, KINT, KFLOAT, KBOOL, KNIL } kind;
 
     union {
         RegType reg_;
@@ -137,30 +128,12 @@ struct ExprResult {
     {
     }
 
-    static ExprResult reg(RegType r)
-    {
-        return ExprResult(r);
-    }
-    static ExprResult reloc(PCType p)
-    {
-        return ExprResult(p);
-    }
-    static ExprResult kint(i64 v)
-    {
-        return ExprResult(v);
-    }
-    static ExprResult kfloat(f64 v)
-    {
-        return ExprResult(v);
-    }
-    static ExprResult kbool(bool v)
-    {
-        return ExprResult(v);
-    }
-    static ExprResult knil()
-    {
-        return ExprResult();
-    }
+    static ExprResult reg(RegType r) { return ExprResult(r); }
+    static ExprResult reloc(PCType p) { return ExprResult(p); }
+    static ExprResult kint(i64 v) { return ExprResult(v); }
+    static ExprResult kfloat(f64 v) { return ExprResult(v); }
+    static ExprResult kbool(bool v) { return ExprResult(v); }
+    static ExprResult knil() { return ExprResult(); }
 
 private:
     // Initialize the selected union member directly. Strong identities have
@@ -232,10 +205,8 @@ private:
             u32 depth = cs->scope_depth;
             Array<LocalVar>& locals = cs->locals;
             size_t pop_from = locals.size();
-            while (pop_from > 0 && locals[pop_from - 1].depth > depth)
-                pop_from -= 1;
-            if (pop_from < locals.size())
-                cs->registers.rewind(locals[pop_from].reg.value);
+            while (pop_from > 0 && locals[pop_from - 1].depth > depth) pop_from -= 1;
+            if (pop_from < locals.size()) cs->registers.rewind(locals[pop_from].reg.value);
             locals.resize(static_cast<u32>(pop_from));
         }
     };
@@ -265,10 +236,7 @@ private:
     HashTable<StringRef, ClassDescriptor, StringRefHash, StringRefEqual> m_class_registry;
 
     struct VarInfo {
-        enum class Kind {
-            LOCAL,
-            GLOBAL
-        } kind;
+        enum class Kind { LOCAL, GLOBAL } kind;
         RegType reg { 0 };
     };
 
@@ -279,10 +247,8 @@ private:
     CompileStmtResult compile_if(AST::IfElseStmt* s);
     CompileStmtResult compile_while(AST::WhileStmt* s);
     CompileStmtResult compile_function_def(AST::FuncDefStmt* f);
-    void defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
-        CompilerState state, StringRef receiver_class = { });
-    CompileStmtResult compile_function_body(AST::FuncDefStmt const* node,
-        CompilerState& state, StringRef receiver_class);
+    void defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class = { });
+    CompileStmtResult compile_function_body(AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class);
     CompileStmtResult compile_return(AST::ReturnStmt* s);
     CompileStmtResult compile_for(AST::ForStmt* s);
     CompileStmtResult compile_break(AST::BreakStmt* s);
@@ -314,10 +280,7 @@ private:
     ErrorOr<RegType, RuntimeError> any_reg(ExprResult const& r, SourceLocation loc);
     ErrorOr<RegType, RuntimeError> alloc_register(SourceLocation loc);
 
-    void declare_local(StringRef const& name, RegType reg)
-    {
-        declare_local(name, reg, "");
-    }
+    void declare_local(StringRef const& name, RegType reg) { declare_local(name, reg, ""); }
     void declare_local(StringRef const& name, RegType reg, StringRef const& known_class)
     {
         m_current->locals.push({ name, m_current->scope_depth, reg, known_class });
@@ -333,10 +296,7 @@ private:
 
     int current_method_slot(StringRef const& name) const;
 
-    void push_loop(PCType loop_start)
-    {
-        m_current->loop_stack.push({ { }, { }, loop_start });
-    }
+    void push_loop(PCType loop_start) { m_current->loop_stack.push({ { }, { }, loop_start }); }
 
     void pop_loop(PCType loop_exit, PCType continue_target, u32 line);
 
@@ -348,10 +308,7 @@ private:
 
     bool is_declaration(AST::AssignExpr const* e) const;
 
-    ErrorOr<void> reserve_register(RegType reg)
-    {
-        return m_current->registers.reserve_register(reg);
-    }
+    ErrorOr<void> reserve_register(RegType reg) { return m_current->registers.reserve_register(reg); }
 
     // Mirrors fairuz::parser::same_name (fparser.cc), which is file-local to
     // that translation unit and not visible here. Used to detect `this.field`
@@ -363,19 +320,12 @@ private:
     // registry insert happens only after the full method-compilation loop).
     static bool is_this_reference(AST::ExprPtr e)
     {
-        return e->get_kind() == AST::ExprKind::IDENTIFIER
-            && AST::as_identifier(e)->spelling == kClassInstanceName;
+        return e->get_kind() == AST::ExprKind::IDENTIFIER && AST::as_identifier(e)->spelling == kClassInstanceName;
     }
 
-    RuntimeError raise_compile_error(Error const& err)
-    {
-        return raise_compile_error(err.get_code(), err.get_location());
-    }
+    RuntimeError raise_compile_error(Error const& err) { return raise_compile_error(err.get_code(), err.get_location()); }
 
-    RuntimeError raise_compile_error(ErrorCode errc, SourceLocation loc)
-    {
-        return RuntimeError { errc, m_source, loc };
-    }
+    RuntimeError raise_compile_error(ErrorCode errc, SourceLocation loc) { return RuntimeError { errc, m_source, loc }; }
 }; // class Compiler
 
 } // namespace fairuz::runtime

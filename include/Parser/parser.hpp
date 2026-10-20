@@ -32,13 +32,11 @@ public:
     StringRef m_context;
     Array<StringRef> m_suggestions;
 
-    ParseError(StringRef const& message, u32 line, u32 column,
-        StringRef context = "", Array<StringRef> suggestions = { });
+    ParseError(StringRef const& message, u32 line, u32 column, StringRef context = "", Array<StringRef> suggestions = { });
     StringRef format() const;
 };
 
-enum class BodyParsing { Lazy,
-    Eager };
+enum class BodyParsing { Lazy, Eager };
 
 // Parser contract
 // ---------------
@@ -75,8 +73,7 @@ public:
     // An empty parser is a valid, already-complete bounded stream.
     Parser();
     explicit Parser(lex::FileManager*, BodyParsing = BodyParsing::Lazy);
-    explicit Parser(Array<TokenPtr> const&, diagnostic::SourcePtr,
-        BodyParsing = BodyParsing::Lazy);
+    explicit Parser(Array<TokenPtr> const&, diagnostic::SourcePtr, BodyParsing = BodyParsing::Lazy);
 
     Parser(Parser const&) = delete;
     Parser& operator=(Parser const&) = delete;
@@ -158,10 +155,7 @@ private:
         Parser* m_parser;
     };
 
-    enum class Sequence { Program,
-        Block,
-        Method,
-        Class };
+    enum class Sequence { Program, Block, Method, Class };
     Array<AST::StmtPtr> parse_sequence(Sequence, Array<AST::ExprPtr>* = nullptr);
     void synchronize(size_t statement_indent);
     void skip_newlines();
@@ -175,9 +169,7 @@ private:
 
     // The opening delimiter has already been consumed. This helper owns the
     // matching closer and permits an empty list and one trailing comma.
-    template<class T, class ReadItem>
-    ErrorOr<Array<T>> parse_delimited(tok::TokenType close, ErrorCode,
-        ReadItem&&, bool* had_comma = nullptr);
+    template<class T, class ReadItem> ErrorOr<Array<T>> parse_delimited(tok::TokenType close, ErrorCode, ReadItem&&, bool* had_comma = nullptr);
 
     ErrorOr<AST::ExprPtr> parse_assignment_tail(AST::ExprPtr, bool allow_augmented);
     AST::AssignExpr* make_augmented(AST::ExprPtr, AST::ExprPtr, AST::ExprKind);

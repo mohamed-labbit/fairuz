@@ -23,40 +23,25 @@ namespace {
 
 using Kind = tok::TokenType;
 
-bool is_open(Kind kind)
-{
-    return kind == Kind::LPAREN || kind == Kind::LBRACKET || kind == Kind::LBRACE;
-}
+bool is_open(Kind kind) { return kind == Kind::LPAREN || kind == Kind::LBRACKET || kind == Kind::LBRACE; }
 
-bool is_close(Kind kind)
-{
-    return kind == Kind::RPAREN || kind == Kind::RBRACKET || kind == Kind::RBRACE;
-}
+bool is_close(Kind kind) { return kind == Kind::RPAREN || kind == Kind::RBRACKET || kind == Kind::RBRACE; }
 
 bool ends_expression(Kind kind)
 {
-    return is_close(kind) || kind == Kind::IDENTIFIER || kind == Kind::NAME
-        || kind == Kind::STRING || kind == Kind::INTEGER || kind == Kind::DECIMAL
-        || kind == Kind::HEX || kind == Kind::OCTAL || kind == Kind::BINARY
-        || kind == Kind::KW_THIS || kind == Kind::KW_TRUE || kind == Kind::KW_FALSE
-        || kind == Kind::KW_NIL;
+    return is_close(kind) || kind == Kind::IDENTIFIER || kind == Kind::NAME || kind == Kind::STRING || kind == Kind::INTEGER || kind == Kind::DECIMAL
+        || kind == Kind::HEX || kind == Kind::OCTAL || kind == Kind::BINARY || kind == Kind::KW_THIS || kind == Kind::KW_TRUE
+        || kind == Kind::KW_FALSE || kind == Kind::KW_NIL;
 }
 
-bool is_symbolic_unary(Kind kind)
-{
-    return kind == Kind::OP_PLUS || kind == Kind::OP_MINUS || kind == Kind::OP_BITNOT;
-}
+bool is_symbolic_unary(Kind kind) { return kind == Kind::OP_PLUS || kind == Kind::OP_MINUS || kind == Kind::OP_BITNOT; }
 
 bool needs_space(Kind previous, Kind current, bool previous_unary)
 {
-    if (current == Kind::COMMA || current == Kind::COLON || current == Kind::DOT || is_close(current))
-        return false;
-    if (previous == Kind::DOT || is_open(previous))
-        return false;
-    if ((current == Kind::LPAREN || current == Kind::LBRACKET) && ends_expression(previous))
-        return false;
-    if (previous_unary && !is_symbolic_unary(current))
-        return false;
+    if (current == Kind::COMMA || current == Kind::COLON || current == Kind::DOT || is_close(current)) return false;
+    if (previous == Kind::DOT || is_open(previous)) return false;
+    if ((current == Kind::LPAREN || current == Kind::LBRACKET) && ends_expression(previous)) return false;
+    if (previous_unary && !is_symbolic_unary(current)) return false;
     return true;
 }
 
@@ -64,14 +49,10 @@ size_t indentation(std::string_view line)
 {
     size_t width = 0;
     for (char ch : line) {
-        if (ch == ' ')
-            ++width;
-        else if (ch == '\t')
-            width += 4 - width % 4;
-        else if (ch == '\f')
-            width = 0;
-        else
-            break;
+        if (ch == ' ') ++width;
+        else if (ch == '\t') width += 4 - width % 4;
+        else if (ch == '\f') width = 0;
+        else break;
     }
     return width;
 }
@@ -80,8 +61,7 @@ size_t display_width(std::string_view text)
 {
     size_t width = 0;
     for (unsigned char ch : text) {
-        if ((ch & 0xc0) != 0x80)
-            ++width;
+        if ((ch & 0xc0) != 0x80) ++width;
     }
     return width;
 }
@@ -98,14 +78,11 @@ struct Line {
 size_t token_end(TokenPtr token, std::string_view source)
 {
     size_t start = token->location().offset;
-    if (token->type() != Kind::STRING)
-        return start + token->lexeme().len();
+    if (token->type() != Kind::STRING) return start + token->lexeme().len();
     char quote = source.at(start);
     for (size_t i = start + 1; i < source.size(); ++i) {
-        if (source[i] == '\\')
-            ++i;
-        else if (source[i] == quote)
-            return i + 1;
+        if (source[i] == '\\') ++i;
+        else if (source[i] == quote) return i + 1;
     }
     throw std::runtime_error("Cannot format an unterminated string");
 }
@@ -124,16 +101,13 @@ std::vector<TokenPtr> significant(Array<TokenPtr> const& tokens)
     bool has_code = false;
     for (auto token : tokens) {
         Kind kind = token->type();
-        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER)
-            continue;
+        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER) continue;
         if (kind == Kind::NEWLINE) {
-            if (has_code)
-                result.push_back(token);
+            if (has_code) result.push_back(token);
             has_code = false;
         } else if (kind == Kind::DEDENT || kind == Kind::INDENT) {
             // A final newline can occur before EOF's implicit dedents.
-            if (!result.empty() && result.back()->type() == Kind::NEWLINE)
-                result.pop_back();
+            if (!result.empty() && result.back()->type() == Kind::NEWLINE) result.pop_back();
             result.push_back(token);
             has_code = false;
         } else {
@@ -141,8 +115,7 @@ std::vector<TokenPtr> significant(Array<TokenPtr> const& tokens)
             has_code = true;
         }
     }
-    if (!result.empty() && result.back()->type() == Kind::NEWLINE)
-        result.pop_back();
+    if (!result.empty() && result.back()->type() == Kind::NEWLINE) result.pop_back();
     return result;
 }
 
@@ -153,18 +126,15 @@ StringRef Formatter::format(StringRef const& source)
     lex::FileManager input;
     input.buffer().assign(source.data(), source.len());
     auto tokens = tokenize(input);
-    if (diagnostic::has_errors())
-        throw std::runtime_error("Cannot format invalid source");
+    if (diagnostic::has_errors()) throw std::runtime_error("Cannot format invalid source");
 
     std::string_view text(source.empty() ? "" : source.data(), source.len());
     std::vector<Line> lines;
     for (size_t start = 0; start < text.size();) {
         size_t end = text.find('\n', start);
-        if (end == std::string_view::npos)
-            end = text.size();
+        if (end == std::string_view::npos) end = text.size();
         size_t content_end = end;
-        if (content_end > start && text[content_end - 1] == '\r')
-            --content_end;
+        if (content_end > start && text[content_end - 1] == '\r') --content_end;
         lines.push_back({ start, text.substr(start, content_end - start), { }, 0 });
         start = end + 1;
     }
@@ -177,15 +147,12 @@ StringRef Formatter::format(StringRef const& source)
             continue;
         }
         if (kind == Kind::DEDENT) {
-            if (depth)
-                --depth;
+            if (depth) --depth;
             continue;
         }
-        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER || kind == Kind::NEWLINE)
-            continue;
+        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER || kind == Kind::NEWLINE) continue;
         size_t line = token->line() - 1;
-        if (line >= lines.size())
-            throw std::runtime_error("Invalid formatter source location");
+        if (line >= lines.size()) throw std::runtime_error("Invalid formatter source location");
         lines[line].tokens.push_back(token);
         lines[line].depth = depth;
     }
@@ -208,8 +175,7 @@ StringRef Formatter::format(StringRef const& source)
             indent = brackets.back().indent + 4;
             size_t closing = 0;
             for (auto token : line.tokens) {
-                if (!is_close(token->type()) || closing == brackets.size())
-                    break;
+                if (!is_close(token->type()) || closing == brackets.size()) break;
                 indent = brackets[brackets.size() - 1 - closing++].indent;
             }
         } else if (!line.tokens.empty()) {
@@ -223,10 +189,8 @@ StringRef Formatter::format(StringRef const& source)
             // whose first line is a comment.
             size_t width = indentation(line.text);
             size_t level = 0;
-            while (level + 1 < source_indents.size() && source_indents[level + 1] <= width)
-                ++level;
-            if (width > source_indents[level])
-                ++level;
+            while (level + 1 < source_indents.size() && source_indents[level + 1] <= width) ++level;
+            if (width > source_indents[level]) ++level;
             indent = level * 4;
         }
 
@@ -237,20 +201,15 @@ StringRef Formatter::format(StringRef const& source)
         for (auto token : line.tokens) {
             Kind kind = token->type();
             bool unary = is_symbolic_unary(kind) && !ends_expression(previous);
-            if (!rendered.empty() && needs_space(previous, kind, previous_unary))
-                rendered += ' ';
+            if (!rendered.empty() && needs_space(previous, kind, previous_unary)) rendered += ' ';
             starts.push_back(rendered.size());
             size_t start = token->location().offset;
             consumed = token_end(token, text);
-            if (kind == Kind::COMMA)
-                rendered += "،";
-            else
-                rendered.append(text.substr(start, consumed - start));
+            if (kind == Kind::COMMA) rendered += "،";
+            else rendered.append(text.substr(start, consumed - start));
             ends.push_back(rendered.size());
-            if (is_open(kind))
-                brackets.push_back({ indent });
-            else if (is_close(kind) && !brackets.empty())
-                brackets.pop_back();
+            if (is_open(kind)) brackets.push_back({ indent });
+            else if (is_close(kind) && !brackets.empty()) brackets.pop_back();
             previous = kind;
             previous_unary = unary;
         }
@@ -258,34 +217,27 @@ StringRef Formatter::format(StringRef const& source)
         // Everything after the last token is whitespace or a comment. Hashes
         // inside strings are already consumed with the raw string token.
         size_t comment = line.text.find('#', consumed - line.start);
-        std::string_view comment_text = comment == std::string_view::npos
-            ? std::string_view { }
-            : line.text.substr(comment);
+        std::string_view comment_text = comment == std::string_view::npos ? std::string_view { } : line.text.substr(comment);
         bool disable_here = comment_text.find("# fmt: off") != std::string_view::npos;
         bool enable_here = comment_text.find("# fmt: on") != std::string_view::npos;
         bool skip_here = comment_text.find("# fmt: skip") != std::string_view::npos;
         if (comment != std::string_view::npos) {
-            if (!rendered.empty())
-                rendered += "  ";
+            if (!rendered.empty()) rendered += "  ";
             rendered.append(line.text.substr(comment));
         }
-        while (!rendered.empty() && (rendered.back() == ' ' || rendered.back() == '\t'))
-            rendered.pop_back();
+        while (!rendered.empty() && (rendered.back() == ' ' || rendered.back() == '\t')) rendered.pop_back();
         if (formatting_disabled || disable_here || enable_here || skip_here) {
             output.append(line.text);
             output += eol;
-            if (disable_here)
-                formatting_disabled = true;
-            if (enable_here)
-                formatting_disabled = false;
+            if (disable_here) formatting_disabled = true;
+            if (enable_here) formatting_disabled = false;
             continue;
         }
         if (!rendered.empty()) {
             bool wrapped = false;
             // A single-line bracket group can be split at its own commas.
             // Leave lines with comments and already multiline groups alone.
-            if (comment == std::string_view::npos && brackets.size() == bracket_depth_at_start
-                && indent + display_width(rendered) > 88) {
+            if (comment == std::string_view::npos && brackets.size() == bracket_depth_at_start && indent + display_width(rendered) > 88) {
                 size_t open = line.tokens.size();
                 size_t close = line.tokens.size();
                 size_t nesting = 0;
@@ -293,12 +245,10 @@ StringRef Formatter::format(StringRef const& source)
                 for (size_t i = 0; i < line.tokens.size(); ++i) {
                     Kind kind = line.tokens[i]->type();
                     if (is_open(kind)) {
-                        if (nesting == 0 && open == line.tokens.size())
-                            open = i;
+                        if (nesting == 0 && open == line.tokens.size()) open = i;
                         ++nesting;
                     } else if (is_close(kind)) {
-                        if (nesting == 0)
-                            break;
+                        if (nesting == 0) break;
                         --nesting;
                         if (nesting == 0 && open != line.tokens.size()) {
                             close = i;
@@ -314,8 +264,7 @@ StringRef Formatter::format(StringRef const& source)
                     output += eol;
                     size_t segment = ends[open];
                     for (size_t comma : commas) {
-                        while (segment < starts[comma] && rendered[segment] == ' ')
-                            ++segment;
+                        while (segment < starts[comma] && rendered[segment] == ' ') ++segment;
                         if (segment < ends[comma]) {
                             output.append(indent + 4, ' ');
                             output.append(rendered.substr(segment, ends[comma] - segment));
@@ -323,8 +272,7 @@ StringRef Formatter::format(StringRef const& source)
                         }
                         segment = ends[comma];
                     }
-                    while (segment < starts[close] && rendered[segment] == ' ')
-                        ++segment;
+                    while (segment < starts[close] && rendered[segment] == ' ') ++segment;
                     if (segment < starts[close]) {
                         output.append(indent + 4, ' ');
                         output.append(rendered.substr(segment, starts[close] - segment));
@@ -344,27 +292,22 @@ StringRef Formatter::format(StringRef const& source)
     }
 
     // Exactly one final newline for nonempty documents; empty input stays empty.
-    while (!output.empty() && (output.back() == '\n' || output.back() == '\r'))
-        output.pop_back();
-    if (!output.empty())
-        output += eol;
+    while (!output.empty() && (output.back() == '\n' || output.back() == '\r')) output.pop_back();
+    if (!output.empty()) output += eol;
 
     lex::FileManager formatted;
     formatted.buffer() = output;
     auto before = significant(tokens);
     auto after = significant(tokenize(formatted));
-    if (before.size() != after.size())
-        throw std::runtime_error("Formatting changed the token stream; input left unchanged");
+    if (before.size() != after.size()) throw std::runtime_error("Formatting changed the token stream; input left unchanged");
     for (size_t i = 0; i < before.size(); ++i) {
         Kind kind = before[i]->type();
-        if (kind != after[i]->type()
-            || (kind != Kind::COMMA && kind != Kind::NEWLINE && before[i]->lexeme() != after[i]->lexeme()))
+        if (kind != after[i]->type() || (kind != Kind::COMMA && kind != Kind::NEWLINE && before[i]->lexeme() != after[i]->lexeme()))
             throw std::runtime_error("Formatting changed a token; input left unchanged");
     }
     parser::Parser parser(&formatted, parser::BodyParsing::Eager);
     (void)parser.parse_program();
-    if (diagnostic::has_errors())
-        throw std::runtime_error("Formatted output is invalid; input left unchanged");
+    if (diagnostic::has_errors()) throw std::runtime_error("Formatted output is invalid; input left unchanged");
     return StringRef(output.c_str());
 }
 

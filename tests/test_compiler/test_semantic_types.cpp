@@ -45,12 +45,9 @@ static_assert(!HasPostIncrement<PCType>);
 static_assert(std::is_same_v<decltype(instr_A(InstrType { })), u8>);
 static_assert(std::is_same_v<decltype(instr_Bx(InstrType { })), u16>);
 static_assert(std::is_same_v<decltype(std::declval<RegisterAllocator>().max_reg()), u16>);
-static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::load_constant),
-    ByteCodeEmitter&, RegType, FunctionIndex, SourceLocation>);
-static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::invoke),
-    ByteCodeEmitter&, RegType, CacheSlot, u32, SourceLocation>);
-static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::ic_call),
-    ByteCodeEmitter&, RegType, RegType, SourceLocation>);
+static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::load_constant), ByteCodeEmitter&, RegType, FunctionIndex, SourceLocation>);
+static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::invoke), ByteCodeEmitter&, RegType, CacheSlot, u32, SourceLocation>);
+static_assert(!std::is_invocable_v<decltype(&ByteCodeEmitter::ic_call), ByteCodeEmitter&, RegType, RegType, SourceLocation>);
 
 } // namespace
 

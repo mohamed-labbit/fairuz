@@ -17,24 +17,15 @@ using namespace fairuz;
 namespace {
 
 struct IntHash {
-    size_t operator()(int m_value) const
-    {
-        return static_cast<size_t>(static_cast<u32>(m_value) * 2654435761u);
-    }
+    size_t operator()(int m_value) const { return static_cast<size_t>(static_cast<u32>(m_value) * 2654435761u); }
 };
 
 struct IntEqual {
-    bool operator()(int lhs, int rhs) const
-    {
-        return lhs == rhs;
-    }
+    bool operator()(int lhs, int rhs) const { return lhs == rhs; }
 };
 
 struct CollidingHash {
-    size_t operator()(int) const
-    {
-        return 1;
-    }
+    size_t operator()(int) const { return 1; }
 };
 
 using IntTable = HashTable<int, int, IntHash, IntEqual>;
@@ -73,8 +64,7 @@ TEST(HashTable, HandlesLinearProbingCollisions)
 {
     CollidingIntTable table;
 
-    for (int i = 0; i < 32; i++)
-        table.insert_or_assign(i, i * 10);
+    for (int i = 0; i < 32; i++) table.insert_or_assign(i, i * 10);
 
     EXPECT_EQ(table.size(), 32u);
     for (int i = 0; i < 32; i++) {
@@ -88,8 +78,7 @@ TEST(HashTable, GrowthPreservesExistingEntries)
 {
     IntTable table;
 
-    for (int i = 0; i < 1000; i++)
-        table.insert_or_assign(i, i + 1);
+    for (int i = 0; i < 1000; i++) table.insert_or_assign(i, i + 1);
 
     EXPECT_EQ(table.size(), 1000u);
     for (int i = 0; i < 1000; i++) {
@@ -103,15 +92,13 @@ TEST(HashTable, ClearRemovesEntriesAndAllowsReuse)
 {
     IntTable table;
 
-    for (int i = 0; i < 64; i++)
-        table.insert_or_assign(i, i);
+    for (int i = 0; i < 64; i++) table.insert_or_assign(i, i);
 
     table.clear();
 
     EXPECT_TRUE(table.empty());
     EXPECT_EQ(table.size(), 0u);
-    for (int i = 0; i < 64; i++)
-        EXPECT_EQ(table.find_ptr(i), nullptr);
+    for (int i = 0; i < 64; i++) EXPECT_EQ(table.find_ptr(i), nullptr);
 
     table.insert_or_assign(123, 456);
     ASSERT_NE(table.find_ptr(123), nullptr);

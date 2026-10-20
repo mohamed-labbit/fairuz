@@ -25,12 +25,7 @@
 namespace fairuz {
 namespace diagnostic {
 
-enum class Severity : u8 {
-    NOTE,
-    FATAL,
-    ERROR,
-    WARNING
-}; // enum Severity
+enum class Severity : u8 { NOTE, FATAL, ERROR, WARNING }; // enum Severity
 
 // Compatibility for existing qualified diagnostic error-code users.
 using ErrorCode = fairuz::ErrorCode;
@@ -94,10 +89,7 @@ public:
 
     void emit(std::string const& msg, Severity const sv = Severity::ERROR) { emit_error(msg, sv); }
 
-    [[noreturn]] void panic(std::string const& msg)
-    {
-        _panic(msg);
-    }
+    [[noreturn]] void panic(std::string const& msg) { _panic(msg); }
 
     // Accumulates a diagnostic. Does not emit or abort, for any severity.
     // If the engine is saturated (error count >= LIMIT), non-FATAL diagnostics
@@ -143,8 +135,7 @@ public:
     Diagnostic const* first_error() const noexcept
     {
         for (auto const& diagnostic : m_diagnostics) {
-            if (diagnostic.severity == Severity::ERROR || diagnostic.severity == Severity::FATAL)
-                return &diagnostic;
+            if (diagnostic.severity == Severity::ERROR || diagnostic.severity == Severity::FATAL) return &diagnostic;
         }
         return nullptr;
     }
@@ -211,8 +202,7 @@ static inline void emit(ErrorCode code, std::string const& detail, Severity cons
 {
     engine.report_deferred(sv, { }, code, detail);
     std::string message = error_message_for(code);
-    if (!detail.empty())
-        message += ": " + detail;
+    if (!detail.empty()) message += ": " + detail;
     engine.emit(message, sv);
 }
 
@@ -222,8 +212,7 @@ static inline void emit(ErrorCode code, std::string const& detail, Severity cons
     engine.panic("");
 }
 
-static inline DiagnosticEngine::DiagnosticId report(
-    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
+static inline DiagnosticEngine::DiagnosticId report(Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
 }

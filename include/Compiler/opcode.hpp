@@ -202,14 +202,10 @@ inline i32 instr_sBx(InstrType const i) { return static_cast<i32>(instr_Bx(i)) -
 
 inline InstrType make_ABC(OpCode op, u8 A, u8 B, u8 C)
 {
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
-        | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
 }
 
-inline InstrType make_ABx(OpCode op, u8 A, u16 Bx)
-{
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | static_cast<u32>(Bx);
-}
+inline InstrType make_ABx(OpCode op, u8 A, u16 Bx) { return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | static_cast<u32>(Bx); }
 
 inline InstrType make_AsBx(OpCode op, u8 A, i64 s_bx)
 {
@@ -220,19 +216,12 @@ inline InstrType make_AsBx(OpCode op, u8 A, i64 s_bx)
 
 inline InstrType make_ABSC(OpCode op, u8 A, u8 B, int8_t s_c)
 {
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
-        | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(s_c + 128));
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(s_c + 128));
 }
 
 inline int8_t instr_sC(InstrType i) { return static_cast<int8_t>(static_cast<int>(instr_C(i)) - 128); }
 
-enum class InstrFormat : u8 {
-    ABC,
-    ABx,
-    AsBx,
-    A,
-    NONE
-}; // enum InstrFormat
+enum class InstrFormat : u8 { ABC, ABx, AsBx, A, NONE }; // enum InstrFormat
 
 struct ICSlot {
     // TypeTag includes bits above bit 7 (native/class/instance/module/etc.).
@@ -260,20 +249,16 @@ static inline InstrFormat opcode_format(OpCode op)
     case OpCode::LOAD_GLOBAL:
     case OpCode::STORE_GLOBAL:
     case OpCode::IMPORT_MODULE:
-    case OpCode::CLOSURE:
-        return InstrFormat::ABx;
+    case OpCode::CLOSURE: return InstrFormat::ABx;
     case OpCode::JUMP:
     case OpCode::JUMP_IF_TRUE:
     case OpCode::JUMP_IF_FALSE:
     case OpCode::LOOP:
     case OpCode::FOR_PREP:
-    case OpCode::FOR_STEP:
-        return InstrFormat::AsBx;
+    case OpCode::FOR_STEP: return InstrFormat::AsBx;
     case OpCode::RETURN_NIL:
-    case OpCode::NOP:
-        return InstrFormat::NONE;
-    default:
-        return InstrFormat::ABC;
+    case OpCode::NOP: return InstrFormat::NONE;
+    default: return InstrFormat::ABC;
     }
 }
 

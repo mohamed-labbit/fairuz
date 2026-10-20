@@ -28,8 +28,7 @@ void VM::unwind()
         if (!it->second->initialized) {
             it->second->executing = false;
             it = m_module_cache.erase(it);
-        } else
-            ++it;
+        } else ++it;
     }
     std::fill(m_stack, m_stack + std::clamp(m_stack_top, 0, STACK_SIZE), Value::nil());
     std::fill(m_frames, m_frames + std::clamp(m_frames_top, 0, MAX_FRAMES), CallFrame());

@@ -38,8 +38,7 @@ public:
     explicit operator bool() const { return value_ && value_ != INVALID_HANDLE_VALUE; }
     void close()
     {
-        if (*this)
-            CloseHandle(value_);
+        if (*this) CloseHandle(value_);
         value_ = INVALID_HANDLE_VALUE;
     }
 };

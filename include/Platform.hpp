@@ -29,10 +29,8 @@ inline void configure_locale()
 
 inline std::filesystem::path path(std::string_view utf8)
 {
-    if (utf8.empty())
-        return { };
-    return std::filesystem::path(std::u8string(
-        reinterpret_cast<char8_t const*>(utf8.data()), utf8.size()));
+    if (utf8.empty()) return { };
+    return std::filesystem::path(std::u8string(reinterpret_cast<char8_t const*>(utf8.data()), utf8.size()));
 }
 
 inline std::string utf8(std::filesystem::path const& value)

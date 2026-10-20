@@ -19,10 +19,7 @@ namespace fairuz::runtime {
 
 namespace {
 
-constexpr u32 rotate_right(u32 value, u32 count)
-{
-    return (value >> count) | (value << (32 - count));
-}
+constexpr u32 rotate_right(u32 value, u32 count) { return (value >> count) | (value << (32 - count)); }
 
 class Sha256 {
 public:
@@ -48,8 +45,7 @@ public:
             m_buffer_size = 0;
         }
         std::fill(m_buffer.begin() + static_cast<ptrdiff_t>(m_buffer_size), m_buffer.begin() + 56, 0);
-        for (int i = 0; i < 8; i++)
-            m_buffer[63 - i] = static_cast<u8>(original_bit_count >> (i * 8));
+        for (int i = 0; i < 8; i++) m_buffer[63 - i] = static_cast<u8>(original_bit_count >> (i * 8));
         transform(m_buffer.data());
 
         std::array<u8, 32> digest { };
@@ -135,10 +131,8 @@ private:
         std::array<u32, 64> words { };
         for (size_t i = 0; i < 16; i++) {
             size_t offset = i * 4;
-            words[i] = (static_cast<u32>(block[offset]) << 24)
-                | (static_cast<u32>(block[offset + 1]) << 16)
-                | (static_cast<u32>(block[offset + 2]) << 8)
-                | static_cast<u32>(block[offset + 3]);
+            words[i] = (static_cast<u32>(block[offset]) << 24) | (static_cast<u32>(block[offset + 1]) << 16)
+                | (static_cast<u32>(block[offset + 2]) << 8) | static_cast<u32>(block[offset + 3]);
         }
         for (size_t i = 16; i < words.size(); i++) {
             u32 s0 = rotate_right(words[i - 15], 7) ^ rotate_right(words[i - 15], 18) ^ (words[i - 15] >> 3);
@@ -228,11 +222,8 @@ std::array<u8, 32> hmac_sha256(std::string_view key, std::string_view data)
 
 VM::RuntimeResult VM::hash_new(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_string() || string_bytes(argv[0]) != "sha256")
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || string_bytes(argv[0]) != "sha256") return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     VM::RuntimeResult handle = dict(0, nullptr);
     dict_put(&handle.value(), m_gc.make_string("__algorithm"), argv[0]);
@@ -242,15 +233,11 @@ VM::RuntimeResult VM::hash_new(int argc, Value* argv)
 
 VM::RuntimeResult VM::hash_update(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_dict() || !argv[1].is_string())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_dict() || !argv[1].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     Value key = m_gc.make_string("__data");
     Value existing = dict_get(&argv[0], key);
-    if (!existing.is_string())
-        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!existing.is_string()) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     StringRef combined = existing.as_string()->str + argv[1].as_string()->str;
     dict_put(&argv[0], key, m_gc.make_string(combined));
     return Value::from_bool(true);
@@ -258,15 +245,11 @@ VM::RuntimeResult VM::hash_update(int argc, Value* argv)
 
 VM::RuntimeResult VM::hash_digest(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_dict() || !argv[1].is_bool())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_dict() || !argv[1].is_bool()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     Value algorithm = dict_get(&argv[0], m_gc.make_string("__algorithm"));
     Value data = dict_get(&argv[0], m_gc.make_string("__data"));
-    if (!algorithm.is_string() || string_bytes(algorithm) != "sha256" || !data.is_string())
-        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!algorithm.is_string() || string_bytes(algorithm) != "sha256" || !data.is_string()) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     auto digest = sha256(string_bytes(data));
     if (argv[1].as_bool()) {
@@ -278,11 +261,8 @@ VM::RuntimeResult VM::hash_digest(int argc, Value* argv)
 
 VM::RuntimeResult VM::hmac(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (!argv[0].is_string() || !argv[1].is_string()
-        || !argv[2].is_string() || string_bytes(argv[0]) != "sha256")
+    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_string() || string_bytes(argv[0]) != "sha256")
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto digest = hmac_sha256(string_bytes(argv[1]), string_bytes(argv[2]));
     std::string encoded = hex_string(digest.data(), digest.size());

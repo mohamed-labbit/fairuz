@@ -33,10 +33,7 @@ protected:
     }
 
     Chunk* compile(std::string const& text) { return test_source::compile(text); }
-    Chunk* compile(std::initializer_list<std::string> text)
-    {
-        return compile(test_source::join(Array<std::string>(text)));
-    }
+    Chunk* compile(std::initializer_list<std::string> text) { return compile(test_source::join(Array<std::string>(text))); }
 };
 
 TEST_F(LazyCompilation, UnusedBodiesStayEmptyWhileDefinitionsAreBound)
@@ -69,8 +66,7 @@ TEST_F(LazyCompilation, FirstInlineCacheCallCompilesOnceAndBindsParameters)
     EXPECT_TRUE(body->code.empty());
     EXPECT_EQ(body->arity, 2);
     bool has_ic_call = false;
-    for (u32 instruction : main->code)
-        has_ic_call |= instr_op(instruction) == OpCode::IC_CALL;
+    for (u32 instruction : main->code) has_ic_call |= instr_op(instruction) == OpCode::IC_CALL;
     ASSERT_TRUE(has_ic_call);
 
     VM vm;
@@ -85,19 +81,18 @@ TEST_F(LazyCompilation, FirstInlineCacheCallCompilesOnceAndBindsParameters)
 TEST_F(LazyCompilation, FirstTailCallCompilesCalleeAndSupportsMutualRecursion)
 {
     auto recursive = [](char const* name, char const* other) {
-        return (std::string("دالة ") + name + "(ن):\n" + test_source::indent((std::string("اذا (ن = 0):\n"
-                                                                                          "    ارجع 42\n")
-                    + (std::string("ارجع") + (std::string(" ") + (std::string(other) + "((ن - 1))")) + "\n"))));
+        return (std::string("دالة ") + name + "(ن):\n"
+            + test_source::indent((std::string("اذا (ن = 0):\n"
+                                               "    ارجع 42\n")
+                + (std::string("ارجع") + (std::string(" ") + (std::string(other) + "((ن - 1))")) + "\n"))));
     };
-    Chunk* main = compile({ recursive("يسار", "يمين"), recursive("يمين", "يسار"),
-        "يسار(1000)\n" });
+    Chunk* main = compile({ recursive("يسار", "يمين"), recursive("يمين", "يسار"), "يسار(1000)\n" });
     VM vm;
     EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     for (Chunk* body : main->functions) {
         EXPECT_FALSE(body->deferred_body);
         bool has_tail_call = false;
-        for (u32 instruction : body->code)
-            has_tail_call |= instr_op(instruction) == OpCode::CALL_TAIL;
+        for (u32 instruction : body->code) has_tail_call |= instr_op(instruction) == OpCode::CALL_TAIL;
         EXPECT_TRUE(has_tail_call);
     }
 }
@@ -114,8 +109,7 @@ TEST_F(LazyCompilation, AliasesKeepDistinctBodiesWithTheSameName)
     });
     VM vm;
     EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
-    for (Chunk* body : main->functions)
-        EXPECT_FALSE(body->deferred_body);
+    for (Chunk* body : main->functions) EXPECT_FALSE(body->deferred_body);
 }
 
 TEST_F(LazyCompilation, NativeCallbackCompilesOnFirstInvocation)
@@ -139,8 +133,7 @@ TEST_F(LazyCompilation, OnlyInvokedMethodsCompileIncludingConstructors)
                           "العلبة := علبة(42)\n"
                           "العلبة.احصل()\n");
     ASSERT_EQ(main->functions.size(), 3u);
-    for (Chunk* body : main->functions)
-        EXPECT_TRUE(body->code.empty());
+    for (Chunk* body : main->functions) EXPECT_TRUE(body->code.empty());
     VM vm;
     auto result_or_error = run_success(vm.run(main));
     Value result = result_or_error;

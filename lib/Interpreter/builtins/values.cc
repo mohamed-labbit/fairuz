@@ -25,8 +25,7 @@ VM::RuntimeResult VM::print(int argc, Value* argv)
     }
 
     for (int i = 0; i < argc; i++) {
-        if (i > 0)
-            std::cout << '\t';
+        if (i > 0) std::cout << '\t';
         print_runtime_value(argv[i]);
     }
     std::cout << '\n';
@@ -35,9 +34,7 @@ VM::RuntimeResult VM::print(int argc, Value* argv)
 
 VM::RuntimeResult VM::type(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
 
     Value& v = argv[0];
     TypeTag type = value_type_tag(v);
@@ -63,15 +60,13 @@ VM::RuntimeResult VM::type(int argc, Value* argv)
 
 VM::RuntimeResult VM::same_object(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT);
 
     Value lhs = argv[0];
     Value rhs = argv[1];
 
     // Deep-copy memoization needs object identity, including for cyclic containers.
-    if (lhs.is_obj() || rhs.is_obj())
-        return Value::from_bool(lhs.is_obj() && rhs.is_obj() && lhs.as_obj() == rhs.as_obj());
+    if (lhs.is_obj() || rhs.is_obj()) return Value::from_bool(lhs.is_obj() && rhs.is_obj() && lhs.as_obj() == rhs.as_obj());
     return Value::from_bool(ValueEqual { }(lhs, rhs));
 }
 
@@ -79,41 +74,27 @@ VM::RuntimeResult VM::same_object(int argc, Value* argv)
 
 VM::RuntimeResult VM::Int(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-    if (argv[0].is_int())
-        return argv[0];
-    if (!argv[0].is_double())
-        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argv[0].is_int()) return argv[0];
+    if (!argv[0].is_double()) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return integer::from_double(argv[0].as_double(), m_gc);
 }
 
 VM::RuntimeResult VM::Float(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-            "got " + std::to_string(argc));
-
-    if (argv[0].is_number())
-        return Value::from_real(argv[0].as_double_any());
-
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argv[0].is_number()) return Value::from_real(argv[0].as_double_any());
     return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 }
 
 VM::RuntimeResult VM::str(int argc, Value* argv)
 {
-    if (argc > 1)
-        return raise_runtime_error(ErrorCode::STR_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc > 1) return raise_runtime_error(ErrorCode::STR_ARG_COUNT, "got " + std::to_string(argc));
 
     StringRef output = "";
 
-    if (argc == 0 || argv == nullptr)
-        return m_gc.make_string(output); // return empty on no arg
-
-    if (argv[0].is_string())
-        return m_gc.make_string(argv[0].as_string()->str);
+    if (argc == 0 || argv == nullptr) return m_gc.make_string(output); // return empty on no arg
+    if (argv[0].is_string()) return m_gc.make_string(argv[0].as_string()->str);
 
     StringRef rendered = value_to_string(argv[0]);
     return m_gc.make_string(rendered);
@@ -121,18 +102,14 @@ VM::RuntimeResult VM::str(int argc, Value* argv)
 
 VM::RuntimeResult VM::Bool(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::BOOL_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::BOOL_ARG_COUNT, "got " + std::to_string(argc));
 
     return argv[0].is_truthy() ? Value::from_bool(true) : Value::from_bool(false);
 }
 
 VM::RuntimeResult VM::Assert(int argc, Value* argv)
 {
-    if (argc < 1 || argc > 2 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::ASSERT_ARG_COUNT,
-            "got" + std::to_string(argc));
+    if (argc < 1 || argc > 2 || argv == nullptr) return raise_runtime_error(ErrorCode::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
 
     // Python-style assert accepts an optional diagnostic value; that second
     // argument describes a failed assertion and is not itself a condition.

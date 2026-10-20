@@ -24,8 +24,7 @@ public:
 
     ErrorOr<RegType> alloc_register()
     {
-        if (m_next_reg >= MAX_REGS)
-            return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
+        if (m_next_reg >= MAX_REGS) return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
         RegType reg { static_cast<u8>(m_next_reg) };
         ++m_next_reg;
         m_max_reg = m_next_reg > m_max_reg ? m_next_reg : m_max_reg;
@@ -34,8 +33,7 @@ public:
 
     void free_register()
     {
-        if (m_next_reg > 0)
-            m_next_reg--;
+        if (m_next_reg > 0) m_next_reg--;
     }
 
     void rewind(u16 checkpoint)
@@ -46,13 +44,11 @@ public:
 
     ErrorOr<void> reserve_register(RegType reg)
     {
-        if (reg.value >= MAX_REGS)
-            return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
+        if (reg.value >= MAX_REGS) return Error { ErrorCode::TOO_MANY_REGISTERS, { } };
 
         if (reg.value >= m_next_reg) {
             m_next_reg = static_cast<u16>(reg.value) + 1;
-            if (m_next_reg > m_max_reg)
-                m_max_reg = m_next_reg;
+            if (m_next_reg > m_max_reg) m_max_reg = m_next_reg;
         }
 
         return { };

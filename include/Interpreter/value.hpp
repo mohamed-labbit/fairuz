@@ -87,8 +87,7 @@ public:
         ::memcpy(&bits, &d, sizeof(bits));
         // NaN signs and payloads can overlap object, integer, and singleton
         // tags. Normalize every NaN before it enters the tagged value space.
-        if ((bits & ~NANBOX_SIGN_BIT) > UINT64_C(0x7FF0000000000000))
-            bits = NANBOX_QNAN;
+        if ((bits & ~NANBOX_SIGN_BIT) > UINT64_C(0x7FF0000000000000)) bits = NANBOX_QNAN;
         return bits;
     }
 
@@ -115,8 +114,7 @@ public:
     bool is_bool() const { return (m_value | 1) == TRUE_VAL; }
     bool is_int() const
     {
-        if (is_big_int())
-            return true;
+        if (is_big_int()) return true;
         return (m_value >> 48) == INT_TAG16;
     }
     bool is_obj() const { return (m_value >> 48) == OBJ_TAG16; }
@@ -193,28 +191,18 @@ enum class TypeTag : u16 {
     MODULE = 1 << 13,
 }; // enum TypeTag
 
-[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept
-{
-    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
-}
+[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept { return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0; }
 
-[[nodiscard]] inline TypeTag operator|(TypeTag a, TypeTag b) noexcept
-{
-    return static_cast<TypeTag>(static_cast<u16>(a) | static_cast<u16>(b));
-}
+[[nodiscard]] inline TypeTag operator|(TypeTag a, TypeTag b) noexcept { return static_cast<TypeTag>(static_cast<u16>(a) | static_cast<u16>(b)); }
 
 inline TypeTag& operator|=(TypeTag& a, TypeTag b) noexcept { return a = a | b; }
 
 [[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept
 {
-    if (v.is_nil())
-        return TypeTag::NIL;
-    if (v.is_bool())
-        return TypeTag::BOOL;
-    if (v.is_int())
-        return TypeTag::INT;
-    if (v.is_double())
-        return TypeTag::DOUBLE;
+    if (v.is_nil()) return TypeTag::NIL;
+    if (v.is_bool()) return TypeTag::BOOL;
+    if (v.is_int()) return TypeTag::INT;
+    if (v.is_double()) return TypeTag::DOUBLE;
 
     if (v.is_obj()) {
         switch (v.as_obj()->type) {
@@ -291,10 +279,7 @@ public:
     /// between the NANBOXED implementation and the tagged union fallback
     /// the garbage collector is not used here because the 64 int is stored
     /// as is without the 48 bit constraint of NANBOXing
-    static Value from_int(i64 ival, GarbageCollector&)
-    {
-        return from_int(ival);
-    }
+    static Value from_int(i64 ival, GarbageCollector&) { return from_int(ival); }
     static Value from_int(i64 ival)
     {
         Value v;
@@ -358,8 +343,7 @@ public:
 
     bool operator==(Value const& other) const
     {
-        if (m_type != other.m_type)
-            return false;
+        if (m_type != other.m_type) return false;
         switch (m_type) {
         case TypeTag::NONE: return false;
         case TypeTag::NIL: return true;
@@ -393,15 +377,9 @@ public:
     bool is_module() const { return is_obj() && m_type == TypeTag::MODULE; }
 };
 
-[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept
-{
-    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
-}
+[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept { return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0; }
 
-[[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept
-{
-    return v.is_int() ? TypeTag::INT : v.type_tag();
-}
+[[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept { return v.is_int() ? TypeTag::INT : v.type_tag(); }
 
 struct ValueHash {
     size_t operator()(Value const& v) const;

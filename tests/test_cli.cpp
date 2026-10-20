@@ -40,7 +40,8 @@ RunResult run_cli(std::vector<std::string> const& args)
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / fairuz::platform::path("fairuz_cli_program_" + std::to_string(test_process::process_id()) + ".ف");
+    auto path
+        = std::filesystem::temp_directory_path() / fairuz::platform::path("fairuz_cli_program_" + std::to_string(test_process::process_id()) + ".ف");
     std::ofstream out(path);
     out << source;
     return path;
@@ -100,8 +101,7 @@ TEST(CliE2E, LazyBodySyntaxErrorsAreValidatedByCheckAstDumpAndFormatter)
         SCOPED_TRACE(option);
         RunResult validated = run_cli({ option, path });
         EXPECT_EQ(validated.exit_code, 65);
-        if (std::string(option) != "format")
-            EXPECT_TRUE(validated.out.empty());
+        if (std::string(option) != "format") EXPECT_TRUE(validated.out.empty());
         EXPECT_NE(validated.out, "42\n");
         EXPECT_FALSE(validated.err.empty());
         EXPECT_EQ(read_file(program), source);
@@ -172,8 +172,7 @@ TEST(CliE2E, FormatCheckReportsChangesWithoutWriting)
 
 TEST(CliE2E, FormatDirectoryReportsInvalidSource)
 {
-    auto directory = std::filesystem::temp_directory_path()
-        / ("fairuz_format_dir_" + std::to_string(test_process::process_id()));
+    auto directory = std::filesystem::temp_directory_path() / ("fairuz_format_dir_" + std::to_string(test_process::process_id()));
     std::filesystem::create_directory(directory);
     auto invalid = directory / fairuz::platform::path("invalid.ف");
     std::string const source = "اذا صحيح\n"
@@ -190,8 +189,7 @@ TEST(CliE2E, FormatDirectoryReportsInvalidSource)
 
 TEST(CliE2E, FormatCheckDirectoryReportsFilesInStableOrder)
 {
-    auto directory = std::filesystem::temp_directory_path()
-        / ("fairuz_format_check_dir_" + std::to_string(test_process::process_id()));
+    auto directory = std::filesystem::temp_directory_path() / ("fairuz_format_check_dir_" + std::to_string(test_process::process_id()));
     std::filesystem::create_directory(directory);
     auto first = directory / fairuz::platform::path("a.ف");
     auto second = directory / fairuz::platform::path("b.ف");
@@ -310,13 +308,12 @@ TEST(CliE2E, FormatRejectsSymbolicLinks)
 
 TEST(CliE2E, FormatPreservesProgramBehaviorAndIsIdempotent)
 {
-    auto program = write_program(
-        "# formatting must not erase this\n"
-        "ن:=0\n"
-        "لكل عنصر في [1,2,3]:\n"
-        "  ن+=عنصر\n"
-        "تاكد ن=6, 'sum'\n"
-        "اكتب(ن, 0.0000001, (1+2)*3)\n");
+    auto program = write_program("# formatting must not erase this\n"
+                                 "ن:=0\n"
+                                 "لكل عنصر في [1,2,3]:\n"
+                                 "  ن+=عنصر\n"
+                                 "تاكد ن=6, 'sum'\n"
+                                 "اكتب(ن, 0.0000001, (1+2)*3)\n");
     auto before = run_cli({ fairuz::platform::utf8(program) });
     ASSERT_EQ(before.exit_code, 0) << before.err;
     auto result = run_cli({ "format", fairuz::platform::utf8(program) });

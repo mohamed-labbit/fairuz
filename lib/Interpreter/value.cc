@@ -19,8 +19,7 @@ namespace fairuz::runtime {
 
 Value Value::from_int(i64 const v, GarbageCollector& gc)
 {
-    if (fits_in_int48(v))
-        return from_int(v);
+    if (fits_in_int48(v)) return from_int(v);
     return gc.make_int(v);
 }
 
@@ -36,8 +35,7 @@ i64 Value::as_int() const
     }
 #if FA_USE_NANBOX
     i64 payload = static_cast<i64>(m_value & PAYLOAD_MASK);
-    if (payload & (INT64_C(1) << 47))
-        return payload - (INT64_C(1) << 48);
+    if (payload & (INT64_C(1) << 47)) return payload - (INT64_C(1) << 48);
     return payload;
 #else
     return as.i;
@@ -48,16 +46,11 @@ f64 Value::as_double_any() const { return is_int() ? integer::to_double(*this) :
 
 bool Value::is_truthy() const
 {
-    if (is_nil())
-        return false;
-    if (is_bool())
-        return as_bool();
-    if (is_big_int())
-        return !as_big_int()->limbs.empty();
-    if (is_int())
-        return as_int() != 0;
-    if (is_obj())
-        return true;
+    if (is_nil()) return false;
+    if (is_bool()) return as_bool();
+    if (is_big_int()) return !as_big_int()->limbs.empty();
+    if (is_int()) return as_int() != 0;
+    if (is_obj()) return true;
     return as_double() != 0;
 }
 
@@ -87,18 +80,12 @@ size_t ValueHash::operator()(Value const& v) const
 
 bool ValueEqual::operator()(Value const& lhs, Value const& rhs) const
 {
-    if (lhs.is_nil() && rhs.is_nil())
-        return true;
-    if (lhs.is_string() && rhs.is_string())
-        return lhs.as_string()->str == rhs.as_string()->str;
-    if (lhs.is_double() && rhs.is_double())
-        return lhs.as_double() == rhs.as_double();
-    if (lhs.is_number() && rhs.is_number())
-        return integer::compare_numbers(lhs, rhs) == 0;
-    if (lhs.is_bool() && rhs.is_bool())
-        return lhs.as_bool() == rhs.as_bool();
-    if (lhs.is_obj() && rhs.is_obj())
-        return lhs.as_obj() == rhs.as_obj();
+    if (lhs.is_nil() && rhs.is_nil()) return true;
+    if (lhs.is_string() && rhs.is_string()) return lhs.as_string()->str == rhs.as_string()->str;
+    if (lhs.is_double() && rhs.is_double()) return lhs.as_double() == rhs.as_double();
+    if (lhs.is_number() && rhs.is_number()) return integer::compare_numbers(lhs, rhs) == 0;
+    if (lhs.is_bool() && rhs.is_bool()) return lhs.as_bool() == rhs.as_bool();
+    if (lhs.is_obj() && rhs.is_obj()) return lhs.as_obj() == rhs.as_obj();
     return false;
 }
 

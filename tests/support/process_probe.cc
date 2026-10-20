@@ -26,8 +26,7 @@ int probe(std::vector<std::string> const& args)
         std::this_thread::sleep_for(std::chrono::seconds(10));
         return 0;
     }
-    for (auto const& arg : args)
-        std::cout << arg.size() << ':' << arg << '\n';
+    for (auto const& arg : args) std::cout << arg.size() << ':' << arg << '\n';
     std::cerr << "probe stderr\n";
     return 23;
 }

@@ -114,14 +114,10 @@ consteval auto make_builtin_registry()
         BuiltinDefinition { "عطل", &VM::error, -1 },
         BuiltinDefinition { "وقت", &VM::time, 0 },
     };
-    std::sort(entries.begin(), entries.end(), [](auto const& lhs, auto const& rhs) {
-        return lhs.name < rhs.name;
-    });
+    std::sort(entries.begin(), entries.end(), [](auto const& lhs, auto const& rhs) { return lhs.name < rhs.name; });
     for (size_t i = 0; i < entries.size(); ++i) {
-        if (entries[i].name.empty() || entries[i].fn == nullptr || entries[i].arity < -1)
-            throw "invalid builtin definition";
-        if (i > 0 && entries[i - 1].name == entries[i].name)
-            throw "duplicate builtin name";
+        if (entries[i].name.empty() || entries[i].fn == nullptr || entries[i].arity < -1) throw "invalid builtin definition";
+        if (i > 0 && entries[i - 1].name == entries[i].name) throw "duplicate builtin name";
     }
     return entries;
 }
@@ -136,18 +132,14 @@ BuiltinsList::BuiltinsList(VM& vm)
 {
 }
 
-std::span<BuiltinDefinition const> BuiltinsList::definitions()
-{
-    return builtin_registry;
-}
+std::span<BuiltinDefinition const> BuiltinsList::definitions() { return builtin_registry; }
 
 Value const* BuiltinsList::find(StringRef const& name) const
 {
     std::string_view key(name.data(), name.len());
     auto found = std::lower_bound(builtin_registry.begin(), builtin_registry.end(), key,
         [](BuiltinDefinition const& entry, std::string_view value) { return entry.name < value; });
-    if (found == builtin_registry.end() || found->name != key)
-        return nullptr;
+    if (found == builtin_registry.end() || found->name != key) return nullptr;
 
     Value& value = m_values[static_cast<size_t>(found - builtin_registry.begin())];
     if (value.is_nil()) {

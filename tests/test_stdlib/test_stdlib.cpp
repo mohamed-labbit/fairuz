@@ -33,16 +33,14 @@ protected:
 Value make_list(VM& vm, std::initializer_list<Value> values)
 {
     Value list = run_success(vm.list(0, nullptr));
-    for (Value m_value : values)
-        list.as_list()->elements.push(m_value);
+    for (Value m_value : values) list.as_list()->elements.push(m_value);
     return list;
 }
 
 std::string as_std_string(Value m_value)
 {
     EXPECT_TRUE(m_value.is_string());
-    if (!m_value.is_string())
-        return { };
+    if (!m_value.is_string()) return { };
     StringRef const& text = m_value.as_string()->str;
     return std::string(text.data(), text.len());
 }
@@ -50,9 +48,7 @@ std::string as_std_string(Value m_value)
 double elapsed_us(std::chrono::high_resolution_clock::time_point start)
 {
     using namespace std::chrono;
-    return static_cast<double>(
-               duration_cast<nanoseconds>(high_resolution_clock::now() - start).count())
-        / 1000.0;
+    return static_cast<double>(duration_cast<nanoseconds>(high_resolution_clock::now() - start).count()) / 1000.0;
 }
 
 } // namespace
@@ -76,12 +72,13 @@ TEST(StdlibRegression, SplitPreservesEmptyFieldsAtBothEnds)
 TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
 {
     VM vm;
-    Value list = make_list(vm, {
-                                   Value::from_int(7),
-                                   Value::from_bool(true),
-                                   str("ok"),
-                                   Value::nil(),
-                               });
+    Value list = make_list(vm,
+        {
+            Value::from_int(7),
+            Value::from_bool(true),
+            str("ok"),
+            Value::nil(),
+        });
     Value args[] = { list, str("|") };
     auto result = run_success(vm.join(2, args));
     Value v = result;
@@ -120,11 +117,12 @@ TEST(StdlibRegression, AppendAddsMultipleValuesInOrder)
 TEST(StdlibRegression, PopRemovesLastElementFromList)
 {
     VM vm;
-    Value list = make_list(vm, {
-                                   Value::from_int(10),
-                                   Value::from_int(20),
-                                   Value::from_int(30),
-                               });
+    Value list = make_list(vm,
+        {
+            Value::from_int(10),
+            Value::from_int(20),
+            Value::from_int(30),
+        });
     auto result = run_success(vm.pop(1, &list));
     Value v = result;
 
@@ -137,12 +135,13 @@ TEST(StdlibRegression, PopRemovesLastElementFromList)
 TEST(StdlibRegression, SliceReturnsCopyNotAlias)
 {
     VM vm;
-    Value source = make_list(vm, {
-                                     Value::from_int(1),
-                                     Value::from_int(2),
-                                     Value::from_int(3),
-                                     Value::from_int(4),
-                                 });
+    Value source = make_list(vm,
+        {
+            Value::from_int(1),
+            Value::from_int(2),
+            Value::from_int(3),
+            Value::from_int(4),
+        });
     Value args[] = { source, Value::from_int(1), Value::from_int(2) };
     auto result = run_success(vm.slice(3, args));
     Value v = result;
@@ -159,12 +158,13 @@ TEST(StdlibRegression, SliceReturnsCopyNotAlias)
 TEST(StdlibRegression, SliceTwoArgsReturnsTail)
 {
     VM vm;
-    Value source = make_list(vm, {
-                                     Value::from_int(4),
-                                     Value::from_int(5),
-                                     Value::from_int(6),
-                                     Value::from_int(7),
-                                 });
+    Value source = make_list(vm,
+        {
+            Value::from_int(4),
+            Value::from_int(5),
+            Value::from_int(6),
+            Value::from_int(7),
+        });
     Value args[] = { source, Value::from_int(2) };
     auto result = run_success(vm.slice(2, args));
     Value v = result;
@@ -249,8 +249,9 @@ TEST(StdlibJsonPrimitives, EscapesAndReadsUnicodeJsonStrings)
     Value parsed = run_success(vm.json_read_string(2, args));
     ASSERT_TRUE(parsed.is_list());
     ASSERT_EQ(parsed.as_list()->elements.size(), 2u);
-    EXPECT_EQ(as_std_string(parsed.as_list()->elements[0]), "A\n"
-                                                            "م😀");
+    EXPECT_EQ(as_std_string(parsed.as_list()->elements[0]),
+        "A\n"
+        "م😀");
     EXPECT_EQ(parsed.as_list()->elements[1].as_int(), 23);
 }
 
@@ -271,8 +272,7 @@ TEST(StdlibRegistry, LookupIsLazyAndCachedAcrossCollection)
     auto initial_memory = vm.gc().current_memory();
     EXPECT_EQ(vm.builtin_env().find("missing_builtin"), nullptr);
     EXPECT_EQ(vm.gc().current_memory(), initial_memory);
-    for (Value value : vm.builtins().values())
-        EXPECT_TRUE(value.is_nil());
+    for (Value value : vm.builtins().values()) EXPECT_TRUE(value.is_nil());
 
     Value const* length = vm.builtin_env().find("طول");
     ASSERT_NE(length, nullptr);
@@ -403,8 +403,7 @@ TEST(StdlibFilesystem, TemporaryResourcesGlobAndDeletion)
     Value file_path = *file_info.as_dict()->data.find_ptr(path_key);
     EXPECT_TRUE(std::filesystem::exists(platform::path(as_std_string(file_path))));
 
-    Value pattern = vm.gc().make_string(
-        platform::utf8(std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").c_str());
+    Value pattern = vm.gc().make_string(platform::utf8(std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").c_str());
     Value recursive = Value::from_bool(false);
     Value glob_args[] = { pattern, recursive };
     Value matches = run_success(vm.path_glob(2, glob_args));
@@ -516,8 +515,7 @@ TEST(StdlibCodecs, Sha256SupportsIncrementalAndRawDigests)
     EXPECT_TRUE(run_success(vm.hash_update(2, second_args)).as_bool());
 
     Value hex_args[] = { handle, Value::from_bool(true) };
-    EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, hex_args))),
-        "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+    EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, hex_args))), "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
     Value raw_args[] = { handle, Value::from_bool(false) };
     EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, raw_args))).size(), 32u);
 
@@ -533,8 +531,7 @@ TEST(StdlibCodecs, HmacSha256MatchesPublishedVector)
         vm.gc().make_string("key"),
         vm.gc().make_string("The quick brown fox jumps over the lazy dog"),
     };
-    EXPECT_EQ(as_std_string(run_success(vm.hmac(3, args))),
-        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8");
+    EXPECT_EQ(as_std_string(run_success(vm.hmac(3, args))), "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8");
 }
 
 TEST(StdlibCompression, GzipRoundTripsAllSupportedBoundaryLevelsAndBinaryData)
@@ -601,11 +598,12 @@ TEST(StdlibRegression, ContainsExactMatchIsTrue)
 TEST(StdlibRegression, StrStringifiesListsLikePrint)
 {
     VM vm;
-    Value list = make_list(vm, {
-                                   Value::from_int(1),
-                                   Value::from_bool(false),
-                                   str("z"),
-                               });
+    Value list = make_list(vm,
+        {
+            Value::from_int(1),
+            Value::from_bool(false),
+            str("z"),
+        });
     auto result = run_success(vm.str(1, &list));
 
     ASSERT_TRUE(result.is_string());
@@ -743,8 +741,7 @@ TEST_F(StdlibPerfTest, SplitJoinRoundTripLargeCsv)
     std::string csv;
     csv.reserve(32 * 2000);
     for (int i = 0; i < 2000; i++) {
-        if (i)
-            csv += ',';
+        if (i) csv += ',';
         csv += "field";
         csv += std::to_string(i);
     }
@@ -796,8 +793,7 @@ TEST_F(StdlibPerfTest, TrimLargePaddedString50kCalls)
 
     auto start = std::chrono::high_resolution_clock::now();
     std::string last;
-    for (int i = 0; i < 50000; i++)
-        last = as_std_string(run_success(vm.trim(1, &arg)));
+    for (int i = 0; i < 50000; i++) last = as_std_string(run_success(vm.trim(1, &arg)));
     double total_us = elapsed_us(start);
 
     EXPECT_EQ(last, "fairuz");

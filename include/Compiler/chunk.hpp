@@ -79,8 +79,10 @@ struct Chunk {
     void add_line(u32 line);
 }; // struct Chunk
 
-template<typename... Args>
-static inline Chunk* make_chunk(Args&&... args) { return get_allocator().allocate_object<Chunk>(std::forward<Args>(args)...); }
+template<typename... Args> static inline Chunk* make_chunk(Args&&... args)
+{
+    return get_allocator().allocate_object<Chunk>(std::forward<Args>(args)...);
+}
 
 } // namespace fairuz::runtime
 

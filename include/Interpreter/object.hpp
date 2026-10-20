@@ -65,10 +65,8 @@ struct ObjBigInt {
         : sign(data.positive)
         , limbs(std::move(data.limbs))
     {
-        while (!limbs.empty() && limbs.back() == 0)
-            limbs.pop_back();
-        if (limbs.empty())
-            sign = true;
+        while (!limbs.empty() && limbs.back() == 0) limbs.pop_back();
+        if (limbs.empty()) sign = true;
     }
 
     /// arithmetic operations, these will use the GC reference
@@ -108,20 +106,16 @@ struct ObjDict {
 
     void set(Value key, Value value)
     {
-        if (!data.contains(key))
-            insertion_order.push(key);
+        if (!data.contains(key)) insertion_order.push(key);
         data.insert_or_assign(key, value);
     }
 
     bool erase(Value key, Value* removed = nullptr)
     {
         Value* existing = data.find_ptr(key);
-        if (existing == nullptr)
-            return false;
-        if (removed != nullptr)
-            *removed = *existing;
-        if (!data.erase(key))
-            return false;
+        if (existing == nullptr) return false;
+        if (removed != nullptr) *removed = *existing;
+        if (!data.erase(key)) return false;
         ValueEqual equal;
         for (u32 i = 0; i < insertion_order.size(); ++i) {
             if (equal(insertion_order[i], key)) {
@@ -181,9 +175,7 @@ struct ObjClass {
     IndexTable field_index_map = { };
     IndexTable method_slot_map = { };
 
-    ObjClass(
-        Array<StringRef, /*_Alloc=*/GarbageCollector> f,
-        Array<StringRef, /*_Alloc=*/GarbageCollector> m,
+    ObjClass(Array<StringRef, /*_Alloc=*/GarbageCollector> f, Array<StringRef, /*_Alloc=*/GarbageCollector> m,
         Array<Chunk*, /*_Alloc=*/GarbageCollector> vt);
 
     void build_indices();
@@ -223,11 +215,9 @@ struct ObjFileHandle {
 
     bool close()
     {
-        if (is_open == false)
-            return true;
+        if (is_open == false) return true;
 
-        if (fp == nullptr)
-            return false;
+        if (fp == nullptr) return false;
 
         bool const ok = (::fclose(fp) == 0);
         fp = nullptr;
@@ -235,10 +225,7 @@ struct ObjFileHandle {
         return ok;
     }
 
-    ~ObjFileHandle()
-    {
-        close();
-    }
+    ~ObjFileHandle() { close(); }
 };
 
 static_assert(std::is_standard_layout_v<ObjHeader>, "ObjHeader must remain standard-layout");

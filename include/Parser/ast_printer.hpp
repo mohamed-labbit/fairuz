@@ -63,16 +63,14 @@ private:
 
     std::string color(std::string const& s, std::string const& c) const
     {
-        if (!m_use_color)
-            return s;
+        if (!m_use_color) return s;
 
         return c + s + Color::RESET;
     }
 
     void print_expr(ExprPtr e, Prefix p)
     {
-        if (e == nullptr)
-            return;
+        if (e == nullptr) return;
 
         m_node_count++;
 
@@ -86,7 +84,11 @@ private:
         }
 
         case ExprKind::INT_LITERAL: {
-            std::cout << color("Int Literal", Color::GREEN) << "(" << (as_literal_int(e)->large_literal.empty() ? std::to_string(as_literal_int(e)->value) : std::string(as_literal_int(e)->large_literal.data(), as_literal_int(e)->large_literal.len())) << ")\n";
+            std::cout << color("Int Literal", Color::GREEN) << "("
+                      << (as_literal_int(e)->large_literal.empty()
+                                 ? std::to_string(as_literal_int(e)->value)
+                                 : std::string(as_literal_int(e)->large_literal.data(), as_literal_int(e)->large_literal.len()))
+                      << ")\n";
             break;
         }
         case ExprKind::FLOAT_LITERAL: {
@@ -148,16 +150,14 @@ private:
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             print_expr(c->callee, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->args.size(); i++)
-                print_expr(c->args[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args.size() });
+            for (size_t i = 0; i < c->args.size(); i++) print_expr(c->args[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args.size() });
             break;
         }
 
         case Expr::Kind::LIST: {
             auto l = as_list(e);
             std::cout << color("List", Color::BLUE) << " [" << l->elements.size() << "]\n";
-            for (size_t i = 0; i < l->elements.size(); i++)
-                print_expr(l->elements[i], { p.indent + pipe(p.last), i + 1 == l->elements.size() });
+            for (size_t i = 0; i < l->elements.size(); i++) print_expr(l->elements[i], { p.indent + pipe(p.last), i + 1 == l->elements.size() });
             break;
         }
 
@@ -205,30 +205,25 @@ private:
             break;
         }
 
-        default:
-            std::cout << color("<unknown expr>", Color::RED) << "\n";
+        default: std::cout << color("<unknown expr>", Color::RED) << "\n";
         }
     }
 
     void print_stmt(StmtPtr s, Prefix p)
     {
-        if (s == nullptr)
-            return;
+        if (s == nullptr) return;
 
         m_node_count++;
 
         std::cout << p.indent << glyph(p.last);
 
         switch (s->get_kind()) {
-        case Stmt::Kind::FUNCTION_STUB:
-            std::cout << color("FunctionStub (unparsed body)", Color::BOLD) << "\n";
-            break;
+        case Stmt::Kind::FUNCTION_STUB: std::cout << color("FunctionStub (unparsed body)", Color::BOLD) << "\n"; break;
         case Stmt::Kind::FUNC: {
             auto f = static_cast<FuncDefStmt const*>(s);
             std::cout << color("FuncDefStmt", Color::BOLD) << " " << f->name->spelling << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->params.size(); i++)
-                print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
+            for (size_t i = 0; i < f->params.size(); i++) print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->body, { p.indent + pipe(p.last) + "    ", true });
         } break;
@@ -270,8 +265,7 @@ private:
         case Stmt::Kind::BLOCK: {
             auto b = static_cast<BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->stmts.size() << " stmts}\n";
-            for (size_t i = 0; i < b->stmts.size(); i++)
-                print_stmt(b->stmts[i], { p.indent + pipe(p.last), i + 1 == b->stmts.size() });
+            for (size_t i = 0; i < b->stmts.size(); i++) print_stmt(b->stmts[i], { p.indent + pipe(p.last), i + 1 == b->stmts.size() });
         } break;
 
         case Stmt::Kind::FOR: {
@@ -299,21 +293,18 @@ private:
             bool const has_methods = !methods.empty();
             std::cout << p.indent + pipe(p.last) << (has_methods ? "├─" : "└─") << " members:\n";
             std::string const members_prefix = p.indent + pipe(p.last) + (has_methods ? "│  " : "   ");
-            for (size_t i = 0; i < members.size(); i++)
-                print_expr(members[i], { members_prefix, i + 1 == members.size() });
+            for (size_t i = 0; i < members.size(); i++) print_expr(members[i], { members_prefix, i + 1 == members.size() });
 
             if (has_methods) {
                 std::cout << p.indent + pipe(p.last) << "└─ methods:\n";
-                for (size_t i = 0; i < methods.size(); i++)
-                    print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
+                for (size_t i = 0; i < methods.size(); i++) print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
             }
         } break;
 
         case Stmt::Kind::IMPORT: {
             auto import = as_import(s);
             std::cout << color("Import", Color::BOLD) << " " << import->get_module();
-            if (import->imports_member())
-                std::cout << "." << import->get_names()[0];
+            if (import->imports_member()) std::cout << "." << import->get_names()[0];
             std::cout << " as " << import->get_aliases()[0] << "\n";
         } break;
 

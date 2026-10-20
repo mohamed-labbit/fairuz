@@ -59,8 +59,7 @@ private:
 size_t occurrences(std::string const& output, std::string const& text)
 {
     size_t count = 0;
-    for (size_t position = 0; (position = output.find(text, position)) != std::string::npos; position += text.size())
-        ++count;
+    for (size_t position = 0; (position = output.find(text, position)) != std::string::npos; position += text.size()) ++count;
     return count;
 }
 
@@ -93,8 +92,7 @@ protected:
         std::ofstream file(path, std::ios::binary);
         file << source;
         file.close();
-        if (!file)
-            throw std::runtime_error("Could not write VMRunner test source");
+        if (!file) throw std::runtime_error("Could not write VMRunner test source");
         return platform::utf8(path);
     }
 };
@@ -176,9 +174,7 @@ TEST_F(VMRunnerBoundaryTest, AstDumpEagerlyRejectsInvalidUnusedBodies)
 
 TEST_F(VMRunnerBoundaryTest, JsonOptionsProduceOneDocumentForCompileAndRuntimeErrors)
 {
-    for (auto const& test : {
-             std::pair { "اخرج\n", "BREAK_OUTSIDE_LOOP" },
-             std::pair { "تاكد خطا\n", "ASSERT_FAILED" } }) {
+    for (auto const& test : { std::pair { "اخرج\n", "BREAK_OUTSIDE_LOOP" }, std::pair { "تاكد خطا\n", "ASSERT_FAILED" } }) {
         SCOPED_TRACE(test.second);
         auto path = write("json_error.fa", test.first);
         StreamCapture err(std::cerr);
@@ -248,8 +244,7 @@ TEST_F(VMRunnerBoundaryTest, ParseAndCompileFailuresPreventExecutionAndReportOnc
         char const* source;
         char const* diagnostic;
     };
-    for (auto const& test : {
-             Case { "قيمة :=\nاكتب(\"must not execute\")\n", "Unexpected token" },
+    for (auto const& test : { Case { "قيمة :=\nاكتب(\"must not execute\")\n", "Unexpected token" },
              Case { "اخرج\nاكتب(\"must not execute\")\n", "'break' used outside of a loop" } }) {
         SCOPED_TRACE(test.source);
         auto path = write("invalid.fa", test.source);
@@ -334,8 +329,7 @@ TEST_F(VMRunnerBoundaryTest, RestoresCallerDiagnosticsSourceOutputModeAndAllocat
     auto invalid = write("invalid.fa", "تاكد خطا\n");
     auto source = std::make_shared<SourceManager>("caller.fa", "caller source\n");
     diagnostic::engine.set_source(source);
-    auto id = diagnostic::report(diagnostic::Severity::ERROR, { 1, 1, 0, 0 },
-        ErrorCode::INTERNAL_ERROR, "caller diagnostic");
+    auto id = diagnostic::report(diagnostic::Severity::ERROR, { 1, 1, 0, 0 }, ErrorCode::INTERNAL_ERROR, "caller diagnostic");
     diagnostic::engine.add_suggestion(id, "preserve this suggestion");
     diagnostic::engine.set_json_output(true);
     auto caller_diagnostics = diagnostic::engine.to_json();
@@ -387,10 +381,7 @@ TEST_F(VMRunnerBoundaryTest, PreservesTheCallersDiagnosticPrintingPosition)
 
 class ThrowingBuffer final : public std::streambuf {
     int_type overflow(int_type) override { throw std::runtime_error("diagnostic stream failed"); }
-    std::streamsize xsputn(char const*, std::streamsize) override
-    {
-        throw std::runtime_error("diagnostic stream failed");
-    }
+    std::streamsize xsputn(char const*, std::streamsize) override { throw std::runtime_error("diagnostic stream failed"); }
 };
 
 class FailingDiagnostics {

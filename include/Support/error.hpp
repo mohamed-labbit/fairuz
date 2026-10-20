@@ -58,8 +58,7 @@ private:
 // std::expected owns the active alternative and provides safe state transitions.
 // Its assignment constraints require a nothrow-movable alternative when needed
 // for rollback. Unsupported payload combinations are rejected at compile time.
-template<typename T, typename E = Error>
-class [[nodiscard]] ErrorOr {
+template<typename T, typename E = Error> class [[nodiscard]] ErrorOr {
 public:
     ErrorOr() = delete;
 
@@ -130,19 +129,15 @@ public:
     void set_value(T value) { m_storage = std::move(value); }
     void set_error(E error) { m_storage = std::unexpected<E>(std::move(error)); }
 
-    template<typename U>
-    ErrorOr<U, E> error_or(U value) const&
+    template<typename U> ErrorOr<U, E> error_or(U value) const&
     {
-        if (has_error())
-            return ErrorOr<U, E>::from_error(error());
+        if (has_error()) return ErrorOr<U, E>::from_error(error());
         return ErrorOr<U, E>::from_value(std::move(value));
     }
 
-    template<typename U>
-    ErrorOr<U, E> error_or(U value) &&
+    template<typename U> ErrorOr<U, E> error_or(U value) &&
     {
-        if (has_error())
-            return ErrorOr<U, E>::from_error(std::move(*this).error());
+        if (has_error()) return ErrorOr<U, E>::from_error(std::move(*this).error());
         return ErrorOr<U, E>::from_value(std::move(value));
     }
 
@@ -159,8 +154,7 @@ private:
 }; // class ErrorOr
 
 /// partial specialization for T = void
-template<typename E>
-class [[nodiscard]] ErrorOr<void, E> {
+template<typename E> class [[nodiscard]] ErrorOr<void, E> {
 public:
     // For void, default construction represents success.
     ErrorOr() noexcept = default;
@@ -172,10 +166,7 @@ public:
 
     static ErrorOr from_value() { return ErrorOr { }; }
 
-    static ErrorOr from_error(E error)
-    {
-        return ErrorOr(std::unexpect, std::move(error));
-    }
+    static ErrorOr from_error(E error) { return ErrorOr(std::unexpect, std::move(error)); }
 
     ErrorOr(ErrorOr const&) = default;
     ErrorOr& operator=(ErrorOr const&) = default;
@@ -187,10 +178,7 @@ public:
     bool has_error() const noexcept { return !has_value(); }
 
     // Checks success; there is no payload to retrieve.
-    void value() const noexcept
-    {
-        assert(has_value());
-    }
+    void value() const noexcept { assert(has_value()); }
 
     E& error() &
     {
@@ -216,29 +204,19 @@ public:
         return std::move(m_storage).error();
     }
 
-    void set_value() noexcept
-    {
-        m_storage.emplace();
-    }
+    void set_value() noexcept { m_storage.emplace(); }
 
-    void set_error(E error)
-    {
-        m_storage = std::unexpected<E>(std::move(error));
-    }
+    void set_error(E error) { m_storage = std::unexpected<E>(std::move(error)); }
 
-    template<typename U>
-    ErrorOr<U, E> error_or(U value) const&
+    template<typename U> ErrorOr<U, E> error_or(U value) const&
     {
-        if (has_error())
-            return ErrorOr<U, E>::from_error(error());
+        if (has_error()) return ErrorOr<U, E>::from_error(error());
         return ErrorOr<U, E>::from_value(std::move(value));
     }
 
-    template<typename U>
-    ErrorOr<U, E> error_or(U value) &&
+    template<typename U> ErrorOr<U, E> error_or(U value) &&
     {
-        if (has_error())
-            return ErrorOr<U, E>::from_error(std::move(*this).error());
+        if (has_error()) return ErrorOr<U, E>::from_error(std::move(*this).error());
         return ErrorOr<U, E>::from_value(std::move(value));
     }
 

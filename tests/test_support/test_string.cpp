@@ -351,8 +351,7 @@ TEST_F(StringRefTest, AppendChar_UnicodeChar)
 TEST_F(StringRefTest, AppendChar_TriggerExpansion)
 {
     StringRef s(2);
-    for (int i = 0; i < 100; i++)
-        s += 'A';
+    for (int i = 0; i < 100; i++) s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
 
@@ -805,10 +804,8 @@ TEST_F(StringRefTest, StdHash_Works)
 TEST_F(StringRefPerfTest, Stress_ManyErases)
 {
     StringRef s;
-    for (int i = 0; i < 1000; i++)
-        s += char('A');
-    for (int i = 0; i < 500; i++)
-        s.erase(0);
+    for (int i = 0; i < 1000; i++) s += char('A');
+    for (int i = 0; i < 500; i++) s.erase(0);
     EXPECT_EQ(s.len(), 500);
 }
 
@@ -823,8 +820,7 @@ TEST_F(StringRefPerfTest, Stress_CopyAndModify)
     }
 
     EXPECT_EQ(original, "Original");
-    for (size_t i = 0; i < copies.size(); i++)
-        EXPECT_NE(copies[i], original);
+    for (size_t i = 0; i < copies.size(); i++) EXPECT_NE(copies[i], original);
 }
 
 TEST_F(StringRefPerfTest, Stress_LargeString)
@@ -837,8 +833,7 @@ TEST_F(StringRefPerfTest, Stress_LargeString)
 TEST_F(StringRefPerfTest, Stress_UnicodeAppends)
 {
     StringRef s;
-    for (int i = 0; i < 1000; i++)
-        s = s + "مرحبا";
+    for (int i = 0; i < 1000; i++) s = s + "مرحبا";
 
     EXPECT_EQ(s.len(), 10000);
 }
@@ -849,8 +844,7 @@ TEST_F(StringRefPerfTest, Stress_ManySubstrings)
     std::vector<StringRef> subs;
 
     for (size_t i = 0; i < s.len(); i++) {
-        for (size_t j = i; j < s.len(); j++)
-            subs.push_back(s.substr(i, j));
+        for (size_t j = i; j < s.len(); j++) subs.push_back(s.substr(i, j));
     }
 
     EXPECT_GT(subs.size(), 100);
@@ -870,12 +864,10 @@ TEST_F(StringRefPerfTest, Stress_RandomOperations)
         case 0: s += char(char_dist(rng)); break;
         case 1: s.clear(); break;
         case 2:
-            if (!s.empty())
-                s.erase(0);
+            if (!s.empty()) s.erase(0);
             break;
         case 3:
-            if (!s.empty())
-                s.truncate(s.len() / 2);
+            if (!s.empty()) s.truncate(s.len() / 2);
             break;
         case 4: {
             StringRef copy = s;
@@ -898,8 +890,7 @@ TEST_F(StringRefPerfTest, EdgeCase_MaxSizeString)
 {
     size_t const large_size = 1000000;
     StringRef s(large_size);
-    for (size_t i = 0; i < 100; i++)
-        s += 'A';
+    for (size_t i = 0; i < 100; i++) s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
 
@@ -924,8 +915,7 @@ TEST_F(StringRefTest, EdgeCase_SurrogatesPairs)
 TEST_F(StringRefTest, EdgeCase_AllZeros)
 {
     StringRef s(10);
-    for (int i = 0; i < 10; i++)
-        s += char { 0 };
+    for (int i = 0; i < 10; i++) s += char { 0 };
     EXPECT_EQ(s.len(), 10);
 }
 
@@ -937,8 +927,7 @@ TEST_F(StringRefTest, EdgeCase_HighUnicodeValues)
 
 TEST_F(StringRefTest, NoLeak_MultipleConstructDestruct)
 {
-    for (int i = 0; i < 1000; i++)
-        StringRef s("Test String");
+    for (int i = 0; i < 1000; i++) StringRef s("Test String");
     EXPECT_TRUE(true);
 }
 
@@ -1020,15 +1009,12 @@ TEST_F(StringRefTest, CoW_NonConstData)
 static f64 microseconds_since(std::chrono::high_resolution_clock::time_point t0)
 {
     using namespace std::chrono;
-    return static_cast<f64>(
-               duration_cast<nanoseconds>(high_resolution_clock::now() - t0).count())
-        / 1000.0;
+    return static_cast<f64>(duration_cast<nanoseconds>(high_resolution_clock::now() - t0).count()) / 1000.0;
 }
 
 // Prevent the compiler from optimizing away a value entirely.
 // We write through a volatile sink so the read of `v` is observable.
-template<typename T>
-static void do_not_optimize(T const& v)
+template<typename T> static void do_not_optimize(T const& v)
 {
     void const volatile* sink = &v; // NOLINT
     (void)sink;
@@ -1047,8 +1033,7 @@ TEST_F(StringRefPerfTest, Append_1M_Chars_PreReserved)
     s.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        s += 'A';
+    for (int i = 0; i < N; i++) s += 'A';
     f64 us = microseconds_since(t0);
 
     do_not_optimize(s);
@@ -1064,8 +1049,7 @@ TEST_F(StringRefPerfTest, Append_1M_Chars_NoReserve)
     StringRef s;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        s += char('A' + i % 26);
+    for (int i = 0; i < N; i++) s += char('A' + i % 26);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(s);
@@ -1083,8 +1067,7 @@ TEST_F(StringRefPerfTest, Append_250k_ShortStrings)
     s.reserve(N * 4);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        s += chunk;
+    for (int i = 0; i < N; i++) s += chunk;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(s);
@@ -1105,8 +1088,7 @@ TEST_F(StringRefPerfTest, Concat_10k_Growing)
     StringRef result;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        result = result + part;
+    for (int i = 0; i < N; i++) result = result + part;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -1123,8 +1105,7 @@ TEST_F(StringRefPerfTest, Concat_10k_AppendAssign)
     result.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        result += part;
+    for (int i = 0; i < N; i++) result += part;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -1192,14 +1173,12 @@ TEST_F(StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
     }
     f64 mutate_us = microseconds_since(t0);
 
-    std::printf("  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n",
-        shallow_us, mutate_us, mutate_us / shallow_us);
+    std::printf("  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n", shallow_us, mutate_us, mutate_us / shallow_us);
 
     // Shallow copy must be at least 2x faster than copy+mutate.
     // If CoW is working, it should be much more than 2x.
-    EXPECT_LT(shallow_us, mutate_us * 0.5)
-        << "CoW shallow copy is not significantly faster than copy+mutate — "
-           "CoW benefit may not be materializing";
+    EXPECT_LT(shallow_us, mutate_us * 0.5) << "CoW shallow copy is not significantly faster than copy+mutate — "
+                                              "CoW benefit may not be materializing";
 }
 
 // ---------------------------------------------------------------------------
@@ -1215,8 +1194,7 @@ TEST_F(StringRefPerfTest, Hash_1M_Short)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc ^= hasher(s);
+    for (int i = 0; i < N; i++) acc ^= hasher(s);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
@@ -1232,8 +1210,7 @@ TEST_F(StringRefPerfTest, Hash_1M_Long)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc ^= hasher(s);
+    for (int i = 0; i < N; i++) acc ^= hasher(s);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
@@ -1253,13 +1230,11 @@ TEST_F(StringRefPerfTest, Hash_ScalesWithLength)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc ^= hasher(s_short);
+    for (int i = 0; i < N; i++) acc ^= hasher(s_short);
     f64 short_us = microseconds_since(t0);
 
     t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc ^= hasher(s_long);
+    for (int i = 0; i < N; i++) acc ^= hasher(s_long);
     f64 long_us = microseconds_since(t0);
 
     do_not_optimize(acc);
@@ -1269,8 +1244,7 @@ TEST_F(StringRefPerfTest, Hash_ScalesWithLength)
         short_us, long_us, ratio);
 
     // Allow up to 128x — anything beyond suggests quadratic scanning.
-    EXPECT_LT(ratio, 128.0)
-        << "Hash appears to scale worse than O(n) with string length";
+    EXPECT_LT(ratio, 128.0) << "Hash appears to scale worse than O(n) with string length";
 }
 
 // ---------------------------------------------------------------------------
@@ -1355,8 +1329,7 @@ TEST_F(StringRefPerfTest, Slice_vs_Substr_Ratio)
 
     std::printf("  slice=%.1f µs  substr=%.1f µs  ratio=%.1fx\n", slice_us, substr_us, substr_us / slice_us);
 
-    EXPECT_LT(slice_us, substr_us)
-        << "slice() should be faster than substr() — slice is zero-copy";
+    EXPECT_LT(slice_us, substr_us) << "slice() should be faster than substr() — slice is zero-copy";
 }
 
 // ---------------------------------------------------------------------------
@@ -1372,8 +1345,7 @@ TEST_F(StringRefPerfTest, Equality_2M_Equal)
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        hits += (s1 == s2) ? 1 : 0;
+    for (int i = 0; i < N; i++) hits += (s1 == s2) ? 1 : 0;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(hits);
@@ -1394,14 +1366,12 @@ TEST_F(StringRefPerfTest, Equality_2M_DifferLastByte)
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        hits += (s1 == s2) ? 1 : 0;
+    for (int i = 0; i < N; i++) hits += (s1 == s2) ? 1 : 0;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(hits);
     EXPECT_EQ(hits, 0);
-    std::printf("  Equality 2M (differ last, 64B):  %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Equality 2M (differ last, 64B):  %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------
@@ -1415,12 +1385,10 @@ TEST_F(StringRefPerfTest, Erase_100k_FromFront)
     constexpr int N = 100'000;
     StringRef s;
     s.reserve(N);
-    for (int i = 0; i < N; i++)
-        s += char('A' + i % 26);
+    for (int i = 0; i < N; i++) s += char('A' + i % 26);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    while (!s.empty())
-        s.erase(0);
+    while (!s.empty()) s.erase(0);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(s);
@@ -1441,8 +1409,7 @@ TEST_F(StringRefPerfTest, Append_100k_ArabicChunks)
     s.reserve(N * 10);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        s += chunk;
+    for (int i = 0; i < N; i++) s += chunk;
     f64 us = microseconds_since(t0);
 
     do_not_optimize(s);

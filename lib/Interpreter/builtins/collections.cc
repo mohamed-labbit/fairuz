@@ -20,8 +20,7 @@ VM::RuntimeResult VM::list(int argc, Value* argv)
     Value ret = m_gc.make_list();
     ObjList* list_obj = ret.as_list();
 
-    for (int i = 0; i < argc; i++)
-        list_obj->elements.push(argv[i]);
+    for (int i = 0; i < argc; i++) list_obj->elements.push(argv[i]);
 
     return ret;
 }
@@ -29,12 +28,10 @@ VM::RuntimeResult VM::list(int argc, Value* argv)
 VM::RuntimeResult VM::dict(int argc, Value* argv)
 {
     Value ret = m_gc.make_dict();
-    if (argc <= 0 || argv == nullptr)
-        return ret;
+    if (argc <= 0 || argv == nullptr) return ret;
 
     ObjDict* dict_obj = ret.as_dict();
-    for (int i = 0; i + 1 < argc; i += 2)
-        dict_obj->set(argv[i], argv[i + 1]);
+    for (int i = 0; i + 1 < argc; i += 2) dict_obj->set(argv[i], argv[i + 1]);
 
     return ret;
 }
@@ -42,16 +39,14 @@ VM::RuntimeResult VM::dict(int argc, Value* argv)
 VM::RuntimeResult VM::dict_contains(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
-            "dictionary contains expects a dictionary and key");
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dictionary contains expects a dictionary and key");
     return Value::from_bool(argv[0].as_dict()->data.contains(argv[1]));
 }
 
 VM::RuntimeResult VM::dict_delete(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
-            "dictionary delete expects a dictionary and key");
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dictionary delete expects a dictionary and key");
     Value removed = Value::nil();
     argv[0].as_dict()->erase(argv[1], &removed);
     return removed;
@@ -60,30 +55,24 @@ VM::RuntimeResult VM::dict_delete(int argc, Value* argv)
 VM::RuntimeResult VM::dict_keys(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_dict())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
-            "dictionary keys expects one dictionary");
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dictionary keys expects one dictionary");
 
     Value result = m_gc.make_list();
     ObjDict* dict = argv[0].as_dict();
-    for (Value key : dict->insertion_order)
-        result.as_list()->elements.push(key);
+    for (Value key : dict->insertion_order) result.as_list()->elements.push(key);
     return result;
 }
 
 VM::RuntimeResult VM::append(int argc, Value* argv)
 {
-    if (argc < 2 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::APPEND_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc < 2 || argv == nullptr) return raise_runtime_error(ErrorCode::APPEND_ARG_COUNT, "got " + std::to_string(argc));
 
     Value& list_v = argv[0];
-    if (!list_v.is_list())
-        return raise_runtime_error(ErrorCode::APPEND_TYPE_ERROR);
+    if (!list_v.is_list()) return raise_runtime_error(ErrorCode::APPEND_TYPE_ERROR);
 
     ObjList* list_obj = list_v.as_list();
 
-    for (int i = 1; i < argc; i++)
-        list_obj->elements.push(argv[i]);
+    for (int i = 1; i < argc; i++) list_obj->elements.push(argv[i]);
 
     // success
     return Value::nil();
@@ -91,18 +80,14 @@ VM::RuntimeResult VM::append(int argc, Value* argv)
 
 VM::RuntimeResult VM::pop(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::POP_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::POP_ARG_COUNT, "got " + std::to_string(argc));
 
     Value& list_v = argv[0];
-    if (!list_v.is_list())
-        return raise_runtime_error(ErrorCode::POP_TYPE_ERROR);
+    if (!list_v.is_list()) return raise_runtime_error(ErrorCode::POP_TYPE_ERROR);
 
     ObjList* list_obj = list_v.as_list();
 
-    if (list_obj->empty())
-        return raise_runtime_error(ErrorCode::POP_EMPTY_LIST);
+    if (list_obj->empty()) return raise_runtime_error(ErrorCode::POP_EMPTY_LIST);
 
     list_obj->elements.pop();
     return list_v;
@@ -110,9 +95,7 @@ VM::RuntimeResult VM::pop(int argc, Value* argv)
 
 VM::RuntimeResult VM::len(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::LEN_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::LEN_ARG_COUNT, "got " + std::to_string(argc));
 
     if (argv[0].is_string()) {
         StringRef const& str = argv[0].as_string()->str;
@@ -120,8 +103,7 @@ VM::RuntimeResult VM::len(int argc, Value* argv)
         // boundaries (files, codecs, compression).  Preserve Unicode
         // code-point length for text, but never try to decode arbitrary
         // binary payloads such as gzip streams.
-        if (!simdutf::validate_utf8(str.data(), str.len()))
-            return Value::from_int(static_cast<i64>(str.len()), m_gc);
+        if (!simdutf::validate_utf8(str.data(), str.len())) return Value::from_int(static_cast<i64>(str.len()), m_gc);
         size_t byte_pos = 0;
         i64 char_count = 0;
 
@@ -135,10 +117,8 @@ VM::RuntimeResult VM::len(int argc, Value* argv)
         return Value::from_int(char_count, m_gc);
     }
 
-    if (argv[0].is_list())
-        return Value::from_int(argv[0].as_list()->elements.size(), m_gc);
-    if (argv[0].is_dict())
-        return Value::from_int(argv[0].as_dict()->data.size(), m_gc);
+    if (argv[0].is_list()) return Value::from_int(argv[0].as_list()->elements.size(), m_gc);
+    if (argv[0].is_dict()) return Value::from_int(argv[0].as_dict()->data.size(), m_gc);
 
     /// unreachable
     return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
@@ -146,8 +126,7 @@ VM::RuntimeResult VM::len(int argc, Value* argv)
 
 void VM::dict_put(Value* dict_ptr, Value k, Value v)
 {
-    if (UNLIKELY(dict_ptr == nullptr))
-        return;
+    if (UNLIKELY(dict_ptr == nullptr)) return;
 
     ObjDict* as_dict = dict_ptr->as_dict();
     as_dict->set(k, v);
@@ -155,8 +134,7 @@ void VM::dict_put(Value* dict_ptr, Value k, Value v)
 
 Value VM::dict_get(Value* dict_ptr, Value k)
 {
-    if (UNLIKELY(dict_ptr == nullptr))
-        return Value::nil();
+    if (UNLIKELY(dict_ptr == nullptr)) return Value::nil();
 
     ObjDict* as_dict = dict_ptr->as_dict();
     return as_dict->data[k];
@@ -169,38 +147,29 @@ VM::RuntimeResult VM::slice(int argc, Value* argv)
     /// a, b are the indices
     /// if b is null then cut [start:]
 
-    if (argc < 2 || argc > 3 || argv == nullptr)
-        return raise_runtime_error(ErrorCode::SLICE_ARG_COUNT,
-            "got " + std::to_string(argc));
+    if (argc < 2 || argc > 3 || argv == nullptr) return raise_runtime_error(ErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
 
     Value container = argv[0];
     Value start_value = argv[1];
     Value end_value = argc < 3 ? Value::nil() : argv[2];
 
     if (UNLIKELY(!container.is_string() && !container.is_list()))
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
-            "slice expects a string or list as its first argument");
-    if (UNLIKELY(!start_value.is_int() || !(end_value.is_nil() || end_value.is_int())))
-        return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "slice expects a string or list as its first argument");
+    if (UNLIKELY(!start_value.is_int() || !(end_value.is_nil() || end_value.is_int()))) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
     i64 start_i = start_value.as_int();
-    size_t container_size = container.is_string()
-        ? static_cast<size_t>(len(1, &container).value().as_int())
-        : static_cast<size_t>(container.as_list()->size());
+    size_t container_size
+        = container.is_string() ? static_cast<size_t>(len(1, &container).value().as_int()) : static_cast<size_t>(container.as_list()->size());
 
     if (container_size == 0) {
-        if (start_i == 0 && end_value.is_nil())
-            return container.is_string() ? m_gc.make_string("") : m_gc.make_list();
+        if (start_i == 0 && end_value.is_nil()) return container.is_string() ? m_gc.make_string("") : m_gc.make_list();
         return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
     }
 
-    i64 end_i = end_value.is_nil()
-        ? static_cast<i64>(container_size - 1)
-        : end_value.as_int();
+    i64 end_i = end_value.is_nil() ? static_cast<i64>(container_size - 1) : end_value.as_int();
 
-    if (UNLIKELY(start_i < 0 || end_i < 0 || start_i > end_i
-            || static_cast<u64>(start_i) >= container_size
-            || static_cast<u64>(end_i) >= container_size))
+    if (UNLIKELY(
+            start_i < 0 || end_i < 0 || start_i > end_i || static_cast<u64>(start_i) >= container_size || static_cast<u64>(end_i) >= container_size))
         return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
     size_t start = static_cast<size_t>(start_i);
@@ -208,15 +177,13 @@ VM::RuntimeResult VM::slice(int argc, Value* argv)
 
     if (container.is_string()) {
         ObjString* str_obj = container.as_string();
-        if (!simdutf::validate_utf8(str_obj->str.data(), str_obj->str.len()))
-            return m_gc.make_string(str_obj->str.slice(start, end + 1));
+        if (!simdutf::validate_utf8(str_obj->str.data(), str_obj->str.len())) return m_gc.make_string(str_obj->str.slice(start, end + 1));
         Value args[] = { container, Value::from_int(start_i, m_gc), Value::from_int(end_i + 1, m_gc) };
         return substr(3, args);
     } else if (container.is_list()) {
         ObjList* list_obj = container.as_list();
         ObjList* ret_list = m_gc.make_obj_list();
-        for (size_t i = start; i <= end; i++)
-            ret_list->elements.push(list_obj->elements[static_cast<u32>(i)]);
+        for (size_t i = start; i <= end; i++) ret_list->elements.push(list_obj->elements[static_cast<u32>(i)]);
 
         return Value::from_list(ret_list);
     }

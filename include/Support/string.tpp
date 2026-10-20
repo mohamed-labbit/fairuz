@@ -91,8 +91,7 @@ StringBase<Allocator>::StringBase(char const* s, Allocator* allocator)
         m_storage.heap.cap = n + 1;
         m_storage.heap.ptr = m_allocator->template allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic(ErrorCode::ALLOC_FAILED,
-                "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
+            diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
 }
@@ -113,8 +112,7 @@ StringRefImpl<Allocator>::StringRefImpl(StringRefImpl const& other, size_t offse
     , m_length(length != SIZE_MAX ? length : (offset <= other.m_length ? other.m_length - offset : 0))
     , m_allocator(other.m_allocator)
 {
-    if (m_string_data)
-        m_string_data->increment();
+    if (m_string_data) m_string_data->increment();
 }
 
 // relies on lit being nul terminated
@@ -197,11 +195,9 @@ StringRefImpl<Allocator>::StringRefImpl(StringRefImpl&& other) noexcept
     other.m_allocator = nullptr;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl&& other) noexcept
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl&& other) noexcept
 {
-    if (this == &other)
-        return *this;
+    if (this == &other) return *this;
 
     if (m_string_data) {
         if (m_string_data == detail::empty_string_singleton<Allocator>()) {
@@ -228,11 +224,9 @@ StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl&& ot
     return *this;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>::~StringRefImpl()
+template<class Allocator> StringRefImpl<Allocator>::~StringRefImpl()
 {
-    if (m_string_data == nullptr)
-        return;
+    if (m_string_data == nullptr) return;
 
     if (m_string_data == detail::empty_string_singleton<Allocator>()) {
         m_string_data->decrement();
@@ -246,11 +240,9 @@ StringRefImpl<Allocator>::~StringRefImpl()
     }
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl const& other)
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl const& other)
 {
-    if (this == &other)
-        return *this;
+    if (this == &other) return *this;
 
     if (m_string_data) {
         if (m_string_data == detail::empty_string_singleton<Allocator>()) {
@@ -270,19 +262,16 @@ StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl cons
     m_length = other.m_length;
     m_allocator = other.m_allocator;
 
-    if (m_string_data != nullptr)
-        m_string_data->increment();
+    if (m_string_data != nullptr) m_string_data->increment();
 
     return *this;
 }
 
-template<class Allocator>
-void StringRefImpl<Allocator>::expand(size_t const new_size)
+template<class Allocator> void StringRefImpl<Allocator>::expand(size_t const new_size)
 {
     ensure_unique();
 
-    if (new_size <= cap())
-        return;
+    if (new_size <= cap()) return;
 
     char const* old_ptr = data();
     size_t old_len = len();
@@ -290,8 +279,7 @@ void StringRefImpl<Allocator>::expand(size_t const new_size)
     size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
     char* new_ptr = m_allocator->template allocate_array<char>(new_capacity);
 
-    if (old_ptr != nullptr && old_len > 0)
-        ::memcpy(new_ptr, old_ptr, old_len);
+    if (old_ptr != nullptr && old_len > 0) ::memcpy(new_ptr, old_ptr, old_len);
 
     if (m_string_data->is_heap() && m_string_data->m_storage.heap.ptr)
         m_allocator->template deallocate_array<char>(m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.cap);
@@ -303,20 +291,16 @@ void StringRefImpl<Allocator>::expand(size_t const new_size)
     m_offset = 0;
 }
 
-template<class Allocator>
-void StringRefImpl<Allocator>::reserve(size_t const new_capacity)
+template<class Allocator> void StringRefImpl<Allocator>::reserve(size_t const new_capacity)
 {
-    if (new_capacity <= cap())
-        return;
+    if (new_capacity <= cap()) return;
 
     expand(new_capacity);
 }
 
-template<class Allocator>
-void StringRefImpl<Allocator>::erase(size_t const at)
+template<class Allocator> void StringRefImpl<Allocator>::erase(size_t const at)
 {
-    if (empty() || at >= len())
-        return;
+    if (empty() || at >= len()) return;
 
     if (at == 0) {
         m_offset += 1;
@@ -330,25 +314,21 @@ void StringRefImpl<Allocator>::erase(size_t const at)
     }
 
     ensure_unique();
-    if (data() == nullptr)
-        return;
+    if (data() == nullptr) return;
 
     ::memmove(data() + at, data() + at + 1, len() - at - 1);
     m_length -= 1;
     m_string_data->ptr()[m_length] = 0;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(StringRefImpl const& other)
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(StringRefImpl const& other)
 {
-    if (other.empty())
-        return *this;
+    if (other.empty()) return *this;
 
     ensure_unique();
 
     size_t new_len = m_length + other.m_length;
-    if (m_offset + new_len >= cap())
-        expand(new_len);
+    if (m_offset + new_len >= cap()) expand(new_len);
 
     ::memcpy(m_string_data->ptr() + m_offset + m_length, other.data(), other.m_length);
     m_length = new_len;
@@ -357,13 +337,11 @@ StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(StringRefImpl con
     return *this;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(char c)
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(char c)
 {
     ensure_unique();
 
-    if (UNLIKELY(m_offset + m_length + 1 >= m_string_data->cap()))
-        expand(m_length + 1);
+    if (UNLIKELY(m_offset + m_length + 1 >= m_string_data->cap())) expand(m_length + 1);
 
     m_string_data->ptr()[m_offset + m_length] = c;
     m_length += 1;
@@ -372,81 +350,62 @@ StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(char c)
     return *this;
 }
 
-template<class Allocator>
-char StringRefImpl<Allocator>::operator[](size_t const i) const
-{
-    return (*m_string_data)[i + m_offset];
-}
+template<class Allocator> char StringRefImpl<Allocator>::operator[](size_t const i) const { return (*m_string_data)[i + m_offset]; }
 
-template<class Allocator>
-char& StringRefImpl<Allocator>::operator[](size_t const i)
+template<class Allocator> char& StringRefImpl<Allocator>::operator[](size_t const i)
 {
     ensure_unique();
     return (*m_string_data)[i + m_offset];
 }
 
-template<class Allocator>
-char StringRefImpl<Allocator>::at(size_t const i) const
+template<class Allocator> char StringRefImpl<Allocator>::at(size_t const i) const
 {
-    if (UNLIKELY(i >= m_length))
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::at: index out of bounds");
+    if (UNLIKELY(i >= m_length)) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
 
-template<class Allocator>
-char& StringRefImpl<Allocator>::at(size_t const i)
+template<class Allocator> char& StringRefImpl<Allocator>::at(size_t const i)
 {
     ensure_unique();
-    if (UNLIKELY(i >= m_length))
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::at: index out of bounds");
+    if (UNLIKELY(i >= m_length)) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
 
-template<class Allocator>
-bool StringRefImpl<Allocator>::find(char const c) const noexcept
+template<class Allocator> bool StringRefImpl<Allocator>::find(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + m_length;
-    while (p < end && *p != c)
-        p += 1;
+    while (p < end && *p != c) p += 1;
     return p < end;
 }
 
-template<class Allocator>
-bool StringRefImpl<Allocator>::find(StringRefImpl const& s) const noexcept
+template<class Allocator> bool StringRefImpl<Allocator>::find(StringRefImpl const& s) const noexcept
 {
-    if (s.empty() || s.len() > len())
-        return false;
+    if (s.empty() || s.len() > len()) return false;
 
     size_t search_len = s.len();
     size_t max_start = len() - search_len;
 
     for (size_t i = 0; i <= max_start; i += 1) {
-        if (::memcmp(data() + i, s.data(), search_len) == 0)
-            return true;
+        if (::memcmp(data() + i, s.data(), search_len) == 0) return true;
     }
 
     return false;
 }
 
-template<class Allocator>
-std::optional<size_t> StringRefImpl<Allocator>::find_pos(char const c) const noexcept
+template<class Allocator> std::optional<size_t> StringRefImpl<Allocator>::find_pos(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + m_length;
 
-    while (p < end && *p != c)
-        p += 1;
+    while (p < end && *p != c) p += 1;
 
     return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
 {
     if (leading) {
         while (m_length > 0 && util::is_whitespace(data()[0])) {
@@ -456,43 +415,35 @@ StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading
     }
 
     if (trailing) {
-        while (m_length > 0 && util::is_whitespace(data()[m_length - 1]))
-            m_length -= 1;
+        while (m_length > 0 && util::is_whitespace(data()[m_length - 1])) m_length -= 1;
     }
 
     return *this;
 }
 
-template<class Allocator>
-StringRefImpl<Allocator>& StringRefImpl<Allocator>::truncate(size_t const s) noexcept
+template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::truncate(size_t const s) noexcept
 {
-    if (s < m_length)
-        m_length = s;
+    if (s < m_length) m_length = s;
 
     return *this;
 }
 
-template<class Allocator>
-void StringRefImpl<Allocator>::resize(size_t const s)
+template<class Allocator> void StringRefImpl<Allocator>::resize(size_t const s)
 {
     ensure_unique();
-    if (s > cap())
-        expand(s);
+    if (s > cap()) expand(s);
 }
 
-template<class Allocator>
-StringRefImpl<Allocator> StringRefImpl<Allocator>::slice(size_t start, size_t end) const
+template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::slice(size_t start, size_t end) const
 {
-    if (m_length == 0)
-        return StringRefImpl(static_cast<size_t>(0), m_allocator);
+    if (m_length == 0) return StringRefImpl(static_cast<size_t>(0), m_allocator);
 
     if (start > m_length) {
         diagnostic::fatal_error(ErrorCode::STRING_SLICE_START_OOB);
         return StringRefImpl(static_cast<size_t>(0), m_allocator);
     }
 
-    if (end > m_length || end == SIZE_MAX)
-        end = m_length;
+    if (end > m_length || end == SIZE_MAX) end = m_length;
 
     if (end < start) {
         diagnostic::fatal_error(ErrorCode::STRING_SLICE_END_BEFORE_START);
@@ -502,25 +453,17 @@ StringRefImpl<Allocator> StringRefImpl<Allocator>::slice(size_t start, size_t en
     return StringRefImpl(*this, start, end - start);
 }
 
-template<class Allocator>
-StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, size_t end) const
+template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, size_t end) const
 {
-    if (m_length == 0)
-        return StringRefImpl(static_cast<size_t>(0), m_allocator);
-    if (start > m_length)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::substrCopy: start index out of range");
+    if (m_length == 0) return StringRefImpl(static_cast<size_t>(0), m_allocator);
+    if (start > m_length) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
 
-    if (end > m_length || end == SIZE_MAX)
-        end = m_length;
-    if (end < start)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::substrCopy: start index out of range");
+    if (end > m_length || end == SIZE_MAX) end = m_length;
+    if (end < start) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
 
     size_t copy_len = end - start;
 
-    if (copy_len == 0)
-        return StringRefImpl(static_cast<size_t>(0), m_allocator);
+    if (copy_len == 0) return StringRefImpl(static_cast<size_t>(0), m_allocator);
 
     StringBase<Allocator>* ret = m_allocator->template allocate_object<StringBase<Allocator>>(copy_len, m_allocator);
 
@@ -530,23 +473,19 @@ StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, siz
     return StringRefImpl(ret, 0, copy_len);
 }
 
-template<class Allocator>
-StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
+template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
 {
     Allocator* used_allocator = resolve_allocator(allocator);
 
-    if (src == nullptr || !src[0])
-        return StringRefImpl(static_cast<size_t>(0), used_allocator);
+    if (src == nullptr || !src[0]) return StringRefImpl(static_cast<size_t>(0), used_allocator);
 
     char16_t const* p = src;
-    while (*p)
-        p += 1;
+    while (*p) p += 1;
     auto src_len = static_cast<size_t>(p - src);
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
     if (validation.error != simdutf::error_code::SUCCESS)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Invalid UTF-16 at code unit " + std::to_string(validation.count));
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-16 at code unit " + std::to_string(validation.count));
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
     StringBase<Allocator>* ret_data = used_allocator->template allocate_object<StringBase<Allocator>>(utf8_len, used_allocator);
@@ -559,14 +498,12 @@ StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* sr
     return StringRefImpl(ret_data);
 }
 
-template<class Allocator>
-void StringRefImpl<Allocator>::detach()
+template<class Allocator> void StringRefImpl<Allocator>::detach()
 {
     size_t const copy_len = m_length;
     StringBase<Allocator>* s = m_allocator->template allocate_object<StringBase<Allocator>>(copy_len, m_allocator);
 
-    if (copy_len > 0)
-        ::memcpy(s->ptr(), m_string_data->ptr() + m_offset, copy_len);
+    if (copy_len > 0) ::memcpy(s->ptr(), m_string_data->ptr() + m_offset, copy_len);
 
     s->ptr()[copy_len] = 0;
     m_string_data->decrement();
@@ -577,8 +514,7 @@ void StringRefImpl<Allocator>::detach()
 
 namespace detail {
 
-template<class Allocator>
-StringBase<Allocator>* empty_string_singleton() noexcept
+template<class Allocator> StringBase<Allocator>* empty_string_singleton() noexcept
 {
     static StringBase<Allocator> instance;
     return &instance;

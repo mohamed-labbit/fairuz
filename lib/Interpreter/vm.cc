@@ -40,20 +40,16 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
         return result;
     };
     auto wanted = points(StringRef(missing.c_str()));
-    if (wanted.size() < 3 || wanted.size() > 64)
-        return { };
+    if (wanted.size() < 3 || wanted.size() > 64) return { };
     size_t best = wanted.size() < 6 ? 2 : 3;
     std::string match;
     size_t examined = 0;
     auto consider = [&](StringRef const& name) {
-        if (++examined > 1000)
-            return;
+        if (++examined > 1000) return;
         auto candidate = points(name);
-        if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size())
-            return;
+        if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size()) return;
         std::vector<size_t> previous(candidate.size() + 1), current(candidate.size() + 1);
-        for (size_t j = 0; j <= candidate.size(); ++j)
-            previous[j] = j;
+        for (size_t j = 0; j <= candidate.size(); ++j) previous[j] = j;
         for (size_t i = 1; i <= wanted.size(); ++i) {
             current[0] = i;
             for (size_t j = 1; j <= candidate.size(); ++j)
@@ -69,12 +65,10 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
     for (auto* env = environment; env && examined < 1000; env = env->fallback) {
         for (auto const& [name, slot] : env->index) {
             consider(name);
-            if (examined >= 1000)
-                break;
+            if (examined >= 1000) break;
         }
         if (env->builtins != nullptr) {
-            for (auto const& builtin : BuiltinsList::definitions())
-                consider(StringRef(builtin.name.data()));
+            for (auto const& builtin : BuiltinsList::definitions()) consider(StringRef(builtin.name.data()));
         }
     }
     return match;
@@ -87,8 +81,8 @@ static void check_stack_index(int index, int stack_size, char const* m_context)
     if (index < 0 || index >= stack_size)
         // This is a VM internal error, not a user error.
         diagnostic::panic(ErrorCode::INTERNAL_ERROR,
-            std::string(" : ") + std::string("VM internal error: stack index ") + std::to_string(index)
-                + " out of range [0," + std::to_string(stack_size) + ") in " + m_context);
+            std::string(" : ") + std::string("VM internal error: stack index ") + std::to_string(index) + " out of range [0,"
+                + std::to_string(stack_size) + ") in " + m_context);
 }
 
 VM::VM()
@@ -104,28 +98,22 @@ VM::VM()
     m_builtin_environment.builtins = &m_builtin_functions;
 }
 
-VM::~VM()
-{
-    m_gc.sweep_all();
-}
+VM::~VM() { m_gc.sweep_all(); }
 
-#define PUSH_VALUE(v)                                              \
-    do {                                                           \
-        if (m_stack_top == STACK_SIZE)                             \
-            return raise_runtime_error(ErrorCode::STACK_OVERFLOW); \
-        m_stack[m_stack_top] = v;                                  \
-        m_stack_top++;                                             \
+#define PUSH_VALUE(v)                                                                         \
+    do {                                                                                      \
+        if (m_stack_top == STACK_SIZE) return raise_runtime_error(ErrorCode::STACK_OVERFLOW); \
+        m_stack[m_stack_top] = v;                                                             \
+        m_stack_top++;                                                                        \
     } while (0);
 
 // Ensure the value stack has at least `needed` slots allocated, filling
 // any new slots with NIL.  Checks against the hard cap.
 ErrorOr<bool, RuntimeError> VM::ensure_stack_slots(int needed)
 {
-    if (needed > STACK_SIZE)
-        return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
+    if (needed > STACK_SIZE) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
 
-    while (m_stack_top < needed)
-        PUSH_VALUE(Value::nil());
+    while (m_stack_top < needed) PUSH_VALUE(Value::nil());
 
     return true;
 }
@@ -141,22 +129,19 @@ Value& VM::get_reg(CallFrame const& f, int reg)
 
 GlobalEnvironment* VM::current_globals()
 {
-    if (m_frames_top == 0 || frame().globals == nullptr)
-        return &m_root_environment;
+    if (m_frames_top == 0 || frame().globals == nullptr) return &m_root_environment;
     return frame().globals;
 }
 
 Value const* VM::find_global(GlobalEnvironment* env, StringRef const& name) const
 {
-    if (env == nullptr)
-        env = const_cast<GlobalEnvironment*>(&m_root_environment);
+    if (env == nullptr) env = const_cast<GlobalEnvironment*>(&m_root_environment);
     return env->find(name);
 }
 
 void VM::store_global(GlobalEnvironment* env, StringRef const& name, Value value)
 {
-    if (env == nullptr)
-        env = &m_root_environment;
+    if (env == nullptr) env = &m_root_environment;
     if (u32* slot = env->index.find_ptr(name)) {
         env->slots[*slot] = value;
         return;
@@ -180,24 +165,20 @@ VM::RuntimeResult VM::run(Chunk* chunk, Compiler*)
     m_stack[0] = Value::from_obj(reinterpret_cast<ObjHeader*>(fn));
     m_stack_top = static_cast<int>(chunk->local_count) + 2;
 
-    m_frames[m_frames_top] = CallFrame(fn, chunk, PCType { 0 }, 1,
-        static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
+    m_frames[m_frames_top] = CallFrame(fn, chunk, PCType { 0 }, 1, static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
     m_frames_top++;
     intern_chunk_constants(fn->chunk);
 
-    if (m_gc.current_memory() >= GC_THRESHOLD)
-        m_gc.collect(this);
+    if (m_gc.current_memory() >= GC_THRESHOLD) m_gc.collect(this);
 
     auto result = execute();
-    if (result.has_error())
-        unwind();
+    if (result.has_error()) unwind();
     return result;
 }
 
 ObjString* VM::intern(StringRef const& str)
 {
-    if (ObjString** existing = m_string_table.find_ptr(str))
-        return *existing;
+    if (ObjString** existing = m_string_table.find_ptr(str)) return *existing;
 
     ObjString* obj = m_gc.make_obj_string(str);
     m_string_table.insert_or_assign(str, obj);
@@ -206,60 +187,49 @@ ObjString* VM::intern(StringRef const& str)
 
 ErrorOr<bool, RuntimeError> VM::ensure_compiled(Chunk* ch)
 {
-    if (!ch->deferred_body)
-        return true;
+    if (!ch->deferred_body) return true;
     auto comp_result = Compiler::compile_function_deferred(ch);
-    if (comp_result.has_error())
-        return comp_result.error();
+    if (comp_result.has_error()) return comp_result.error();
     intern_chunk_constants(ch);
     return true;
 }
 
 void VM::intern_chunk_constants(Chunk* ch)
 {
-    if (ch == nullptr)
-        return;
+    if (ch == nullptr) return;
 
     for (u32 i = 0; i < ch->constants.size(); i++) {
-        if (ch->constants[i].is_string())
-            ch->constants[i] = Value::from_obj(reinterpret_cast<ObjHeader*>(intern(ch->constants[i].as_string()->str)));
+        if (ch->constants[i].is_string()) ch->constants[i] = Value::from_obj(reinterpret_cast<ObjHeader*>(intern(ch->constants[i].as_string()->str)));
     }
 
-    for (auto* fn : ch->functions)
-        intern_chunk_constants(fn);
+    for (auto* fn : ch->functions) intern_chunk_constants(fn);
 }
 
 SourceLocation VM::current_location() const
 {
-    if (m_frames_top == 0)
-        return { };
+    if (m_frames_top == 0) return { };
 
     CallFrame const& f = top_frame();
     size_t off = f.ip.value > 0 ? f.ip.value - 1 : 0;
     Chunk const& ch = *f.chunk;
 
-    if (off < ch.locations.size())
-        return ch.locations[off];
+    if (off < ch.locations.size()) return ch.locations[off];
 
     return { };
 }
 
 RuntimeError VM::raise_runtime_error(ErrorCode errc, std::string const& detail)
 {
-    if (m_frames_top == 0)
-        return RuntimeError { errc, nullptr, { }, detail };
+    if (m_frames_top == 0) return RuntimeError { errc, nullptr, { }, detail };
     FrameTrace top { frame() };
     RuntimeError error { errc, top.source, top.loc, detail };
-    for (int i = m_frames_top - 1; i >= 0; --i)
-        error.add_trace(m_frames[i]);
+    for (int i = m_frames_top - 1; i >= 0; --i) error.add_trace(m_frames[i]);
     return error;
 }
 
 void VM::update_ic_binary(Chunk* ch, u32 nop_ip, Value lhs, Value rhs, Value result)
 {
-    if (ch == nullptr || nop_ip >= ch->code.size()
-        || instr_op(ch->code[nop_ip]) != OpCode::NOP)
-        return;
+    if (ch == nullptr || nop_ip >= ch->code.size() || instr_op(ch->code[nop_ip]) != OpCode::NOP) return;
 
     u32 nop = ch->code[nop_ip];
     u8 ic_idx = instr_A(nop);

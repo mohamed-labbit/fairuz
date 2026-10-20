@@ -36,11 +36,9 @@ namespace {
 void set_environment(std::string const& name, std::string const& value)
 {
 #ifdef _WIN32
-    if (_wputenv_s(platform::path(name).c_str(), platform::path(value).c_str()) != 0)
-        throw std::runtime_error("Failed to update test environment");
+    if (_wputenv_s(platform::path(name).c_str(), platform::path(value).c_str()) != 0) throw std::runtime_error("Failed to update test environment");
 #else
-    if (setenv(name.c_str(), value.c_str(), 1) != 0)
-        throw std::runtime_error("Failed to update test environment");
+    if (setenv(name.c_str(), value.c_str(), 1) != 0) throw std::runtime_error("Failed to update test environment");
 #endif
 }
 void unset_environment(std::string const& name)
@@ -57,25 +55,21 @@ public:
     explicit EnvironmentGuard(char const* name)
         : m_name(name)
     {
-        if (auto old = platform::environment(name); !old.empty())
-            m_old_value = old;
+        if (auto old = platform::environment(name); !old.empty()) m_old_value = old;
         unset_environment(m_name);
     }
 
     EnvironmentGuard(char const* name, std::string const& value)
         : m_name(name)
     {
-        if (auto old = platform::environment(name); !old.empty())
-            m_old_value = old;
+        if (auto old = platform::environment(name); !old.empty()) m_old_value = old;
         set_environment(m_name, value);
     }
 
     ~EnvironmentGuard()
     {
-        if (m_old_value.has_value())
-            set_environment(m_name, *m_old_value);
-        else
-            unset_environment(m_name);
+        if (m_old_value.has_value()) set_environment(m_name, *m_old_value);
+        else unset_environment(m_name);
     }
 
 private:
@@ -90,8 +84,7 @@ protected:
     void SetUp() override
     {
         diagnostic::reset();
-        directory = std::filesystem::temp_directory_path()
-            / ("fairuz-modules-" + std::to_string(reinterpret_cast<uintptr_t>(this)));
+        directory = std::filesystem::temp_directory_path() / ("fairuz-modules-" + std::to_string(reinterpret_cast<uintptr_t>(this)));
         std::filesystem::create_directories(directory);
     }
 
@@ -122,11 +115,9 @@ protected:
         EXPECT_FALSE(diagnostic::has_errors());
         Compiler compiler(diagnostic::engine.source());
         auto compiled = compiler.compile(statements);
-        if (compiled.has_error())
-            return compiled.error();
+        if (compiled.has_error()) return compiled.error();
         Chunk* chunk = run_success(compiled);
-        if (test_config::dump_bytecode)
-            chunk->disassemble();
+        if (test_config::dump_bytecode) chunk->disassemble();
         EXPECT_NE(chunk, nullptr);
         EXPECT_FALSE(diagnostic::has_errors());
         chunk->source_path = platform::utf8(path);
@@ -230,8 +221,7 @@ TEST(ModuleCompiler, HundredsOfMembersInOneImportReuseTemporaryRegisters)
     FileManager source;
     source.buffer() = "من مجموعات استورد ";
     for (int i = 0; i < 300; ++i) {
-        if (i != 0)
-            source.buffer() += "، ";
+        if (i != 0) source.buffer() += "، ";
         source.buffer() += "مدى باسم اسم";
         source.buffer() += std::to_string(i);
     }
@@ -333,12 +323,14 @@ TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentO
 
 TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
 {
-    write("ا.ف", "سر := 10\n"
-                 "دالة قيمة():\n"
-                 "    ارجع سر\n");
-    write("ب.ف", "سر := 20\n"
-                 "دالة قيمة():\n"
-                 "    ارجع سر\n");
+    write("ا.ف",
+        "سر := 10\n"
+        "دالة قيمة():\n"
+        "    ارجع سر\n");
+    write("ب.ف",
+        "سر := 20\n"
+        "دالة قيمة():\n"
+        "    ارجع سر\n");
     auto main = write("رئيسي.ف",
         "استورد ا\n"
         "استورد ب\n"
@@ -352,41 +344,48 @@ TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
 
 TEST_F(ModuleFixture, BreaksImportCyclesWithPartialModules)
 {
-    write("ا.ف", "قيمة := 7\n"
-                 "استورد ب\n");
-    write("ب.ف", "استورد ا\n"
-                 "دالة اقرا():\n"
-                 "    ارجع ا.قيمة\n");
-    auto main = write("رئيسي.ف", "استورد ب\n"
-                                 "نتيجة_الاختبار := ب.اقرا()\n"
-                                 "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
-                                 "تاكد(نتيجة_الاختبار = 7)\n");
+    write("ا.ف",
+        "قيمة := 7\n"
+        "استورد ب\n");
+    write("ب.ف",
+        "استورد ا\n"
+        "دالة اقرا():\n"
+        "    ارجع ا.قيمة\n");
+    auto main = write("رئيسي.ف",
+        "استورد ب\n"
+        "نتيجة_الاختبار := ب.اقرا()\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 7)\n");
     EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
 {
-    write("اساس.ف", "سر := 40\n"
-                    "دالة زد(قيمة):\n"
-                    "    ارجع قيمة + سر\n");
-    auto main = write("رئيسي.ف", "من اساس استورد زد\n"
-                                 "سر := 1000\n"
-                                 "نتيجة_الاختبار := زد(2)\n"
-                                 "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
-                                 "تاكد(نتيجة_الاختبار = 42)\n");
+    write("اساس.ف",
+        "سر := 40\n"
+        "دالة زد(قيمة):\n"
+        "    ارجع قيمة + سر\n");
+    auto main = write("رئيسي.ف",
+        "من اساس استورد زد\n"
+        "سر := 1000\n"
+        "نتيجة_الاختبار := زد(2)\n"
+        "تاكد(صنف(نتيجة_الاختبار) = \"طبيعي\")\n"
+        "تاكد(نتيجة_الاختبار = 42)\n");
     EXPECT_EQ(test_source::run_file(main), ExitStatus::SUCCESS);
 }
 
 TEST_F(ModuleFixture, LazyFunctionsWithSameNameKeepTheirModuleContext)
 {
-    write("وحدة_يسرى.ف", "سر := 10\n"
-                         "دالة قيمة():\n"
-                         "    ارجع سر\n"
-                         "دالة غير_مستعملة():\n"
-                         "    اخرج\n");
-    write("وحدة_يمنى.ف", "سر := 32\n"
-                         "دالة قيمة():\n"
-                         "    ارجع سر\n");
+    write("وحدة_يسرى.ف",
+        "سر := 10\n"
+        "دالة قيمة():\n"
+        "    ارجع سر\n"
+        "دالة غير_مستعملة():\n"
+        "    اخرج\n");
+    write("وحدة_يمنى.ف",
+        "سر := 32\n"
+        "دالة قيمة():\n"
+        "    ارجع سر\n");
     auto main = write("رئيسي.ف",
         "من وحدة_يسرى استورد قيمة باسم اول\n"
         "استورد وحدة_يمنى باسم ثان\n"
@@ -478,12 +477,14 @@ TEST_F(ModuleFixture, WholeModuleImportsBindDefaultAndExplicitAliases)
 TEST_F(ModuleFixture, FailedModuleExecutionCanBeRetriedInSameVM)
 {
     write("معطوب.ف", "تاكد(خطا)\n");
-    auto main = write("رئيسي.ف", "استورد معطوب\n"
-                                 "معطوب.قيمة()\n");
+    auto main = write("رئيسي.ف",
+        "استورد معطوب\n"
+        "معطوب.قيمة()\n");
     VM vm;
     run_failed(run_in_vm(main, vm));
-    write("معطوب.ف", "دالة قيمة():\n"
-                     "    ارجع 42\n");
+    write("معطوب.ف",
+        "دالة قيمة():\n"
+        "    ارجع 42\n");
     diagnostic::reset();
     Value result = Value::nil();
     ASSERT_NO_THROW(result = run_success(run_in_vm(main, vm)));
@@ -493,14 +494,17 @@ TEST_F(ModuleFixture, FailedModuleExecutionCanBeRetriedInSameVM)
 
 TEST_F(ModuleFixture, FailedModuleParseCanBeRetriedInSameVM)
 {
-    write("معطوب.ف", "دالة قيمة():\n"
-                     "    ارجع (\n");
-    auto main = write("رئيسي.ف", "استورد معطوب\n"
-                                 "معطوب.قيمة()\n");
+    write("معطوب.ف",
+        "دالة قيمة():\n"
+        "    ارجع (\n");
+    auto main = write("رئيسي.ف",
+        "استورد معطوب\n"
+        "معطوب.قيمة()\n");
     VM vm;
     run_failed(run_in_vm(main, vm));
-    write("معطوب.ف", "دالة قيمة():\n"
-                     "    ارجع 7\n");
+    write("معطوب.ف",
+        "دالة قيمة():\n"
+        "    ارجع 7\n");
     diagnostic::reset();
     Value result = Value::nil();
     ASSERT_NO_THROW(result = run_success(run_in_vm(main, vm)));

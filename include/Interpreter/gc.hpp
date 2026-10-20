@@ -35,20 +35,15 @@ private:
 public:
     GarbageCollector() = default;
 
-    ~GarbageCollector()
-    {
-        sweep_all();
-    }
+    ~GarbageCollector() { sweep_all(); }
 
     void collect(VM* vm);
     bool should_collect() const { return m_current_size >= m_next_collection; }
 
-    template<typename T, typename... Args>
-    T* make(Args&&... m_args)
+    template<typename T, typename... Args> T* make(Args&&... m_args)
     {
         T* obj = new T(std::forward<Args>(m_args)...);
-        if (obj == nullptr)
-            diagnostic::panic(ErrorCode::ALLOC_FAILED);
+        if (obj == nullptr) diagnostic::panic(ErrorCode::ALLOC_FAILED);
         m_all.push(&obj->obj);
         m_current_size += sizeof(T); // reasonable estimate
         return obj;
@@ -68,27 +63,18 @@ public:
     ObjDict* make_obj_dict(DictType data = { });
     ObjFunction* make_obj_function(Chunk* chunk, GlobalEnvironment* globals = nullptr);
     ObjNative* make_obj_native(NativeFn fn, ObjString* name, int arity);
-    ObjClass* make_obj_class(
-        StringRef name,
-        StringArr& fields,
-        StringArr& methods,
-        Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
+    ObjClass* make_obj_class(StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
     ObjInstance* make_obj_instance(ObjClass* klass);
     ObjFileHandle* make_obj_file_handle(FILE* fp);
     ObjModule* make_obj_module(StringRef name, StringRef path, GlobalEnvironment* globals);
 
     /* --- allocator api --- */
-    template<typename T>
-    T* allocate_array(u32 const count)
-    {
-        return static_cast<T*>(allocate(count * sizeof(T)));
-    }
+    template<typename T> T* allocate_array(u32 const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
 
     void* allocate(size_t const size)
     {
         void* mem = ::operator new(size, std::nothrow);
-        if (mem == nullptr)
-            diagnostic::panic(ErrorCode::ALLOC_FAILED);
+        if (mem == nullptr) diagnostic::panic(ErrorCode::ALLOC_FAILED);
         m_current_size += size;
         return mem;
     }
@@ -112,12 +98,8 @@ public:
     Value make_native(NativeFn fn, ObjString* name, int arity) { return Value::from_native(make_obj_native(fn, name, arity)); }
     Value make_instance(ObjClass* klass) { return Value::from_instance(make_obj_instance(klass)); }
     Value make_file_handle(FILE* fp) { return Value::from_file_handle(make_obj_file_handle(fp)); }
-    Value make_module(StringRef name, StringRef path, GlobalEnvironment* globals)
-    {
-        return Value::from_module(make_obj_module(name, path, globals));
-    }
-    Value make_class(StringRef name, StringArr fields, StringArr methods,
-        Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
+    Value make_module(StringRef name, StringRef path, GlobalEnvironment* globals) { return Value::from_module(make_obj_module(name, path, globals)); }
+    Value make_class(StringRef name, StringArr fields, StringArr methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
     {
         return Value::from_class(make_obj_class(name, fields, methods, vtable));
     }
@@ -132,16 +114,14 @@ private:
     void mark_value_array(Array<Value, /*_Alloc=*/GarbageCollector> const& arr)
     {
         for (u32 i = 0, n = arr.size(); i < n; i++) {
-            if (arr[i].is_obj())
-                mark_object(arr[i].as_obj());
+            if (arr[i].is_obj()) mark_object(arr[i].as_obj());
         }
     }
 
     void mark_value_array(Array<Value> const& arr)
     {
         for (u32 i = 0, n = arr.size(); i < n; i++) {
-            if (arr[i].is_obj())
-                mark_object(arr[i].as_obj());
+            if (arr[i].is_obj()) mark_object(arr[i].as_obj());
         }
     }
 

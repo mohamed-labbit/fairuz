@@ -80,7 +80,8 @@ public:
 
     BytecodeChecker& done()
     {
-        EXPECT_EQ(pos_, chunk_.code.size()) << "expected end of code at instruction " << pos_ << " but " << (chunk_.code.size() - pos_) << " more remain";
+        EXPECT_EQ(pos_, chunk_.code.size()) << "expected end of code at instruction " << pos_ << " but " << (chunk_.code.size() - pos_)
+                                            << " more remain";
         return *this;
     }
 
@@ -108,15 +109,9 @@ static Chunk* compile_ok(std::string const& source)
     return chunk;
 }
 
-static Chunk* compile_ok(Array<std::string> const& source)
-{
-    return compile_ok(test_source::join(source));
-}
+static Chunk* compile_ok(Array<std::string> const& source) { return compile_ok(test_source::join(source)); }
 
-static Chunk* compile_ok(std::initializer_list<std::string> source)
-{
-    return compile_ok(Array<std::string>(source));
-}
+static Chunk* compile_ok(std::initializer_list<std::string> source) { return compile_ok(Array<std::string>(source)); }
 
 static Chunk* compile_ok_local(Array<std::string> const& source)
 {
@@ -132,10 +127,7 @@ static Chunk* compile_fail(std::string const& source)
     return nullptr;
 }
 
-static Chunk* compile_fail(Array<std::string> const& source)
-{
-    return compile_fail(test_source::join(source));
-}
+static Chunk* compile_fail(Array<std::string> const& source) { return compile_fail(test_source::join(source)); }
 
 static void dump(Chunk const* chunk) { chunk->disassemble(); }
 
@@ -145,8 +137,7 @@ TEST(CompilerLiteral, NilExpression)
 {
     Chunk* chunk = compile_ok("عدم\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_NIL").op(OpCode::LOAD_NIL).A(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
@@ -157,8 +148,7 @@ TEST(CompilerLiteral, TrueLiteral)
 {
     Chunk* chunk = compile_ok("صحيح\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_TRUE").op(OpCode::LOAD_TRUE).A(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
@@ -169,8 +159,7 @@ TEST(CompilerLiteral, FalseLiteral)
 {
     Chunk* chunk = compile_ok("خطا\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_FALSE").op(OpCode::LOAD_FALSE).A(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
@@ -181,8 +170,7 @@ TEST(CompilerLiteral, SmallIntegerUsesLoadInt)
 {
     Chunk* chunk = compile_ok("42\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(42));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
@@ -198,8 +186,7 @@ TEST(CompilerLiteral, VeryBigPositiveIntegerUsesLoadBigInt)
     Chunk* chunk = compile_ok("9223372036854775808\n");
 #endif
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
@@ -215,8 +202,7 @@ TEST(CompilerLiteral, VeryBigNegativeIntegerUsesLoadBigInt)
     Chunk* chunk = compile_ok("-9223372036854775809\n");
 #endif
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
     bc.next("OP_NEG").op(OpCode::OP_NEG).B(0);
@@ -229,8 +215,7 @@ TEST(CompilerLiteral, NegativeSmallIntegerUsesLoadIntAndNegation)
 {
     Chunk* chunk = compile_ok("-100\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT").op(OpCode::LOAD_INT).Bx(load_int_bx(100));
     bc.next("OP_NEG").op(OpCode::OP_NEG).B(0);
@@ -242,8 +227,7 @@ TEST(CompilerLiteral, ZeroUsesLoadInt)
 {
     Chunk* chunk = compile_ok("0\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT").op(OpCode::LOAD_INT).Bx(load_int_bx(0));
 }
@@ -252,8 +236,7 @@ TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
 {
     Chunk* chunk = compile_ok("100000\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
@@ -265,8 +248,7 @@ TEST(CompilerLiteral, FloatUsesConstantPool)
 {
     Chunk* chunk = compile_ok("3.14\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
@@ -278,8 +260,7 @@ TEST(CompilerLiteral, StringUsesConstantPool)
 {
     Chunk* chunk = compile_ok("\"hello\"\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
@@ -294,8 +275,7 @@ TEST(CompilerLiteral, StringsDeduplicated)
     stmts.push("\"dup\"\n");
     Chunk* chunk = compile_ok(test_source::join(std::move(stmts), ""));
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     long string_constants = std::count_if(chunk->constants.begin(), chunk->constants.end(), [](Value const& v) { return v.is_string(); });
     EXPECT_EQ(string_constants, 1);
 }
@@ -344,8 +324,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
 {
     Chunk* chunk = compile_ok({ "عام := 7\n", "عام\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("RHS").op(OpCode::LOAD_INT).Bx(load_int_bx(7));
     bc.next("STORE_GLOBAL").op(OpCode::STORE_GLOBAL);
@@ -354,19 +333,17 @@ TEST(CompilerVar, GlobalLoadAndStore)
     bc.done();
     bool found = false;
     for (auto& v : chunk->constants) {
-        if (v.is_string() && v.as_string()->str == "عام")
-            found = true;
+        if (v.is_string() && v.as_string()->str == "عام") found = true;
     }
     EXPECT_TRUE(found) << "global ident 'عام' not interned into constant pool";
 }
 
 TEST(CompilerUnary, NegateVariable)
 {
-    Chunk* ch = compile_ok_local(
-        {
-            "س := 5\n",
-            "(-س)\n",
-        });
+    Chunk* ch = compile_ok_local({
+        "س := 5\n",
+        "(-س)\n",
+    });
 
     BytecodeChecker bc(*ch);
     bc.next("LOAD_INT x").op(OpCode::LOAD_INT).A(0);
@@ -405,9 +382,7 @@ TEST(CompilerUnary, BitwiseNotVariable)
 
 TEST(CompilerBinary, AddTwoLocals)
 {
-    Chunk* ch = compile_ok_local(
-        { "ا := 1\n", "ب := 2\n",
-            "(ا + ب)\n" });
+    Chunk* ch = compile_ok_local({ "ا := 1\n", "ب := 2\n", "(ا + ب)\n" });
     BytecodeChecker bc(*ch);
     bc.next("decl_stmt a").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(1));
     bc.next("decl_stmt b").op(OpCode::LOAD_INT).A(1).Bx(load_int_bx(2));
@@ -420,12 +395,9 @@ TEST(CompilerBinary, AddTwoLocals)
 
 TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 {
-    Chunk* chunk = compile_ok({ "س := 1\n", "ص := 2\n",
-        "(س + ص)\n",
-        "(س * ص)\n" });
+    Chunk* chunk = compile_ok({ "س := 1\n", "ص := 2\n", "(س + ص)\n", "(س * ص)\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_EQ(chunk->ic_slots.size(), 2u);
 }
 
@@ -445,10 +417,8 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
     (void)jif_idx;
     bool found_jif = false, found_b = false;
     for (auto& instr : ch->code) {
-        if (instr_op(instr) == OpCode::JUMP_IF_FALSE)
-            found_jif = true;
-        if (found_jif && (instr_op(instr) == OpCode::LOAD_FALSE || instr_op(instr) == OpCode::MOVE))
-            found_b = true;
+        if (instr_op(instr) == OpCode::JUMP_IF_FALSE) found_jif = true;
+        if (found_jif && (instr_op(instr) == OpCode::LOAD_FALSE || instr_op(instr) == OpCode::MOVE)) found_b = true;
     }
     EXPECT_TRUE(found_jif) << "expected JUMP_IF_FALSE for && short-circuit";
     EXPECT_TRUE(found_b) << "expected RHS load after JUMP_IF_FALSE";
@@ -464,8 +434,7 @@ TEST(CompilerBinary, LogicalOrShortCircuit)
 
     bool found_jit = false;
     for (auto& instr : chunk->code) {
-        if (instr_op(instr) == OpCode::JUMP_IF_TRUE)
-            found_jit = true;
+        if (instr_op(instr) == OpCode::JUMP_IF_TRUE) found_jit = true;
     }
     EXPECT_TRUE(found_jit) << "expected JUMP_IF_TRUE for || short-circuit";
 }
@@ -475,13 +444,11 @@ TEST(CompilerIf, SimpleIfNoElse)
     Chunk* chunk = compile_ok("اذا س:\n"
                               "    ص := 1\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     int jif_pos = -1;
     for (int i = 0; i < (int)chunk->code.size(); i++) {
-        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE)
-            jif_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE) jif_pos = i;
     }
     ASSERT_GE(jif_pos, 0) << "expected JUMP_IF_FALSE";
     int m_target = jif_pos + 1 + instr_sBx(chunk->code[jif_pos]);
@@ -490,30 +457,24 @@ TEST(CompilerIf, SimpleIfNoElse)
 
 TEST(CompilerIf, IfElse)
 {
-    Chunk* chunk = compile_ok(
-        "اذا س:\n"
-        "    ا := 1\n"
-        "غيره:\n"
-        "    ب := 2\n");
+    Chunk* chunk = compile_ok("اذا س:\n"
+                              "    ا := 1\n"
+                              "غيره:\n"
+                              "    ب := 2\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     bool has_jif = false, has_jmp = false;
     for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::JUMP_IF_FALSE)
-            has_jif = true;
-        if (instr_op(ins) == OpCode::JUMP)
-            has_jmp = true;
+        if (instr_op(ins) == OpCode::JUMP_IF_FALSE) has_jif = true;
+        if (instr_op(ins) == OpCode::JUMP) has_jmp = true;
     }
     EXPECT_TRUE(has_jif) << "expected JUMP_IF_FALSE";
     EXPECT_TRUE(has_jmp) << "expected JUMP over else";
     int jif_pos = -1, jmp_pos = -1;
     for (int i = 0; i < (int)chunk->code.size(); i++) {
-        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE)
-            jif_pos = i;
-        else if (instr_op(chunk->code[i]) == OpCode::JUMP)
-            jmp_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE) jif_pos = i;
+        else if (instr_op(chunk->code[i]) == OpCode::JUMP) jmp_pos = i;
     }
     ASSERT_GE(jif_pos, 0);
     ASSERT_GE(jmp_pos, 0);
@@ -526,22 +487,18 @@ TEST(CompilerWhile, BasicWhile)
     Chunk* chunk = compile_ok("طالما س:\n"
                               "    ا := 1\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     bool has_jif = false, has_loop = false;
     for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::JUMP_IF_FALSE)
-            has_jif = true;
-        if (instr_op(ins) == OpCode::LOOP)
-            has_loop = true;
+        if (instr_op(ins) == OpCode::JUMP_IF_FALSE) has_jif = true;
+        if (instr_op(ins) == OpCode::LOOP) has_loop = true;
     }
     EXPECT_TRUE(has_jif) << "while needs JUMP_IF_FALSE";
     EXPECT_TRUE(has_loop) << "while needs LOOP back-edge";
 
     for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::LOOP)
-            EXPECT_LT(instr_sBx(ins), 0) << "LOOP offset must be negative";
+        if (instr_op(ins) == OpCode::LOOP) EXPECT_LT(instr_sBx(ins), 0) << "LOOP offset must be negative";
     }
 }
 
@@ -550,12 +507,10 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
     Chunk* chunk = compile_ok("طالما شرط:\n"
                               "    س := 0\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     int jif_pos = -1;
     for (int i = 0; i < (int)chunk->code.size(); i++)
-        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE)
-            jif_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::JUMP_IF_FALSE) jif_pos = i;
     ASSERT_GE(jif_pos, 0);
     int m_target = jif_pos + 1 + instr_sBx(chunk->code[jif_pos]);
     ASSERT_LT(m_target, (int)chunk->code.size());
@@ -564,13 +519,11 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 
 TEST(CompilerFor, ListIterationLowersToLoopBytecode)
 {
-    Chunk* chunk = compile_ok({ "عناصر := [1, 2, 3]\n",
-        "مجموع := 0\n",
+    Chunk* chunk = compile_ok({ "عناصر := [1, 2, 3]\n", "مجموع := 0\n",
         "لكل عنصر في عناصر:\n"
         "    مجموع := (مجموع + عنصر)\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     bool has_list_len = false;
     bool has_list_get = false;
@@ -580,24 +533,15 @@ TEST(CompilerFor, ListIterationLowersToLoopBytecode)
 
     for (auto ins : chunk->code) {
         switch (instr_op(ins)) {
-        case OpCode::LIST_LEN:
-            has_list_len = true;
-            break;
-        case OpCode::LIST_GET:
-            has_list_get = true;
-            break;
-        case OpCode::JUMP_IF_FALSE:
-            has_jif = true;
-            break;
+        case OpCode::LIST_LEN: has_list_len = true; break;
+        case OpCode::LIST_GET: has_list_get = true; break;
+        case OpCode::JUMP_IF_FALSE: has_jif = true; break;
         case OpCode::LOOP:
             has_loop = true;
             EXPECT_LT(instr_sBx(ins), 0) << "for loop back-edge must be negative";
             break;
-        case OpCode::OP_ADD:
-            has_add = true;
-            break;
-        default:
-            break;
+        case OpCode::OP_ADD: has_add = true; break;
+        default: break;
         }
     }
 
@@ -610,11 +554,9 @@ TEST(CompilerFor, ListIterationLowersToLoopBytecode)
 
 TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
 {
-    Chunk* chunk = compile_ok(
-        "{\"a\": 1, \"b\": 2}\n");
+    Chunk* chunk = compile_ok("{\"a\": 1, \"b\": 2}\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_GLOBAL قاموس").op(OpCode::LOAD_GLOBAL).A(1).Bx(0);
@@ -661,11 +603,9 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
 TEST(CompilerDict, NestedListValueKeepsLaterEntriesContiguous)
 {
     // {"a": [1], "b": 2}
-    Chunk* chunk = compile_ok(
-        "{\"a\": [1], \"b\": 2}\n");
+    Chunk* chunk = compile_ok("{\"a\": [1], \"b\": 2}\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_GLOBAL قاموس").op(OpCode::LOAD_GLOBAL).A(1).Bx(0);
@@ -701,8 +641,7 @@ TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
     Chunk* chunk = compile_ok("ارجع عدم\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
@@ -712,8 +651,7 @@ TEST(CompilerReturn, ReturnValueEmitsReturn)
 {
     Chunk* chunk = compile_ok("ارجع 42\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT 42").op(OpCode::LOAD_INT).Bx(load_int_bx(42));
     bc.next("RETURN").op(OpCode::RETURN).B(1);
@@ -724,14 +662,11 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 {
     Chunk* chunk = compile_ok({ "ارجع 1\n", "س := 99\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    for (auto& v : chunk->constants)
-        EXPECT_NE(v.as_int(), 99) << "dead code leaked into constant pool";
+    if (test_config::dump_bytecode) dump(chunk);
+    for (auto& v : chunk->constants) EXPECT_NE(v.as_int(), 99) << "dead code leaked into constant pool";
     bool found_99 = false;
     for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::LOAD_INT && instr_Bx(ins) == load_int_bx(99))
-            found_99 = true;
+        if (instr_op(ins) == OpCode::LOAD_INT && instr_Bx(ins) == load_int_bx(99)) found_99 = true;
     }
     EXPECT_FALSE(found_99) << "dead code (LOAD_INT 99) was emitted after return";
 }
@@ -741,14 +676,12 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
     Chunk* chunk = compile_ok("دالة غلاف():\n"
                               "    ارجع دال()\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     ASSERT_FALSE(chunk->functions.empty());
     Chunk const* fn = chunk->functions[0];
     bool has_tail = false;
     for (auto& ins : fn->code) {
-        if (instr_op(ins) == OpCode::CALL_TAIL)
-            has_tail = true;
+        if (instr_op(ins) == OpCode::CALL_TAIL) has_tail = true;
     }
     EXPECT_TRUE(has_tail) << "return f() in function should emit CALL_TAIL";
 }
@@ -758,8 +691,7 @@ TEST(CompilerFunc, FunctionReturningNil)
     Chunk* chunk = compile_ok("دالة مثال():\n"
                               "    ارجع\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("CLOSURE").op(OpCode::CLOSURE).A(0).Bx(0);
     bc.next("STORE_GLOBAL").op(OpCode::STORE_GLOBAL).A(0).Bx(0);
@@ -780,8 +712,7 @@ TEST(CompilerFunc, FunctionWithParams)
     Chunk* chunk = compile_ok("دالة اجمع(ا, ب):\n"
                               "    ارجع (ا + ب)\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
     Chunk const* fn = chunk->functions[0];
     EXPECT_EQ(fn->arity, 2);
@@ -800,8 +731,7 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
     Chunk* chunk = compile_ok("دالة مثال():\n"
                               "    عدم\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_EQ(chunk->local_count, 1);
 }
 
@@ -812,8 +742,7 @@ TEST(CompilerFunc, NestedFunctionIndexing)
         "دالة ب():\n"
         "    عدم\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 2u);
     BytecodeChecker bc(*chunk);
     bc.next("CLOSURE a").op(OpCode::CLOSURE).A(0).Bx(0);
@@ -827,14 +756,12 @@ TEST(CompilerFunc, NestedFunctionIndexing)
 TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 {
     // fn fact(n) { if (n) { return n } return 1 }
-    Chunk* chunk = compile_ok(
-        "دالة مضروب(ن):\n"
-        "    اذا ن:\n"
-        "        ارجع ن\n"
-        "    ارجع 1\n");
+    Chunk* chunk = compile_ok("دالة مضروب(ن):\n"
+                              "    اذا ن:\n"
+                              "        ارجع ن\n"
+                              "    ارجع 1\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     ASSERT_FALSE(chunk->functions.empty());
     EXPECT_FALSE(chunk->functions[0]->code.empty());
 }
@@ -843,8 +770,7 @@ TEST(CompilerCall, CallWithNoArgs)
 {
     Chunk* chunk = compile_ok("دال()\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_GLOBAL f").op(OpCode::LOAD_GLOBAL);
     bc.next("IC_CALL").op(OpCode::IC_CALL).B(0);
@@ -858,8 +784,7 @@ TEST(CompilerCall, CallWithTwoArgs)
     Array<std::string> args { "1", "2" };
     Chunk* chunk = compile_ok((std::string((std::string("دال(") + test_source::join(args, ", ") + ")")) + "\n"));
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_GLOBAL f").op(OpCode::LOAD_GLOBAL).A(0);
     bc.next("arg1").op(OpCode::LOAD_INT).A(1).Bx(load_int_bx(1));
@@ -873,12 +798,10 @@ TEST(CompilerCall, CallResultUsed)
 {
     Chunk* chunk = compile_ok("نتيجة := دال(س)\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     bool has_ic_call = false;
     for (auto& ins : chunk->code)
-        if (instr_op(ins) == OpCode::IC_CALL)
-            has_ic_call = true;
+        if (instr_op(ins) == OpCode::IC_CALL) has_ic_call = true;
     EXPECT_TRUE(has_ic_call);
 }
 
@@ -886,8 +809,7 @@ TEST(CompilerCall, ICSlotAllocatedPerCallSite)
 {
     Chunk* chunk = compile_ok({ "دال()\n", "عام()\n" });
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_EQ(chunk->ic_slots.size(), 2u);
 }
 
@@ -895,8 +817,7 @@ TEST(CompilerList, EmptyList)
 {
     Chunk* chunk = compile_ok("[]\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LIST_NEW").op(OpCode::LIST_NEW).A(1).B(0);
     bc.next("MOVE").op(OpCode::MOVE).A(0).B(1);
@@ -909,8 +830,7 @@ TEST(CompilerList, ListWithElements)
     Array<std::string> elems = { "1", "2", "3" };
     Chunk* chunk = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LIST_NEW").op(OpCode::LIST_NEW).A(1).B(3);
     bc.next("LOAD 1").op(OpCode::LOAD_INT).Bx(load_int_bx(1));
@@ -928,8 +848,7 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
 {
     Chunk* chunk = compile_ok("");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_EQ(chunk->name, MAIN_PROGRAM);
 }
 
@@ -938,8 +857,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
     Chunk* chunk = compile_ok("دالة دال(س, ص, ع):\n"
                               "    عدم\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
     EXPECT_EQ(chunk->functions[0]->arity, 3);
 }
@@ -948,8 +866,7 @@ TEST(CompilerMeta, LineInfoPresent)
 {
     Chunk* chunk = compile_ok("س := 42\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_FALSE(chunk->lines.empty());
 }
 
@@ -959,14 +876,17 @@ TEST(CompilerIntegration, Fibonacci)
     args_n1.push("(ن - 1)");
     args_n2.push("(ن - 2)");
 
-    Chunk* chunk = compile_ok(
-        (std::string("دالة فيبوناتشي(ن):\n") + test_source::indent((std::string("اذا (ن <= 1):\n"
-                                                                                "    ارجع ن\n")
-             + (std::string("ارجع") + (std::string(" ") + (std::string("(") + (std::string("فيبوناتشي(") + test_source::join(args_n1, ", ") + ")") + " + " + (std::string("فيبوناتشي(") + test_source::join(args_n2, ", ") + ")") + ")")) + "\n")))));
+    Chunk* chunk = compile_ok((std::string("دالة فيبوناتشي(ن):\n")
+        + test_source::indent((std::string("اذا (ن <= 1):\n"
+                                           "    ارجع ن\n")
+            + (std::string("ارجع")
+                + (std::string(" ")
+                    + (std::string("(") + (std::string("فيبوناتشي(") + test_source::join(args_n1, ", ") + ")") + " + "
+                        + (std::string("فيبوناتشي(") + test_source::join(args_n2, ", ") + ")") + ")"))
+                + "\n")))));
 
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     EXPECT_FALSE(chunk->functions.empty());
     Chunk const* fib = chunk->functions[0];
     EXPECT_EQ(fib->name, "فيبوناتشي");
@@ -977,21 +897,17 @@ TEST(CompilerIntegration, Fibonacci)
 
 TEST(CompilerLoop, BreakPatchesToLoopExit)
 {
-    Chunk* chunk = compile_ok(
-        "طالما شرط:\n"
-        "    اخرج\n"
-        "    س := 1\n");
+    Chunk* chunk = compile_ok("طالما شرط:\n"
+                              "    اخرج\n"
+                              "    س := 1\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     int jump_pos = -1;
     int loop_pos = -1;
     for (int i = 0; i < (int)chunk->code.size(); i++) {
-        if (instr_op(chunk->code[i]) == OpCode::JUMP && jump_pos < 0)
-            jump_pos = i;
-        if (instr_op(chunk->code[i]) == OpCode::LOOP)
-            loop_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::JUMP && jump_pos < 0) jump_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::LOOP) loop_pos = i;
     }
 
     ASSERT_GE(jump_pos, 0);
@@ -1001,21 +917,17 @@ TEST(CompilerLoop, BreakPatchesToLoopExit)
 
 TEST(CompilerLoop, ContinuePatchesToLoopLatch)
 {
-    Chunk* chunk = compile_ok(
-        "طالما شرط:\n"
-        "    اكمل\n"
-        "    س := 1\n");
+    Chunk* chunk = compile_ok("طالما شرط:\n"
+                              "    اكمل\n"
+                              "    س := 1\n");
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
 
     int jump_pos = -1;
     int loop_pos = -1;
     for (int i = 0; i < (int)chunk->code.size(); i++) {
-        if (instr_op(chunk->code[i]) == OpCode::JUMP && jump_pos < 0)
-            jump_pos = i;
-        if (instr_op(chunk->code[i]) == OpCode::LOOP)
-            loop_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::JUMP && jump_pos < 0) jump_pos = i;
+        if (instr_op(chunk->code[i]) == OpCode::LOOP) loop_pos = i;
     }
 
     ASSERT_GE(jump_pos, 0);
@@ -1040,12 +952,10 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     Array<std::string> elems = { "صحيح", "42", "3.14", "\"mohamed\"" };
     Chunk* chunk = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
     ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    if (test_config::dump_bytecode) dump(chunk);
     int appends = 0;
     for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::LIST_APPEND)
-            appends++;
+        if (instr_op(ins) == OpCode::LIST_APPEND) appends++;
     }
     EXPECT_EQ(appends, 4);
 }

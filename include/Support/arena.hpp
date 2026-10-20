@@ -55,20 +55,13 @@ public:
     [[nodiscard]] unsigned char* next() const { return m_next; }
     [[nodiscard]] size_t size() const { return m_size; }
 
-    [[nodiscard]] size_t used() const
-    {
-        return (m_begin == nullptr || m_next < m_begin) ? 0 : static_cast<size_t>(m_next - m_begin);
-    }
+    [[nodiscard]] size_t used() const { return (m_begin == nullptr || m_next < m_begin) ? 0 : static_cast<size_t>(m_next - m_begin); }
 
-    [[nodiscard]] size_t remaining() const
-    {
-        return (m_begin == nullptr) ? 0 : static_cast<size_t>(m_end - m_next);
-    }
+    [[nodiscard]] size_t remaining() const { return (m_begin == nullptr) ? 0 : static_cast<size_t>(m_end - m_next); }
 
     bool pop(size_t bytes)
     {
-        if (m_begin == nullptr || m_next < m_begin + bytes)
-            return false;
+        if (m_begin == nullptr || m_next < m_begin + bytes) return false;
 
         m_next -= bytes;
         return true;
@@ -78,8 +71,7 @@ public:
 
     unsigned char* reserve(size_t const bytes)
     {
-        if ((m_begin == nullptr || bytes == 0) || static_cast<size_t>(m_end - m_next) < bytes)
-            return nullptr;
+        if ((m_begin == nullptr || bytes == 0) || static_cast<size_t>(m_end - m_next) < bytes) return nullptr;
 
         m_next += bytes;
         return m_next;
@@ -88,9 +80,7 @@ public:
 
 class ArenaAllocator {
 public:
-    enum class GrowthStrategy : i32 {
-        LINEAR
-    }; // enum GrowthStrategy
+    enum class GrowthStrategy : i32 { LINEAR }; // enum GrowthStrategy
 
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
@@ -155,25 +145,17 @@ public:
 
     void deallocate(void* ptr, size_t const size);
 
-    template<typename T>
-    [[nodiscard]] T* allocate_array(size_t const count)
-    {
-        return static_cast<T*>(allocate(count * sizeof(T)));
-    }
+    template<typename T> [[nodiscard]] T* allocate_array(size_t const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
 
-    template<typename T>
-    void deallocate_array(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
+    template<typename T> void deallocate_array(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
 
-    template<typename T, typename... Args>
-    [[nodiscard]] T* allocate_object(Args&&... args)
+    template<typename T, typename... Args> [[nodiscard]] T* allocate_object(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
         T* object = ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
         if constexpr (!std::is_trivially_destructible_v<T>) {
             try {
-                m_destructors.push_back({ object, [](void* pointer) {
-                                             static_cast<T*>(pointer)->~T();
-                                         } });
+                m_destructors.push_back({ object, [](void* pointer) { static_cast<T*>(pointer)->~T(); } });
             } catch (...) {
                 object->~T();
                 throw;
@@ -182,11 +164,9 @@ public:
         return object;
     }
 
-    template<typename T>
-    void deallocate_object(T* obj)
+    template<typename T> void deallocate_object(T* obj)
     {
-        if constexpr (!std::is_trivially_destructible_v<T>)
-            unregister_destructor(obj);
+        if constexpr (!std::is_trivially_destructible_v<T>) unregister_destructor(obj);
         deallocate(static_cast<void*>(obj), sizeof(T));
     }
 

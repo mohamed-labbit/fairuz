@@ -116,8 +116,7 @@ public:
             while (!err.traceback.empty()) {
                 FrameTrace const& frame = err.traceback.top();
                 oss << frame_to_string(frame) + "\n";
-                if (frame.source)
-                    oss << std::string(frame.source->line(frame.loc.line)) + "\n";
+                if (frame.source) oss << std::string(frame.source->line(frame.loc.line)) + "\n";
                 err.traceback.pop();
             }
         } else if (err.source) {
@@ -129,17 +128,13 @@ public:
         /// Print error category and error message
         oss << Color::RED + Color::BOLD << error_category_name(err.kind) << ": " << Color::RESET;
         oss << error_message_for(err.errc);
-        if (!err.detail.empty())
-            oss << ": " << err.detail;
+        if (!err.detail.empty()) oss << ": " << err.detail;
         oss << "\n";
 
         return oss.str();
     }
 
-    void print_runtime_error(RuntimeError err) const
-    {
-        std::cerr << error_string(err) << std::endl;
-    }
+    void print_runtime_error(RuntimeError err) const { std::cerr << error_string(err) << std::endl; }
 
     // Reporting is a host decision; constructing/returning an error stays silent.
     void report(RuntimeError const& err) const
@@ -149,8 +144,7 @@ public:
         auto frames = err.traceback;
         while (!frames.empty()) {
             auto const& frame = frames.top();
-            diagnostic::engine.add_frame(id, frame.source, frame.loc,
-                frame.function_name);
+            diagnostic::engine.add_frame(id, frame.source, frame.loc, frame.function_name);
             frames.pop();
         }
     }

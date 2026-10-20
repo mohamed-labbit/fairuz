@@ -29,10 +29,8 @@ static inline bool is_operator(u32 const& ch)
     case '|':
     case '&':
     case '*':
-    case '/':
-        return true;
-    default:
-        return false;
+    case '/': return true;
+    default: return false;
     }
 }
 
@@ -74,10 +72,8 @@ static inline bool isalpha_arabic(u32 const c)
     case 0x0647:
     case 0x0648:
     case 0x0649:
-    case 0x064A:
-        return true;
-    default:
-        return false;
+    case 0x064A: return true;
+    default: return false;
     }
 
     return (c >= 0x0600 && c <= 0x06FF);
@@ -97,8 +93,7 @@ static inline bool is_arab_digit(u32 const cp)
     case u'٨': // 8
     case u'٩': // 9
         return true;
-    default:
-        return false;
+    default: return false;
     }
 }
 

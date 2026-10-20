@@ -71,18 +71,16 @@ protected:
             ASSERT_TRUE(program.good());
         }
 
-        auto result = test_process::run(test_process::executable(),
-            { "main.ف", "--diagnostics=text" }, directory);
+        auto result = test_process::run(test_process::executable(), { "main.ف", "--diagnostics=text" }, directory);
         auto const& output = result.out;
         auto const& error = result.err;
-        ASSERT_FALSE(result.timed_out) << "Interpreter timed out\n"
-                                       << error;
-        ASSERT_FALSE(result.crashed) << "Interpreter crashed\n"
-                                     << error;
+        ASSERT_FALSE(result.timed_out) << "Interpreter timed out\n" << error;
+        ASSERT_FALSE(result.crashed) << "Interpreter crashed\n" << error;
         if (test.error == nullptr) {
             EXPECT_EQ(result.exit_code, 0) << error;
-            EXPECT_EQ(output, "stdlib-e2e-start\n"
-                              "stdlib-e2e-ok\n")
+            EXPECT_EQ(output,
+                "stdlib-e2e-start\n"
+                "stdlib-e2e-ok\n")
                 << error;
             EXPECT_TRUE(error.empty()) << error;
         } else {
@@ -94,10 +92,7 @@ protected:
     }
 };
 
-TEST_P(StdlibE2E, ExecutesPublicApi)
-{
-    run(GetParam());
-}
+TEST_P(StdlibE2E, ExecutesPublicApi) { run(GetParam()); }
 
 PublicApiCase const cases[] = {
     { "FileLifecycleAndFailureResults", R"fa(
@@ -554,7 +549,6 @@ gunzip(gzip("abc"، 6)، 0)
         "executor is closed" },
 };
 
-INSTANTIATE_TEST_SUITE_P(PublicApi, StdlibE2E, ::testing::ValuesIn(cases),
-    [](auto const& info) { return info.param.name; });
+INSTANTIATE_TEST_SUITE_P(PublicApi, StdlibE2E, ::testing::ValuesIn(cases), [](auto const& info) { return info.param.name; });
 
 } // namespace

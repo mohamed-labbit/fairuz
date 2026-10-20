@@ -83,8 +83,7 @@ static std::unordered_map<std::string_view, TokenType> const& get_operators()
 std::optional<TokenType> lookup_keyword(StringRef const& s)
 {
     auto it = get_keywords().find(std::string_view(s.data(), s.len()));
-    if (it == get_keywords().end())
-        return std::nullopt;
+    if (it == get_keywords().end()) return std::nullopt;
 
     return it->second;
 }
@@ -92,8 +91,7 @@ std::optional<TokenType> lookup_keyword(StringRef const& s)
 std::optional<TokenType> lookup_operator(StringRef const& s)
 {
     auto it = get_operators().find(std::string_view(s.data(), s.len()));
-    if (it == get_operators().end())
-        return std::nullopt;
+    if (it == get_operators().end()) return std::nullopt;
 
     return it->second;
 }
@@ -103,7 +101,8 @@ bool Token::operator==(Token const& other) const
     if (m_type == TokenType::INDENT || m_type == TokenType::DEDENT || m_type == TokenType::BEGINMARKER || m_type == TokenType::ENDMARKER)
         return m_type == other.m_type;
 
-    return m_value == other.m_value && m_type == other.m_type && m_location.line == other.m_location.line && m_location.column == other.m_location.column;
+    return m_value == other.m_value && m_type == other.m_type && m_location.line == other.m_location.line
+        && m_location.column == other.m_location.column;
 }
 
 bool Token::operator!=(Token const& other) const { return !(*this == other); }
@@ -134,46 +133,25 @@ bool Token::is_unary_op() const
 
 bool Token::is_binary_op() const
 {
-    return m_type == TokenType::OP_PLUS
-        || m_type == TokenType::OP_MINUS
-        || m_type == TokenType::OP_STAR
-        || m_type == TokenType::OP_SLASH
-        || m_type == TokenType::OP_PERCENT
-        || m_type == TokenType::OP_POWER
-        || m_type == TokenType::OP_EQ
-        || m_type == TokenType::OP_NEQ
-        || m_type == TokenType::OP_LT
-        || m_type == TokenType::OP_GT
-        || m_type == TokenType::OP_LTE
-        || m_type == TokenType::OP_GTE
-        || m_type == TokenType::OP_BITAND
-        || m_type == TokenType::OP_BITOR
-        || m_type == TokenType::OP_BITXOR
-        || m_type == TokenType::OP_LSHIFT
-        || m_type == TokenType::OP_RSHIFT
-        || m_type == TokenType::OP_AND
-        || m_type == TokenType::OP_OR;
+    return m_type == TokenType::OP_PLUS || m_type == TokenType::OP_MINUS || m_type == TokenType::OP_STAR || m_type == TokenType::OP_SLASH
+        || m_type == TokenType::OP_PERCENT || m_type == TokenType::OP_POWER || m_type == TokenType::OP_EQ || m_type == TokenType::OP_NEQ
+        || m_type == TokenType::OP_LT || m_type == TokenType::OP_GT || m_type == TokenType::OP_LTE || m_type == TokenType::OP_GTE
+        || m_type == TokenType::OP_BITAND || m_type == TokenType::OP_BITOR || m_type == TokenType::OP_BITXOR || m_type == TokenType::OP_LSHIFT
+        || m_type == TokenType::OP_RSHIFT || m_type == TokenType::OP_AND || m_type == TokenType::OP_OR;
 }
 
 bool Token::is_comparison_op() const
 {
-    return m_type == TokenType::OP_EQ
-        || m_type == TokenType::OP_NEQ
-        || m_type == TokenType::OP_LT
-        || m_type == TokenType::OP_GT
-        || m_type == TokenType::OP_LTE
-        || m_type == TokenType::OP_GTE;
+    return m_type == TokenType::OP_EQ || m_type == TokenType::OP_NEQ || m_type == TokenType::OP_LT || m_type == TokenType::OP_GT
+        || m_type == TokenType::OP_LTE || m_type == TokenType::OP_GTE;
 }
 
-bool Token::is_whitespace() const
-{
-    return m_type == TokenType::INDENT || m_type == TokenType::DEDENT || m_type == TokenType::NEWLINE;
-}
+bool Token::is_whitespace() const { return m_type == TokenType::INDENT || m_type == TokenType::DEDENT || m_type == TokenType::NEWLINE; }
 
 bool Token::is_numeric() const
 {
-    return m_type == TokenType::INTEGER || m_type == TokenType::HEX || m_type == TokenType::OCTAL
-        || m_type == TokenType::BINARY || m_type == TokenType::DECIMAL;
+    return m_type == TokenType::INTEGER || m_type == TokenType::HEX || m_type == TokenType::OCTAL || m_type == TokenType::BINARY
+        || m_type == TokenType::DECIMAL;
 }
 
 f64 Token::to_double() const

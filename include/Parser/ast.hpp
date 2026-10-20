@@ -73,11 +73,7 @@ using ConstStmtPtr = Stmt*;
 
 class ASTNode {
 public:
-    enum class NodeType : int {
-        EXPR,
-        STMT,
-        INVALID
-    }; // enum NodeType
+    enum class NodeType : int { EXPR, STMT, INVALID }; // enum NodeType
 
 private:
     NodeType node_type { NodeType::INVALID };
@@ -245,16 +241,12 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto bin = static_cast<BinaryExpr*>(other);
         return lhs->equals(bin->lhs) && rhs->equals(bin->rhs);
     }
-    [[nodiscard]] BinaryExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location());
-    }
+    [[nodiscard]] BinaryExpr* clone() const override { return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class BinaryExpr
 
@@ -271,16 +263,12 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto un = static_cast<UnaryExpr*>(other);
         return operand->equals(un->operand);
     }
-    [[nodiscard]] UnaryExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location());
-    }
+    [[nodiscard]] UnaryExpr* clone() const override { return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class UnaryExpr
 
@@ -298,8 +286,7 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         auto* rhs = static_cast<IntLiteralExpr*>(other);
         return value == rhs->value && large_literal == rhs->large_literal && literal_base == rhs->literal_base;
@@ -326,15 +313,11 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return value == static_cast<FloatLiteralExpr*>(other)->value;
     }
-    [[nodiscard]] FloatLiteralExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location());
-    }
+    [[nodiscard]] FloatLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -350,15 +333,11 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return str == static_cast<StringLiteralExpr*>(other)->str;
     }
-    [[nodiscard]] StringLiteralExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location());
-    }
+    [[nodiscard]] StringLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -374,15 +353,11 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return value == static_cast<BoolLiteralExpr*>(other)->value;
     }
-    [[nodiscard]] BoolLiteralExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location());
-    }
+    [[nodiscard]] BoolLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -395,15 +370,11 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return true;
     }
-    [[nodiscard]] NilExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(NilExpr, get_location());
-    }
+    [[nodiscard]] NilExpr* clone() const override { return ALLOCATE_AST_NODE(NilExpr, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -419,16 +390,12 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto name = static_cast<IdentifierExpr*>(other);
         return spelling == name->spelling;
     }
-    [[nodiscard]] IdentifierExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location());
-    }
+    [[nodiscard]] IdentifierExpr* clone() const override { return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IdentifierExpr
 
@@ -444,25 +411,19 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto list = static_cast<ListExpr*>(other);
 
-        if (elements.size() != list->elements.size())
-            return false;
+        if (elements.size() != list->elements.size()) return false;
 
         for (size_t i = 0; i < elements.size(); i++) {
-            if (!elements[i]->equals(list->elements[i]))
-                return false;
+            if (!elements[i]->equals(list->elements[i])) return false;
         }
 
         return true;
     }
-    [[nodiscard]] ListExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(ListExpr, elements, get_location());
-    }
+    [[nodiscard]] ListExpr* clone() const override { return ALLOCATE_AST_NODE(ListExpr, elements, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] bool is_empty() const { return elements.empty(); }
@@ -481,8 +442,7 @@ public:
 
     bool equals(ConstExprPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         // a dictionary normally doesn't care about order so this is logically not correct
         // but we gonna stub an implementation that requires order until someone fixes this
@@ -490,20 +450,15 @@ public:
         u32 const s1 = content.size();
         u32 const s2 = dict.size();
 
-        if (s1 != s2)
-            return false;
+        if (s1 != s2) return false;
 
         for (u32 i = 0; i < s1; i++) {
-            if (!content[i].first->equals(dict[i].first) || !content[i].second->equals(dict[i].second))
-                return false;
+            if (!content[i].first->equals(dict[i].first) || !content[i].second->equals(dict[i].second)) return false;
         }
 
         return true;
     }
-    DictExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(DictExpr, content, get_location());
-    }
+    DictExpr* clone() const override { return ALLOCATE_AST_NODE(DictExpr, content, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -522,23 +477,19 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto call = static_cast<CallExpr*>(other);
-        if (args.size() != call->args.size())
-            return false;
+        if (args.size() != call->args.size()) return false;
         for (u32 i = 0, n = args.size(); i < n; ++i) {
-            if (!args[i]->equals(call->args[i]))
-                return false;
+            if (!args[i]->equals(call->args[i])) return false;
         }
         return callee->equals(call->callee);
     }
     [[nodiscard]] CallExpr* clone() const override
     {
         Array<ExprPtr> args_clone;
-        for (auto a : args)
-            args_clone.push(a->clone());
+        for (auto a : args) args_clone.push(a->clone());
         return ALLOCATE_AST_NODE(CallExpr, callee->clone(), args_clone, get_location());
     }
     void accept(ExprVisitor& v) override { v.visit(*this); }
@@ -564,8 +515,7 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other->get_kind() != m_kind)
-            return false;
+        if (other->get_kind() != m_kind) return false;
 
         auto bin = static_cast<AssignExpr*>(other);
         return augmented == bin->augmented && target->equals(bin->target) && value->equals(bin->value);
@@ -595,16 +545,12 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != Kind::INDEX_READ)
-            return false;
+        if (other == nullptr || other->get_kind() != Kind::INDEX_READ) return false;
 
         auto idx = static_cast<IndexExpr*>(other);
         return object->equals(idx->object) && index->equals(idx->index);
     }
-    [[nodiscard]] IndexExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location());
-    }
+    [[nodiscard]] IndexExpr* clone() const override { return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IndexExpr
 
@@ -624,16 +570,12 @@ public:
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
 
         auto get_expr = static_cast<GetExpr*>(other);
         return object->equals(get_expr->object) && member->equals(get_expr->member);
     }
-    [[nodiscard]] GetExpr* clone() const override
-    {
-        return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location());
-    }
+    [[nodiscard]] GetExpr* clone() const override { return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -693,17 +635,14 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != Kind::BLOCK)
-            return false;
+        if (other == nullptr || other->get_kind() != Kind::BLOCK) return false;
 
         auto block = static_cast<BlockStmt*>(other);
 
-        if (stmts.size() != block->stmts.size())
-            return false;
+        if (stmts.size() != block->stmts.size()) return false;
 
         for (size_t i = 0; i < stmts.size(); i++) {
-            if (!stmts[i]->equals(block->stmts[i]))
-                return false;
+            if (!stmts[i]->equals(block->stmts[i])) return false;
         }
 
         return true;
@@ -711,8 +650,7 @@ public:
     [[nodiscard]] BlockStmt* clone() const override
     {
         Array<StmtPtr> stmts_clone;
-        for (auto s : stmts)
-            stmts_clone.push(s->clone());
+        for (auto s : stmts) stmts_clone.push(s->clone());
         return ALLOCATE_AST_NODE(BlockStmt, stmts_clone, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
@@ -732,16 +670,12 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<ExprStmt*>(other);
         return expr->equals(block->expr);
     }
-    [[nodiscard]] ExprStmt* clone() const override
-    {
-        return ALLOCATE_AST_NODE(ExprStmt, expr->clone(), get_location());
-    }
+    [[nodiscard]] ExprStmt* clone() const override { return ALLOCATE_AST_NODE(ExprStmt, expr->clone(), get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ExprStmt
 
@@ -763,23 +697,19 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto if_stmt = static_cast<IfElseStmt*>(other);
         bool eq_else = false;
 
-        if (else_stmt != nullptr && if_stmt->else_stmt)
-            eq_else = else_stmt->equals(if_stmt->else_stmt);
+        if (else_stmt != nullptr && if_stmt->else_stmt) eq_else = else_stmt->equals(if_stmt->else_stmt);
 
         return condition->equals(if_stmt->condition) && then_stmt->equals(if_stmt->then_stmt) && eq_else;
     }
     [[nodiscard]] IfElseStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(IfElseStmt,
-            condition->clone(),
-            then_stmt->clone(), get_location(),
-            LIKELY(else_stmt == nullptr) ? nullptr : else_stmt->clone());
+        return ALLOCATE_AST_NODE(
+            IfElseStmt, condition->clone(), then_stmt->clone(), get_location(), LIKELY(else_stmt == nullptr) ? nullptr : else_stmt->clone());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class IfElseStmt
@@ -800,16 +730,12 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<WhileStmt*>(other);
         return condition->equals(block->condition) && body->equals(block->body);
     }
-    [[nodiscard]] WhileStmt* clone() const override
-    {
-        return ALLOCATE_AST_NODE(WhileStmt, condition->clone(), body->clone(), get_location());
-    }
+    [[nodiscard]] WhileStmt* clone() const override { return ALLOCATE_AST_NODE(WhileStmt, condition->clone(), body->clone(), get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class WhileStmt
 
@@ -832,8 +758,7 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<ForStmt*>(other);
         return container->equals(block->container) && iter->equals(block->iter) && body->equals(block->body);
@@ -854,8 +779,7 @@ public:
     StringRef const body_view;
     StmtPtr parsed_body { nullptr };
 
-    FunctionStub(Array<tok::Token const*> body_tokens, diagnostic::SourcePtr origin,
-        StringRef text, SourceLocation loc)
+    FunctionStub(Array<tok::Token const*> body_tokens, diagnostic::SourcePtr origin, StringRef text, SourceLocation loc)
         : Stmt(loc, Kind::FUNCTION_STUB)
         , tokens(std::move(body_tokens))
         , source(std::move(origin))
@@ -867,16 +791,14 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != m_kind)
-            return false;
+        if (other == nullptr || other->get_kind() != m_kind) return false;
         auto* stub = static_cast<FunctionStub const*>(other);
         return body_view == stub->body_view && tokens.size() == stub->tokens.size();
     }
     [[nodiscard]] FunctionStub* clone() const override
     {
         auto* stub = ALLOCATE_AST_NODE(FunctionStub, tokens, source, body_view, get_location());
-        if (parsed_body != nullptr)
-            stub->parsed_body = parsed_body->clone();
+        if (parsed_body != nullptr) stub->parsed_body = parsed_body->clone();
         return stub;
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
@@ -900,8 +822,7 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<FuncDefStmt const*>(other);
         /// overloading is not supported therefor equality
@@ -911,8 +832,7 @@ public:
     [[nodiscard]] FuncDefStmt* clone() const override
     {
         Array<ExprPtr> params_clone;
-        for (auto p : params)
-            params_clone.push(p->clone());
+        for (auto p : params) params_clone.push(p->clone());
         return ALLOCATE_AST_NODE(FuncDefStmt, name->clone(), params_clone, body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
@@ -931,12 +851,10 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto ret_stmt = static_cast<ReturnStmt*>(other);
-        if (value == nullptr || !ret_stmt->has_value())
-            return value == ret_stmt->value;
+        if (value == nullptr || !ret_stmt->has_value()) return value == ret_stmt->value;
 
         return value->equals(ret_stmt->value);
     }
@@ -956,12 +874,7 @@ public:
     Array<ExprPtr> const members;
     Array<StmtPtr> const methods;
 
-    explicit ClassDefStmt(
-        ExprPtr n,
-        ExprPtr p,
-        Array<ExprPtr> members,
-        Array<StmtPtr> methods,
-        SourceLocation loc)
+    explicit ClassDefStmt(ExprPtr n, ExprPtr p, Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
         : Stmt(loc, Kind::CLASS_DEF)
         , name(n)
         , parent(p)
@@ -973,39 +886,32 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (m_kind != other->get_kind())
-            return false;
+        if (m_kind != other->get_kind()) return false;
 
         auto class_def = static_cast<ClassDefStmt const*>(other);
 
-        if (class_def->members.size() != members.size() || class_def->methods.size() != methods.size())
-            return false;
+        if (class_def->members.size() != members.size() || class_def->methods.size() != methods.size()) return false;
 
         for (u32 i = 0, n = class_def->members.size(); i < n; ++i) {
-            if (!class_def->members[i]->equals(members[i]))
-                return false;
+            if (!class_def->members[i]->equals(members[i])) return false;
         }
 
         for (u32 i = 0, n = class_def->methods.size(); i < n; ++i) {
-            if (!class_def->methods[i]->equals(methods[i]))
-                return false;
+            if (!class_def->methods[i]->equals(methods[i])) return false;
         }
 
-        bool const parents_equal = (parent == nullptr || class_def->parent == nullptr)
-            ? parent == class_def->parent
-            : parent->equals(class_def->parent);
+        bool const parents_equal
+            = (parent == nullptr || class_def->parent == nullptr) ? parent == class_def->parent : parent->equals(class_def->parent);
         return parents_equal && name->equals(class_def->name);
     }
     [[nodiscard]] ClassDefStmt* clone() const override
     {
         Array<ExprPtr> member_clones;
         Array<StmtPtr> method_clones;
-        for (ExprPtr mem : members)
-            member_clones.push(mem->clone());
-        for (StmtPtr met : methods)
-            method_clones.push(met->clone());
-        return ALLOCATE_AST_NODE(ClassDefStmt, name->clone(),
-            parent == nullptr ? nullptr : parent->clone(), member_clones, method_clones, get_location());
+        for (ExprPtr mem : members) member_clones.push(mem->clone());
+        for (StmtPtr met : methods) method_clones.push(met->clone());
+        return ALLOCATE_AST_NODE(
+            ClassDefStmt, name->clone(), parent == nullptr ? nullptr : parent->clone(), member_clones, method_clones, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ClassDefStmt
@@ -1027,15 +933,11 @@ public:
 
     [[nodiscard]] bool equals(ConstStmtPtr other) const override
     {
-        if (other == nullptr || other->get_kind() != Kind::IMPORT)
-            return false;
+        if (other == nullptr || other->get_kind() != Kind::IMPORT) return false;
         auto const* import = static_cast<ImportStmt*>(other);
         return m_module == import->m_module && m_names == import->m_names && m_aliases == import->m_aliases;
     }
-    [[nodiscard]] ImportStmt* clone() const override
-    {
-        return ALLOCATE_AST_NODE(ImportStmt, m_module, m_names, m_aliases, get_location());
-    }
+    [[nodiscard]] ImportStmt* clone() const override { return ALLOCATE_AST_NODE(ImportStmt, m_module, m_names, m_aliases, get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] StringRef const& get_module() const { return m_module; }
     [[nodiscard]] Array<StringRef> const& get_names() const { return m_names; }
@@ -1050,10 +952,7 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
-    {
-        return other != nullptr && other->get_kind() == Kind::BREAK;
-    }
+    [[nodiscard]] bool equals(ConstStmtPtr other) const override { return other != nullptr && other->get_kind() == Kind::BREAK; }
     [[nodiscard]] BreakStmt* clone() const override { return ALLOCATE_AST_NODE(BreakStmt, get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class BreakStmt
@@ -1065,10 +964,7 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
-    {
-        return other != nullptr && other->get_kind() == Kind::CONTINUE;
-    }
+    [[nodiscard]] bool equals(ConstStmtPtr other) const override { return other != nullptr && other->get_kind() == Kind::CONTINUE; }
     [[nodiscard]] ContinueStmt* clone() const override { return ALLOCATE_AST_NODE(ContinueStmt, get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt

@@ -24,8 +24,7 @@
 
 namespace fairuz {
 
-template<typename T, class _Alloc = ArenaAllocator>
-class Array {
+template<typename T, class _Alloc = ArenaAllocator> class Array {
 private:
     static constexpr u32 ARRAY_MAX = __UINT32_MAX__;
     static constexpr u32 DEFAULT_CAP = 8;
@@ -36,15 +35,13 @@ private:
     static void destroy_range(T* first, T* last) noexcept
     {
         if constexpr (!TRIVIAL_DTOR) {
-            for (; first != last; first++)
-                first->~T();
+            for (; first != last; first++) first->~T();
         }
     }
 
     static void relocate(T* dst, T* src, u32 n) noexcept
     {
-        if (n == 0)
-            return;
+        if (n == 0) return;
 
         if constexpr (TRIVIAL_COPY) {
             ::memcpy(static_cast<void*>(dst), src, n * sizeof(T));
@@ -58,16 +55,14 @@ private:
 
     static void copy_construct_range(T* dst, T const* src, u32 n)
     {
-        if (n == 0)
-            return;
+        if (n == 0) return;
 
         if constexpr (TRIVIAL_COPY) {
             ::memcpy(static_cast<void*>(dst), src, n * sizeof(T));
         } else {
             u32 i = 0;
             try {
-                for (; i < n; i++)
-                    ::new (static_cast<void*>(dst + i)) T(src[i]);
+                for (; i < n; i++) ::new (static_cast<void*>(dst + i)) T(src[i]);
             } catch (...) {
                 destroy_range(dst, dst + i);
                 diagnostic::panic(ErrorCode::INTERNAL_ERROR);
@@ -82,10 +77,8 @@ private:
 
     static u32 next_capacity(u32 const s) noexcept
     {
-        if (s <= DEFAULT_CAP)
-            return DEFAULT_CAP;
-        if (s < 64)
-            return 1u << std::bit_width(s - 1); // power-of-2 for small
+        if (s <= DEFAULT_CAP) return DEFAULT_CAP;
+        if (s < 64) return 1u << std::bit_width(s - 1); // power-of-2 for small
 
         return s + (s >> 1); // 1.5x for larger
     }
@@ -153,18 +146,13 @@ public:
     Array& operator=(Array const& other);
     Array& operator=(Array&& other) noexcept;
 
-    [[nodiscard]] bool operator==(Array const& other) const
-    {
-        return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
-    }
+    [[nodiscard]] bool operator==(Array const& other) const { return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr); }
 
     ~Array()
     {
-        if (m_arr != nullptr)
-            destroy_range(m_arr, m_arr + m_size);
+        if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
         if constexpr (!IS_ARENA) {
-            if (m_allocator != nullptr && m_arr != nullptr)
-                m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+            if (m_allocator != nullptr && m_arr != nullptr) m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
         }
     }
 
@@ -172,8 +160,7 @@ public:
     requires IS_ARENA
     {
         Array a;
-        if (capacity == 0)
-            return a;
+        if (capacity == 0) return a;
 
         a.m_arr = a.m_allocator->template allocate_array<T>(capacity);
         assert(a.m_arr != nullptr);
@@ -185,8 +172,7 @@ public:
     requires(!IS_ARENA)
     {
         Array a(allocator);
-        if (capacity == 0)
-            return a;
+        if (capacity == 0) return a;
 
         a.m_arr = a.m_allocator->template allocate_array<T>(capacity);
         assert(a.m_arr != nullptr);
@@ -194,16 +180,13 @@ public:
         return a;
     }
 
-    template<typename... Args>
-    T& emplace(Args&&... args)
+    template<typename... Args> T& emplace(Args&&... args)
     {
         ensure_push_capacity();
         T* slot = m_arr + m_size;
 
-        if constexpr (TRIVIAL_COPY)
-            *slot = T(std::forward<Args>(args)...);
-        else
-            ::new (static_cast<void*>(slot)) T(std::forward<Args>(args)...);
+        if constexpr (TRIVIAL_COPY) *slot = T(std::forward<Args>(args)...);
+        else ::new (static_cast<void*>(slot)) T(std::forward<Args>(args)...);
 
         m_size++;
         return *slot;
@@ -211,8 +194,7 @@ public:
 
     void clear()
     {
-        if (m_arr != nullptr)
-            destroy_range(m_arr, m_arr + m_size);
+        if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
         m_size = 0;
     }
 
@@ -228,32 +210,28 @@ public:
 
     T& back()
     {
-        if (m_size == 0)
-            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
+        if (m_size == 0) diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
 
     T const& back() const
     {
-        if (m_size == 0)
-            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
+        if (m_size == 0) diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
 
     T& front()
     {
-        if (m_size == 0)
-            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
+        if (m_size == 0) diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
 
     T const& front() const
     {
-        if (m_size == 0)
-            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
+        if (m_size == 0) diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
@@ -270,18 +248,15 @@ public:
     T const* end() const noexcept { return m_arr + m_size; }
 }; // class Array
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::ensure_push_capacity()
+template<typename T, class _Alloc> void Array<T, _Alloc>::ensure_push_capacity()
 {
-    if (m_size < m_cap)
-        return;
+    if (m_size < m_cap) return;
 
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
     T* new_arr = m_allocator->template allocate_array<T>(new_cap);
     if (m_arr && m_size > 0) {
         relocate(new_arr, m_arr, m_size);
-        if constexpr (!IS_ARENA)
-            m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        if constexpr (!IS_ARENA) m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
     }
 
     m_arr = new_arr;
@@ -294,11 +269,9 @@ requires(!Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED,
-            std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
+        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
-    if (capacity == 0)
-        return;
+    if (capacity == 0) return;
 
     m_arr = m_allocator->template allocate_array<T>(capacity);
     m_cap = capacity;
@@ -306,11 +279,9 @@ requires(!Array<T, _Alloc>::IS_ARENA)
     u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
-            for (; i < capacity; i++)
-                m_arr[i] = fill_v;
+            for (; i < capacity; i++) m_arr[i] = fill_v;
         } else {
-            for (; i < capacity; i++)
-                ::new (static_cast<void*>(m_arr + i)) T(fill_v);
+            for (; i < capacity; i++) ::new (static_cast<void*>(m_arr + i)) T(fill_v);
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
@@ -326,11 +297,9 @@ requires Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED,
-            std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
+        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
-    if (capacity == 0)
-        return;
+    if (capacity == 0) return;
 
     m_arr = m_allocator->template allocate_array<T>(capacity);
     m_cap = capacity;
@@ -338,11 +307,9 @@ requires Array<T, _Alloc>::IS_ARENA
     u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
-            for (; i < capacity; i++)
-                m_arr[i] = fill_v;
+            for (; i < capacity; i++) m_arr[i] = fill_v;
         } else {
-            for (; i < capacity; i++)
-                ::new (static_cast<void*>(m_arr + i)) T(fill_v);
+            for (; i < capacity; i++) ::new (static_cast<void*>(m_arr + i)) T(fill_v);
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
@@ -357,8 +324,7 @@ Array<T, _Alloc>::Array(Array const& other)
     : m_cap(other.m_cap)
     , m_allocator(other.m_allocator)
 {
-    if (m_cap == 0)
-        return;
+    if (m_cap == 0) return;
 
     m_arr = m_allocator->template allocate_array<T>(m_cap);
     assert(m_arr != nullptr);
@@ -383,8 +349,7 @@ Array<T, _Alloc>::Array(std::initializer_list<T> list, _Alloc* allocator)
 requires(!Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
-    if (list.size() == 0)
-        return;
+    if (list.size() == 0) return;
 
     m_size = static_cast<u32>(list.size());
     m_cap = next_capacity(m_size);
@@ -416,8 +381,7 @@ Array<T, _Alloc>::Array(std::initializer_list<T> list, _Alloc* allocator)
 requires Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
-    if (list.size() == 0)
-        return;
+    if (list.size() == 0) return;
 
     m_size = static_cast<u32>(list.size());
     m_cap = next_capacity(m_size);
@@ -444,20 +408,16 @@ requires Array<T, _Alloc>::IS_ARENA
     }
 }
 
-template<typename T, class _Alloc>
-Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array const& other)
+template<typename T, class _Alloc> Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array const& other)
 {
-    if (this == &other)
-        return *this;
+    if (this == &other) return *this;
 
     _Alloc* const old_allocator = m_allocator;
-    if (m_arr != nullptr)
-        destroy_range(m_arr, m_arr + m_size);
+    if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
     m_size = 0;
 
     if constexpr (!IS_ARENA) {
-        if (m_arr != nullptr)
-            old_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        if (m_arr != nullptr) old_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
         m_arr = nullptr;
         m_cap = 0;
     } else if (old_allocator != other.m_allocator) {
@@ -479,17 +439,13 @@ Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array const& other)
     return *this;
 }
 
-template<typename T, class _Alloc>
-Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array&& other) noexcept
+template<typename T, class _Alloc> Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array&& other) noexcept
 {
-    if (this == &other)
-        return *this;
+    if (this == &other) return *this;
 
-    if (m_arr != nullptr)
-        destroy_range(m_arr, m_arr + m_size);
+    if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
     if constexpr (!IS_ARENA) {
-        if (m_allocator != nullptr && m_arr != nullptr)
-            m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        if (m_allocator != nullptr && m_arr != nullptr) m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
     }
 
     m_arr = other.m_arr;
@@ -504,37 +460,27 @@ Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array&& other) noexcept
     return *this;
 }
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::push(T const& val)
+template<typename T, class _Alloc> void Array<T, _Alloc>::push(T const& val)
 {
     ensure_push_capacity();
-    if constexpr (TRIVIAL_COPY)
-        m_arr[m_size] = val;
-    else
-        ::new (static_cast<void*>(m_arr + m_size)) T(val);
+    if constexpr (TRIVIAL_COPY) m_arr[m_size] = val;
+    else ::new (static_cast<void*>(m_arr + m_size)) T(val);
     m_size++;
 }
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::push(T&& val)
+template<typename T, class _Alloc> void Array<T, _Alloc>::push(T&& val)
 {
     ensure_push_capacity();
-    if constexpr (TRIVIAL_COPY)
-        m_arr[m_size] = std::move(val);
-    else
-        ::new (static_cast<void*>(m_arr + m_size)) T(std::move(val));
+    if constexpr (TRIVIAL_COPY) m_arr[m_size] = std::move(val);
+    else ::new (static_cast<void*>(m_arr + m_size)) T(std::move(val));
     m_size++;
 }
 
-template<typename T, class _Alloc>
-T Array<T, _Alloc>::pop()
+template<typename T, class _Alloc> T Array<T, _Alloc>::pop()
 {
-    if (UNLIKELY(m_size == 0))
-        diagnostic::panic(ErrorCode::INTERNAL_ERROR,
-            "Array::pop called on an empty array");
+    if (UNLIKELY(m_size == 0)) diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Array::pop called on an empty array");
     m_size -= 1;
-    if constexpr (TRIVIAL_DTOR)
-        return m_arr[m_size];
+    if constexpr (TRIVIAL_DTOR) return m_arr[m_size];
     else {
         T val(std::move(m_arr[m_size]));
         m_arr[m_size].~T();
@@ -542,11 +488,9 @@ T Array<T, _Alloc>::pop()
     }
 }
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::reserve(u32 const s)
+template<typename T, class _Alloc> void Array<T, _Alloc>::reserve(u32 const s)
 {
-    if (s <= m_cap)
-        return;
+    if (s <= m_cap) return;
 
     u32 const rounded = next_capacity(s);
     T* new_arr = m_allocator->template allocate_array<T>(rounded);
@@ -554,36 +498,30 @@ void Array<T, _Alloc>::reserve(u32 const s)
 
     T* old_arr = m_arr;
     u32 old_cap = m_cap;
-    if (old_arr && m_size > 0)
-        relocate(new_arr, old_arr, m_size);
+    if (old_arr && m_size > 0) relocate(new_arr, old_arr, m_size);
 
     if constexpr (!IS_ARENA) {
-        if (old_arr != nullptr)
-            m_allocator->deallocate(old_arr, static_cast<size_t>(old_cap) * sizeof(T));
+        if (old_arr != nullptr) m_allocator->deallocate(old_arr, static_cast<size_t>(old_cap) * sizeof(T));
     }
 
     m_arr = new_arr;
     m_cap = rounded;
 }
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::resize(u32 const s)
+template<typename T, class _Alloc> void Array<T, _Alloc>::resize(u32 const s)
 {
     if (s < m_size) {
         destroy_range(m_arr + s, m_arr + m_size);
         m_size = s;
     } else if (s > m_size) {
-        if (s > m_cap)
-            reserve(s);
+        if (s > m_cap) reserve(s);
 
         u32 i = m_size;
         try {
             if constexpr (TRIVIAL_COPY) {
-                for (; i < s; i++)
-                    m_arr[i] = T { };
+                for (; i < s; i++) m_arr[i] = T { };
             } else {
-                for (; i < s; i++)
-                    ::new (static_cast<void*>(m_arr + i)) T();
+                for (; i < s; i++) ::new (static_cast<void*>(m_arr + i)) T();
             }
         } catch (...) {
             m_size = i;
@@ -594,16 +532,13 @@ void Array<T, _Alloc>::resize(u32 const s)
     }
 }
 
-template<typename T, class _Alloc>
-void Array<T, _Alloc>::erase(u32 const at)
+template<typename T, class _Alloc> void Array<T, _Alloc>::erase(u32 const at)
 {
-    if (at >= m_size)
-        diagnostic::fatal_error(ErrorCode::ARRAY_OUT_OF_BOUNDS);
+    if (at >= m_size) diagnostic::fatal_error(ErrorCode::ARRAY_OUT_OF_BOUNDS);
 
     if constexpr (TRIVIAL_COPY) {
         u32 const remaining = m_size - at - 1;
-        if (remaining > 0)
-            ::memmove(m_arr + at, m_arr + at + 1, remaining * sizeof(T));
+        if (remaining > 0) ::memmove(m_arr + at, m_arr + at + 1, remaining * sizeof(T));
     } else {
         m_arr[at].~T();
         for (u32 i = at; i < m_size - 1; i++) {
@@ -615,18 +550,15 @@ void Array<T, _Alloc>::erase(u32 const at)
     m_size -= 1;
 }
 
-template<typename T, class _Alloc>
-T* Array<T, _Alloc>::erase(T const* p)
+template<typename T, class _Alloc> T* Array<T, _Alloc>::erase(T const* p)
 {
-    if (p < m_arr || p >= m_arr + m_size)
-        return const_cast<T*>(p);
+    if (p < m_arr || p >= m_arr + m_size) return const_cast<T*>(p);
 
     T* ptr = const_cast<T*>(p);
     u32 remaining = static_cast<u32>((m_arr + m_size) - (ptr + 1));
 
     if constexpr (TRIVIAL_COPY) {
-        if (remaining > 0)
-            ::memmove(ptr, ptr + 1, remaining * sizeof(T));
+        if (remaining > 0) ::memmove(ptr, ptr + 1, remaining * sizeof(T));
     } else {
         ptr->~T();
         for (u32 i = 0; i < remaining; i++) {
@@ -639,14 +571,12 @@ T* Array<T, _Alloc>::erase(T const* p)
     return ptr;
 }
 
-template<typename T, typename... Args>
-static inline Array<T> make_array(Args&&... args)
+template<typename T, typename... Args> static inline Array<T> make_array(Args&&... args)
 {
     return get_allocator().allocate_array<T>(std::forward<Args>(args)...);
 }
 
-template<typename T, class _Alloc = ArenaAllocator>
-class Set {
+template<typename T, class _Alloc = ArenaAllocator> class Set {
 private:
     Array<T, _Alloc> m_arr;
 
@@ -656,23 +586,20 @@ public:
     bool array_contains(T const& val) const
     {
         for (u32 i = 0, n = m_arr.size(); i < n; ++i) {
-            if (m_arr[i] == val)
-                return true;
+            if (m_arr[i] == val) return true;
         }
         return false;
     }
 
     void push(T&& val)
     {
-        if (array_contains(val))
-            return;
+        if (array_contains(val)) return;
         m_arr.push(val);
     }
 
     void push(T const& val)
     {
-        if (array_contains(val))
-            return;
+        if (array_contains(val)) return;
         m_arr.push(val);
     }
 

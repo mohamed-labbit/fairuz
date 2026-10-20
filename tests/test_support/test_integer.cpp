@@ -54,8 +54,7 @@ TEST(IntegerContract, PayloadBoundariesAndNativeMinimum)
         ASSERT_TRUE(value.is_big_int());
         auto const& limbs = value.as_big_int()->limbs;
         ASSERT_EQ(limbs.size(), parsed.limbs.size());
-        for (u32 i = 0, n = limbs.size(); i < n; ++i)
-            EXPECT_EQ(limbs[i], parsed.limbs[i]);
+        for (u32 i = 0, n = limbs.size(); i < n; ++i) EXPECT_EQ(limbs[i], parsed.limbs[i]);
         EXPECT_EQ(value.as_big_int()->sign, parsed.positive);
         EXPECT_EQ(integer::to_string(value).c_str(), n);
     }
@@ -73,22 +72,16 @@ TEST(IntegerContract, SignedArithmeticMatchesWideOracle)
     std::mt19937_64 random(20260925);
     for (int i = 0; i < 300; ++i) {
         i64 a = static_cast<i64>(random() >> 1), b = static_cast<i64>(random() >> 1);
-        if (i % 2)
-            a = -a;
-        if (i % 3)
-            b = -b;
-        if (i % 4 == 0)
-            a %= 1000;
-        if (i % 4 == 1)
-            b %= 1000;
+        if (i % 2) a = -a;
+        if (i % 3) b = -b;
+        if (i % 4 == 0) a %= 1000;
+        if (i % 4 == 1) b %= 1000;
         Value x = Value::from_int(a, gc), y = Value::from_int(b, gc);
         EXPECT_EQ(integer::to_string(integer::add(x, y, gc)), integer_oracle::add(a, b));
         EXPECT_EQ(integer::to_string(integer::sub(x, y, gc)), integer_oracle::add(a, b, true));
         EXPECT_EQ(integer::to_string(integer::mul(x, y, gc)), integer_oracle::multiply(a, b));
-        if (b)
-            EXPECT_EQ(integer::to_string(integer::div(x, y, gc, true)), std::to_string(a % b));
-        EXPECT_EQ(integer::compare(x, y), a < b ? -1 : a > b ? 1
-                                                             : 0);
+        if (b) EXPECT_EQ(integer::to_string(integer::div(x, y, gc, true)), std::to_string(a % b));
+        EXPECT_EQ(integer::compare(x, y), a < b ? -1 : a > b ? 1 : 0);
         EXPECT_EQ(integer::to_string(x), std::to_string(a));
         EXPECT_EQ(integer::to_string(y), std::to_string(b));
     }

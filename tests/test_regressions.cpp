@@ -37,36 +37,32 @@ std::filesystem::path write_program(std::string const& source)
     return path;
 }
 
-std::filesystem::path binary_path()
-{
-    return test_process::executable();
-}
+std::filesystem::path binary_path() { return test_process::executable(); }
 
 } // namespace
 
 TEST(RegressionInlineBlocks, ConditionalsMixInlineAndIndentedBranches)
 {
-    auto program = write_program(
-        "دالة اختر(س):\n"
-        "    اذا س = 1: ارجع 10 # inline return\n"
-        "    غيره اذا س = 2:\n"
-        "        ارجع 20\n"
-        "    غيره اذا س = 3: ارجع 30\n"
-        "    غيره: ارجع 40\n"
-        "تاكد اختر(1) = 10\n"
-        "تاكد اختر(2) = 20\n"
-        "تاكد اختر(3) = 30\n"
-        "تاكد اختر(4) = 40\n"
-        "س := 0\n"
-        "اذا صحيح:\n"
-        "    اذا خطا: س := 1\n"
-        "    غيره: س := 2\n"
-        "غيره: س := 3\n"
-        "تاكد س = 2\n"
-        "اذا خطا: اذا صحيح: س := 4\n"
-        "غيره: س := 5\n"
-        "تاكد س = 5\n"
-        "اكتب(س)\n");
+    auto program = write_program("دالة اختر(س):\n"
+                                 "    اذا س = 1: ارجع 10 # inline return\n"
+                                 "    غيره اذا س = 2:\n"
+                                 "        ارجع 20\n"
+                                 "    غيره اذا س = 3: ارجع 30\n"
+                                 "    غيره: ارجع 40\n"
+                                 "تاكد اختر(1) = 10\n"
+                                 "تاكد اختر(2) = 20\n"
+                                 "تاكد اختر(3) = 30\n"
+                                 "تاكد اختر(4) = 40\n"
+                                 "س := 0\n"
+                                 "اذا صحيح:\n"
+                                 "    اذا خطا: س := 1\n"
+                                 "    غيره: س := 2\n"
+                                 "غيره: س := 3\n"
+                                 "تاكد س = 2\n"
+                                 "اذا خطا: اذا صحيح: س := 4\n"
+                                 "غيره: س := 5\n"
+                                 "تاكد س = 5\n"
+                                 "اكتب(س)\n");
     auto result = run_installed(binary_path(), program);
     EXPECT_EQ(result.exit_code, 0) << result.err;
     EXPECT_EQ(result.out, "5\n");
@@ -74,32 +70,31 @@ TEST(RegressionInlineBlocks, ConditionalsMixInlineAndIndentedBranches)
 
 TEST(RegressionInlineBlocks, LoopsSupportAssignmentsBreakContinueAndReturn)
 {
-    auto program = write_program(
-        "مجموع := 0\n"
-        "لكل س في [1، 2، 3]: مجموع += س\n"
-        "تاكد مجموع = 6\n"
-        "عدد := 0\n"
-        "طالما عدد < 3: عدد += 1\n"
-        "تاكد عدد = 3\n"
-        "طالما صحيح: اخرج\n"
-        "لكل س في [1، 2، 3]: اكمل\n"
-        "لكل س في [1، 2، 3]:\n"
-        "    اذا س = 2: اكمل\n"
-        "    مجموع += س\n"
-        "تاكد مجموع = 10\n"
-        "طالما عدد < 9:\n"
-        "    عدد += 1\n"
-        "    اذا عدد = 5: اكمل\n"
-        "    اذا عدد = 7: اخرج\n"
-        "تاكد عدد = 7\n"
-        "لكل س في [1، 2]: لكل ص في [3، 4]: مجموع += س * ص\n"
-        "تاكد مجموع = 31\n"
-        "دالة اول(قيم):\n"
-        "    لكل س في قيم: ارجع س\n"
-        "    ارجع 0\n"
-        "تاكد اول([7، 8]) = 7\n"
-        "تاكد اول([]) = 0\n"
-        "اكتب(مجموع)\n");
+    auto program = write_program("مجموع := 0\n"
+                                 "لكل س في [1، 2، 3]: مجموع += س\n"
+                                 "تاكد مجموع = 6\n"
+                                 "عدد := 0\n"
+                                 "طالما عدد < 3: عدد += 1\n"
+                                 "تاكد عدد = 3\n"
+                                 "طالما صحيح: اخرج\n"
+                                 "لكل س في [1، 2، 3]: اكمل\n"
+                                 "لكل س في [1، 2، 3]:\n"
+                                 "    اذا س = 2: اكمل\n"
+                                 "    مجموع += س\n"
+                                 "تاكد مجموع = 10\n"
+                                 "طالما عدد < 9:\n"
+                                 "    عدد += 1\n"
+                                 "    اذا عدد = 5: اكمل\n"
+                                 "    اذا عدد = 7: اخرج\n"
+                                 "تاكد عدد = 7\n"
+                                 "لكل س في [1، 2]: لكل ص في [3، 4]: مجموع += س * ص\n"
+                                 "تاكد مجموع = 31\n"
+                                 "دالة اول(قيم):\n"
+                                 "    لكل س في قيم: ارجع س\n"
+                                 "    ارجع 0\n"
+                                 "تاكد اول([7، 8]) = 7\n"
+                                 "تاكد اول([]) = 0\n"
+                                 "اكتب(مجموع)\n");
     auto result = run_installed(binary_path(), program);
     EXPECT_EQ(result.exit_code, 0) << result.err;
     EXPECT_EQ(result.out, "31\n");
@@ -107,25 +102,24 @@ TEST(RegressionInlineBlocks, LoopsSupportAssignmentsBreakContinueAndReturn)
 
 TEST(RegressionInlineBlocks, InlineClassesAndMethodsKeepFieldAndScopeSemantics)
 {
-    auto program = write_program(
-        "نوع علبة: دالة بداية(قيمة): .قيمة := قيمة\n"
-        "اول := علبة(9)\n"
-        "تاكد اول.قيمة = 9\n"
-        "نوع عداد:\n"
-        "    دالة بداية(): .قيمة := 0\n"
-        "    دالة زد(): .قيمة += 1\n"
-        "    دالة اضبط(قيمة): اذا قيمة > 0: هذا.قيمة := قيمة\n"
-        "    دالة اقرأ(): ارجع هذا.قيمة\n"
-        "ثاني := عداد()\n"
-        "ثاني.زد()\n"
-        "تاكد ثاني.اقرأ() = 1\n"
-        "ثاني.اضبط(12)\n"
-        "تاكد ثاني.اقرأ() = 12\n"
-        "ثاني.اضبط(0)\n"
-        "تاكد ثاني.اقرأ() = 12\n"
-        "دالة مضاعف(قيمة): ارجع قيمة * 2\n"
-        "تاكد مضاعف(3) = 6\n"
-        "اكتب(ثاني.اقرأ())\n");
+    auto program = write_program("نوع علبة: دالة بداية(قيمة): .قيمة := قيمة\n"
+                                 "اول := علبة(9)\n"
+                                 "تاكد اول.قيمة = 9\n"
+                                 "نوع عداد:\n"
+                                 "    دالة بداية(): .قيمة := 0\n"
+                                 "    دالة زد(): .قيمة += 1\n"
+                                 "    دالة اضبط(قيمة): اذا قيمة > 0: هذا.قيمة := قيمة\n"
+                                 "    دالة اقرأ(): ارجع هذا.قيمة\n"
+                                 "ثاني := عداد()\n"
+                                 "ثاني.زد()\n"
+                                 "تاكد ثاني.اقرأ() = 1\n"
+                                 "ثاني.اضبط(12)\n"
+                                 "تاكد ثاني.اقرأ() = 12\n"
+                                 "ثاني.اضبط(0)\n"
+                                 "تاكد ثاني.اقرأ() = 12\n"
+                                 "دالة مضاعف(قيمة): ارجع قيمة * 2\n"
+                                 "تاكد مضاعف(3) = 6\n"
+                                 "اكتب(ثاني.اقرأ())\n");
     auto result = run_installed(binary_path(), program);
     EXPECT_EQ(result.exit_code, 0) << result.err;
     EXPECT_EQ(result.out, "12\n");
@@ -159,10 +153,11 @@ TEST(HardeningRegression, NumericLiteralsUseCorrectBaseAndUtf8Cursor)
                                  "اكتب(١٢)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "255\n"
-                     "10\n"
-                     "15\n"
-                     "12\n");
+    EXPECT_EQ(r.out,
+        "255\n"
+        "10\n"
+        "15\n"
+        "12\n");
 }
 
 TEST(HardeningRegression, OptimizerPreservesRuntimeTypesAndErrors)
@@ -208,8 +203,7 @@ TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
     RunResult min_result = run_installed(binary_path(), min_bad);
     EXPECT_EQ(min_result.exit_code, 65);
 
-    auto output = std::filesystem::temp_directory_path()
-        / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
+    auto output = std::filesystem::temp_directory_path() / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
     std::string file_source = "م := افتح(\"" + fairuz::platform::utf8(output)
         + "\", \"اكتب\")\n"
           "اغلق(م)\n"
@@ -228,19 +222,19 @@ TEST(HardeningRegression, CyclicContainersRenderWithMarker)
                                  "اكتب(سلسلة(س))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "[<cycle>]\n"
-                     "[<cycle>]\n");
+    EXPECT_EQ(r.out,
+        "[<cycle>]\n"
+        "[<cycle>]\n");
 }
 
 TEST(HardeningRegression, DeepContainersRenderWithoutOverflowingTheHostStack)
 {
-    auto program = write_program(
-        "س := []\n"
-        "ع := 0\n"
-        "طالما ع < 200:\n"
-        "    س := [س]\n"
-        "    ع += 1\n"
-        "اكتب(س)\n");
+    auto program = write_program("س := []\n"
+                                 "ع := 0\n"
+                                 "طالما ع < 200:\n"
+                                 "    س := [س]\n"
+                                 "    ع += 1\n"
+                                 "اكتب(س)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("<max-depth>"), std::string::npos);
@@ -252,8 +246,9 @@ TEST(HardeningRegression, SliceUsesInclusiveEndForStringsAndLists)
                                  "اكتب(مقطع([1, 2, 3], 1, 1))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "ب\n"
-                     "[2]\n");
+    EXPECT_EQ(r.out,
+        "ب\n"
+        "[2]\n");
 }
 
 TEST(HardeningRegression, SliceAllowsAnEmptyContainerTail)
@@ -262,8 +257,9 @@ TEST(HardeningRegression, SliceAllowsAnEmptyContainerTail)
                                  "اكتب(مقطع(\"\", 0))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "[]\n"
-                     "\n");
+    EXPECT_EQ(r.out,
+        "[]\n"
+        "\n");
 }
 
 TEST(HardeningRegression, EmbeddedNulIsRejectedRatherThanTruncatingSource)
@@ -304,11 +300,12 @@ TEST(RegressionOperators, OpShift)
     auto program = write_program(src);
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "0\n"
-                     "2\n"
-                     "0\n"
-                     "0\n"
-                     "0\n");
+    EXPECT_EQ(r.out,
+        "0\n"
+        "2\n"
+        "0\n"
+        "0\n"
+        "0\n");
 }
 
 TEST(RegressionConstruct, IterateForLoop)
@@ -321,31 +318,31 @@ TEST(RegressionConstruct, IterateForLoop)
                                  "    اكتب(رقم)");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "1\n"
-                     "2\n"
-                     "3\n");
+    EXPECT_EQ(r.out,
+        "1\n"
+        "2\n"
+        "3\n");
 }
 
 TEST(IntegerRuntimeContract, LiteralsBuiltinsAndCollections)
 {
-    auto program = write_program(
-        "س := 340282366920938463463374607431768211455\n"
-        "اكتب(س + 1)\n"
-        "اكتب(0x100000000000000000000000000000000)\n"
-        "اكتب(١٨٤٤٦٧٤٤٠٧٣٧٠٩٥٥١٦١٦)\n"
-        "اكتب(سلسلة(س))\n"
-        "اكتب(ادنى(18446744073709551616.0))\n"
-        "اكتب(اعلى(-18446744073709551616.0))\n"
-        "اكتب(قوة(2، 128))\n"
-        "د := {9007199254740992: 10، 9007199254740993: 20}\n"
-        "اكتب(طول(د))\n"
-        "اكتب(د[9007199254740992.0])\n"
-        "اكتب(د[9007199254740993])\n"
-        "اكتب(9007199254740993 = 9007199254740992.0)\n"
-        "اكتب(9007199254740993 > 9007199254740992.0)\n"
-        "اكتب(-3 >> 1)\n"
-        "ن := 128\n"
-        "اكتب(1 << ن)\n");
+    auto program = write_program("س := 340282366920938463463374607431768211455\n"
+                                 "اكتب(س + 1)\n"
+                                 "اكتب(0x100000000000000000000000000000000)\n"
+                                 "اكتب(١٨٤٤٦٧٤٤٠٧٣٧٠٩٥٥١٦١٦)\n"
+                                 "اكتب(سلسلة(س))\n"
+                                 "اكتب(ادنى(18446744073709551616.0))\n"
+                                 "اكتب(اعلى(-18446744073709551616.0))\n"
+                                 "اكتب(قوة(2، 128))\n"
+                                 "د := {9007199254740992: 10، 9007199254740993: 20}\n"
+                                 "اكتب(طول(د))\n"
+                                 "اكتب(د[9007199254740992.0])\n"
+                                 "اكتب(د[9007199254740993])\n"
+                                 "اكتب(9007199254740993 = 9007199254740992.0)\n"
+                                 "اكتب(9007199254740993 > 9007199254740992.0)\n"
+                                 "اكتب(-3 >> 1)\n"
+                                 "ن := 128\n"
+                                 "اكتب(1 << ن)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0) << r.err;
     EXPECT_EQ(r.out,
@@ -367,24 +364,24 @@ TEST(IntegerRuntimeContract, LiteralsBuiltinsAndCollections)
 
 TEST(IntegerRuntimeContract, OperandsAndLiteralsSurviveCollections)
 {
-    auto program = write_program(
-        "دالة ثابت():\n"
-        "    ارجع 340282366920938463463374607431768211456\n"
-        "اصل := ثابت()\n"
-        "ق := [اصل]\n"
-        "س := اصل\n"
-        "ن := 0\n"
-        "طالما ن < 4000:\n"
-        "    س := س + 1\n"
-        "    ن += 1\n"
-        "اكتب(س - اصل)\n"
-        "اكتب(ق[0] = ثابت())\n"
-        "اكتب(اصل)\n");
+    auto program = write_program("دالة ثابت():\n"
+                                 "    ارجع 340282366920938463463374607431768211456\n"
+                                 "اصل := ثابت()\n"
+                                 "ق := [اصل]\n"
+                                 "س := اصل\n"
+                                 "ن := 0\n"
+                                 "طالما ن < 4000:\n"
+                                 "    س := س + 1\n"
+                                 "    ن += 1\n"
+                                 "اكتب(س - اصل)\n"
+                                 "اكتب(ق[0] = ثابت())\n"
+                                 "اكتب(اصل)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0) << r.err;
-    EXPECT_EQ(r.out, "4000\n"
-                     "صحيح\n"
-                     "340282366920938463463374607431768211456\n");
+    EXPECT_EQ(r.out,
+        "4000\n"
+        "صحيح\n"
+        "340282366920938463463374607431768211456\n");
 }
 
 TEST(IntegerRuntimeContract, PythonOracle1400Comparisons)
@@ -403,12 +400,10 @@ TEST(IntegerRuntimeContract, PythonOracle1400Comparisons)
     for (size_t start = 0; start < std::size(cases); start += batch_size) {
         std::string source;
         size_t end = std::min(start + batch_size, std::size(cases));
-        for (size_t i = start; i < end; ++i)
-            source += std::string("اكتب(") + cases[i].expression + ")\n";
+        for (size_t i = start; i < end; ++i) source += std::string("اكتب(") + cases[i].expression + ")\n";
         auto program = write_program(source);
         RunResult result = run_installed(binary_path(), program);
-        ASSERT_EQ(result.exit_code, 0) << "batch starting at case " << start << "\n"
-                                       << result.err;
+        ASSERT_EQ(result.exit_code, 0) << "batch starting at case " << start << "\n" << result.err;
         std::istringstream output(result.out);
         for (size_t i = start; i < end; ++i) {
             SCOPED_TRACE("oracle case " + std::to_string(i) + ": " + cases[i].expression);

@@ -10,10 +10,8 @@ namespace test_runtime_detail {
 
 [[noreturn]] inline void fail(char const* message, char const* file, unsigned line)
 {
-    ::testing::TestPartResult failure(::testing::TestPartResult::kFatalFailure,
-        file, static_cast<int>(line), message);
-    GTEST_MESSAGE_AT_(file, static_cast<int>(line), message,
-        ::testing::TestPartResult::kFatalFailure);
+    ::testing::TestPartResult failure(::testing::TestPartResult::kFatalFailure, file, static_cast<int>(line), message);
+    GTEST_MESSAGE_AT_(file, static_cast<int>(line), message, ::testing::TestPartResult::kFatalFailure);
     throw ::testing::AssertionException(failure);
 }
 
@@ -30,8 +28,7 @@ namespace test_runtime_detail {
 #    define FAIRUZ_TEST_CALL_SITE_ARGS where.file_name(), where.line()
 #endif
 
-template<typename T, typename E>
-inline T run_success(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
+template<typename T, typename E> inline T run_success(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
 {
     if (result.has_error())
         test_runtime_detail::fail(
@@ -39,11 +36,9 @@ inline T run_success(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
     return std::move(result).value();
 }
 
-template<typename T, typename E>
-inline E run_failed(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
+template<typename T, typename E> inline E run_failed(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
 {
-    if (result.has_value())
-        test_runtime_detail::fail("Expected an error, but execution succeeded", FAIRUZ_TEST_CALL_SITE_ARGS);
+    if (result.has_value()) test_runtime_detail::fail("Expected an error, but execution succeeded", FAIRUZ_TEST_CALL_SITE_ARGS);
     return std::move(result).error();
 }
 

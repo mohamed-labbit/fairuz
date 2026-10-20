@@ -25,8 +25,7 @@ std::filesystem::path VM::resolve_module_path(std::string const& name) const
     while (begin < name.size()) {
         size_t dot = name.find('.', begin);
         relative /= platform::path(name.substr(begin, dot == std::string::npos ? std::string::npos : dot - begin));
-        if (dot == std::string::npos)
-            break;
+        if (dot == std::string::npos) break;
         begin = dot + 1;
     }
     relative += platform::path(".ف");
@@ -36,16 +35,14 @@ std::filesystem::path VM::resolve_module_path(std::string const& name) const
     // This prevents a project file such as `file.ف` from accidentally
     // shadowing the bundled module. Names absent from these roots still fall
     // through to the importing module's directory for normal relative imports.
-    if (auto configured = platform::environment("FAIRUZ_STDLIB"); !configured.empty())
-        roots.emplace_back(platform::path(configured));
+    if (auto configured = platform::environment("FAIRUZ_STDLIB"); !configured.empty()) roots.emplace_back(platform::path(configured));
 #ifdef FAIRUZ_SOURCE_STDLIB_DIR
     roots.emplace_back(platform::path(FAIRUZ_SOURCE_STDLIB_DIR));
 #endif
 #ifdef FAIRUZ_INSTALL_STDLIB_DIR
     roots.emplace_back(platform::path(FAIRUZ_INSTALL_STDLIB_DIR));
 #endif
-    if (m_frames_top > 0 && !frame().chunk->source_path.empty())
-        roots.push_back(platform::path(frame().chunk->source_path).parent_path());
+    if (m_frames_top > 0 && !frame().chunk->source_path.empty()) roots.push_back(platform::path(frame().chunk->source_path).parent_path());
     roots.push_back(std::filesystem::current_path());
 
     std::error_code ec;
@@ -64,11 +61,9 @@ std::filesystem::path VM::resolve_module_path(std::string const& name) const
 ErrorOr<ObjModule*, RuntimeError> VM::load_module(StringRef const& name)
 {
     std::filesystem::path path = resolve_module_path(std::string(name.data(), name.len()));
-    if (path.empty())
-        return raise_runtime_error(ErrorCode::MODULE_NOT_FOUND, "'" + std::string(name.data(), name.len()) + "'");
+    if (path.empty()) return raise_runtime_error(ErrorCode::MODULE_NOT_FOUND, "'" + std::string(name.data(), name.len()) + "'");
     std::string key = platform::utf8(path);
-    if (auto found = m_module_cache.find(key); found != m_module_cache.end())
-        return found->second;
+    if (auto found = m_module_cache.find(key); found != m_module_cache.end()) return found->second;
 
     auto globals = std::make_unique<GlobalEnvironment>();
     globals->fallback = &m_builtin_environment;
@@ -90,13 +85,11 @@ ErrorOr<ObjModule*, RuntimeError> VM::load_module(StringRef const& name)
     diagnostic::SourceScope source_scope(source.get());
     parser::Parser parser(source.get());
     Array<AST::StmtPtr> statements = parser.parse_program();
-    if (auto const* error = diagnostic::engine.first_error())
-        return RuntimeError(error->err_code, error->source, error->src_loc);
+    if (auto const* error = diagnostic::engine.first_error()) return RuntimeError(error->err_code, error->source, error->src_loc);
 
     Compiler compiler(diagnostic::engine.source());
     auto compile_result = compiler.compile(statements);
-    if (compile_result.has_error())
-        return compile_result.error();
+    if (compile_result.has_error()) return compile_result.error();
     Chunk* imported_chunk = compile_result.value();
     imported_chunk->source_path = key;
     imported_chunk->name = StringRef(module->name.data(), module->name.len());

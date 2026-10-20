@@ -34,28 +34,24 @@ struct Payload {
     Payload(Payload const& other)
         : id(other.id)
     {
-        if (fail_copy)
-            throw std::runtime_error("copy");
+        if (fail_copy) throw std::runtime_error("copy");
         ++alive;
     }
     Payload(Payload&& other) noexcept(false)
         : id(other.id)
     {
-        if (fail_move)
-            throw std::runtime_error("move");
+        if (fail_move) throw std::runtime_error("move");
         ++alive;
     }
     Payload& operator=(Payload const& other)
     {
-        if (fail_assign)
-            throw std::runtime_error("assign");
+        if (fail_assign) throw std::runtime_error("assign");
         id = other.id;
         return *this;
     }
     Payload& operator=(Payload&& other) noexcept(false)
     {
-        if (fail_assign)
-            throw std::runtime_error("assign");
+        if (fail_assign) throw std::runtime_error("assign");
         id = other.id;
         return *this;
     }
@@ -88,7 +84,12 @@ TEST_F(ErrorOrLifetime, FailedCopyAssignmentPreservesBothAlternatives)
     ErrorOr<Payload, int> value(Payload(7));
     ErrorOr<Payload, int> error(42);
     Payload::fail_copy = true;
-    EXPECT_THROW({ auto copy = value; (void)copy; }, std::runtime_error);
+    EXPECT_THROW(
+        {
+            auto copy = value;
+            (void)copy;
+        },
+        std::runtime_error);
     EXPECT_THROW(error = value, std::runtime_error);
     ASSERT_TRUE(error.has_error());
     EXPECT_EQ(error.error(), 42);
@@ -109,7 +110,12 @@ TEST_F(ErrorOrLifetime, FailedMoveConstructionAndAssignmentDoNotTerminateOrDestr
     ErrorOr<int, Payload> source(Payload(9));
     ErrorOr<int, Payload> target(11);
     Payload::fail_move = true;
-    EXPECT_THROW({ auto moved = std::move(source); (void)moved; }, std::runtime_error);
+    EXPECT_THROW(
+        {
+            auto moved = std::move(source);
+            (void)moved;
+        },
+        std::runtime_error);
     EXPECT_THROW(target = std::move(source), std::runtime_error);
     EXPECT_TRUE(source.has_error());
     ASSERT_TRUE(target.has_value());

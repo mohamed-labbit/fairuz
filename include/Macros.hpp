@@ -69,8 +69,7 @@ using f64 = double;
 
 // Semantic identities, not integer substitutes. Arithmetic belongs to the
 // owning subsystem; unwrap explicitly at storage and bytecode boundaries.
-template<typename T, typename Tag>
-struct StrongAlias {
+template<typename T, typename Tag> struct StrongAlias {
     T value { };
 
     constexpr StrongAlias() noexcept = default;

@@ -65,21 +65,14 @@ PCType ByteCodeEmitter::invoke_named(RegType obj, u32 argc, ConstantIndex idx, S
 PCType ByteCodeEmitter::ic_call(RegType obj, u32 argc, SourceLocation loc)
 {
     // Reject an unencodable count before allocating an inline-cache slot.
-    if (argc > 0xFF)
-        diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
+    if (argc > 0xFF) diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
     CacheSlot slot = m_compiler_ptr->current_chunk()->alloc_ic_slot();
     return emit_ABC(OpCode::IC_CALL, obj.value, argc, slot.value, loc);
 }
 
-PCType ByteCodeEmitter::emit_cache_payload(CacheSlot idx, SourceLocation loc)
-{
-    return emit_ABC(OpCode::NOP, idx.value, 0, 0, loc);
-}
+PCType ByteCodeEmitter::emit_cache_payload(CacheSlot idx, SourceLocation loc) { return emit_ABC(OpCode::NOP, idx.value, 0, 0, loc); }
 
-PCType ByteCodeEmitter::emit_name_payload(ConstantIndex idx, SourceLocation loc)
-{
-    return emit_ABx(OpCode::NOP, 0, idx.value, loc);
-}
+PCType ByteCodeEmitter::emit_name_payload(ConstantIndex idx, SourceLocation loc) { return emit_ABx(OpCode::NOP, 0, idx.value, loc); }
 
 PCType ByteCodeEmitter::load_constant(RegType dst, ConstantIndex idx, SourceLocation loc)
 {
@@ -106,20 +99,11 @@ PCType ByteCodeEmitter::import_module(RegType dst, ConstantIndex name, SourceLoc
     return emit_ABx(OpCode::IMPORT_MODULE, dst.value, name.value, loc);
 }
 
-PCType ByteCodeEmitter::closure(RegType dst, FunctionIndex idx, SourceLocation loc)
-{
-    return emit_ABx(OpCode::CLOSURE, dst.value, idx.value, loc);
-}
+PCType ByteCodeEmitter::closure(RegType dst, FunctionIndex idx, SourceLocation loc) { return emit_ABx(OpCode::CLOSURE, dst.value, idx.value, loc); }
 
-PCType ByteCodeEmitter::new_class(RegType dst, ClassIndex idx, SourceLocation loc)
-{
-    return emit_ABx(OpCode::NEW_CLASS, dst.value, idx.value, loc);
-}
+PCType ByteCodeEmitter::new_class(RegType dst, ClassIndex idx, SourceLocation loc) { return emit_ABx(OpCode::NEW_CLASS, dst.value, idx.value, loc); }
 
-PCType ByteCodeEmitter::jump_if_false(RegType cond_reg, SourceLocation loc)
-{
-    return emit_AsBx(OpCode::JUMP_IF_FALSE, cond_reg.value, 0, loc);
-}
+PCType ByteCodeEmitter::jump_if_false(RegType cond_reg, SourceLocation loc) { return emit_AsBx(OpCode::JUMP_IF_FALSE, cond_reg.value, 0, loc); }
 
 PCType ByteCodeEmitter::jump(OpCode op, RegType cond, SourceLocation loc)
 {
@@ -127,43 +111,30 @@ PCType ByteCodeEmitter::jump(OpCode op, RegType cond, SourceLocation loc)
     return emit_AsBx(op, cond.value, 0, loc);
 }
 
-PCType ByteCodeEmitter::jump(SourceLocation loc)
-{
-    return emit_AsBx(OpCode::JUMP, 0, 0, loc);
-}
+PCType ByteCodeEmitter::jump(SourceLocation loc) { return emit_AsBx(OpCode::JUMP, 0, 0, loc); }
 
-PCType ByteCodeEmitter::return_nil(SourceLocation loc)
-{
-    return emit_ABC(OpCode::RETURN_NIL, 0, 0, 0, loc);
-}
+PCType ByteCodeEmitter::return_nil(SourceLocation loc) { return emit_ABC(OpCode::RETURN_NIL, 0, 0, 0, loc); }
 
 void ByteCodeEmitter::patch_jump(PCType at)
 {
-    if (!m_compiler_ptr->current_chunk()->patch_jump(at))
-        diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
+    if (!m_compiler_ptr->current_chunk()->patch_jump(at)) diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
 }
 
 void ByteCodeEmitter::patch_jump_to(PCType instr_idx, PCType target)
 {
     i64 offset = static_cast<i64>(target.value) - instr_idx.value - 1;
-    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::panic(ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW);
+    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET) diagnostic::panic(ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW);
     InstrType word = m_compiler_ptr->current_chunk()->code[instr_idx.value];
     m_compiler_ptr->current_chunk()->code[instr_idx.value] = make_AsBx(instr_op(word), instr_A(word), offset);
 }
 
 PCType ByteCodeEmitter::emit_load_value(RegType dst, Value v, SourceLocation loc)
 {
-    if (v.is_nil())
-        return emit_ABC(OpCode::LOAD_NIL, dst.value, dst.value, 1, loc);
-
-    if (v.is_bool())
-        return emit_ABC(v.as_bool() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE, dst.value, 0, 0, loc);
-
+    if (v.is_nil()) return emit_ABC(OpCode::LOAD_NIL, dst.value, dst.value, 1, loc);
+    if (v.is_bool()) return emit_ABC(v.as_bool() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE, dst.value, 0, 0, loc);
     if (v.is_int()) {
         i64 iv = v.as_int();
-        if (iv >= -JUMP_OFFSET && iv <= JUMP_OFFSET)
-            return emit_ABx(OpCode::LOAD_INT, dst.value, static_cast<u32>(iv + JUMP_OFFSET), loc);
+        if (iv >= -JUMP_OFFSET && iv <= JUMP_OFFSET) return emit_ABx(OpCode::LOAD_INT, dst.value, static_cast<u32>(iv + JUMP_OFFSET), loc);
     }
 
     return load_constant(dst, m_compiler_ptr->current_chunk()->add_constant(v), loc);
@@ -173,8 +144,7 @@ void ByteCodeEmitter::discharge(ExprResult const& r, RegType dst, SourceLocation
 {
     switch (r.kind) {
     case ExprResult::Kind::REG:
-        if (r.reg_ != dst)
-            emit_ABC(OpCode::MOVE, dst.value, r.reg_.value, 0, loc);
+        if (r.reg_ != dst) emit_ABC(OpCode::MOVE, dst.value, r.reg_.value, 0, loc);
         return;
     case ExprResult::Kind::RELOC: patch_a(m_compiler_ptr->current_chunk(), r.reloc_pc, dst); return;
     case ExprResult::Kind::KINT: {
@@ -196,33 +166,25 @@ void ByteCodeEmitter::discharge(ExprResult const& r, RegType dst, SourceLocation
 
 PCType ByteCodeEmitter::emit_ABC(OpCode op, u32 a, u32 b, u32 c, SourceLocation loc)
 {
-    if (a > 0xFF || b > 0xFF || c > 0xFF)
-        diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
+    if (a > 0xFF || b > 0xFF || c > 0xFF) diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
     return emit(make_ABC(op, static_cast<u8>(a), static_cast<u8>(b), static_cast<u8>(c)), loc);
 }
 
 PCType ByteCodeEmitter::emit_ABx(OpCode op, u32 a, u32 bx, SourceLocation loc)
 {
-    if (a > 0xFF)
-        diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
-    if (bx > 0xFFFF)
-        diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
+    if (a > 0xFF) diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
+    if (bx > 0xFFFF) diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
     return emit(make_ABx(op, static_cast<u8>(a), static_cast<u16>(bx)), loc);
 }
 
 PCType ByteCodeEmitter::emit_AsBx(OpCode op, u32 a, i64 s_bx, SourceLocation loc)
 {
-    if (a > 0xFF)
-        diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
-    if (s_bx < -JUMP_OFFSET || s_bx > JUMP_OFFSET)
-        diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
+    if (a > 0xFF) diagnostic::panic(ErrorCode::TOO_MANY_REGISTERS);
+    if (s_bx < -JUMP_OFFSET || s_bx > JUMP_OFFSET) diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
     return emit(make_AsBx(op, static_cast<u8>(a), s_bx), loc);
 }
 
-PCType ByteCodeEmitter::emit(InstrType instr, SourceLocation loc)
-{
-    return m_compiler_ptr->current_chunk()->emit(instr, loc);
-}
+PCType ByteCodeEmitter::emit(InstrType instr, SourceLocation loc) { return m_compiler_ptr->current_chunk()->emit(instr, loc); }
 
 void ByteCodeEmitter::patch_a(Chunk* ch, PCType pc, RegType a)
 {

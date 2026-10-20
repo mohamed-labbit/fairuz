@@ -99,8 +99,7 @@ struct RunContext {
             return;
         }
         auto json = diagnostic::engine.to_json();
-        if (!compile_diagnostics.empty())
-            json.insert(1, compile_diagnostics + (json[1] == ']' ? "" : ","));
+        if (!compile_diagnostics.empty()) json.insert(1, compile_diagnostics + (json[1] == ']' ? "" : ","));
         std::cerr << json;
     }
 
@@ -108,17 +107,12 @@ struct RunContext {
     RunContext& operator=(RunContext const&) = delete;
 };
 
-constexpr RunResult failed(RunFailure failure = RunFailure::PROGRAM)
-{
-    return { ExitStatus::ERROR, failure };
-}
+constexpr RunResult failed(RunFailure failure = RunFailure::PROGRAM) { return { ExitStatus::ERROR, failure }; }
 
 RunResult diagnostic_failure()
 {
     auto* error = diagnostic::engine.first_error();
-    return failed(error != nullptr && error_category_for(error->err_code) == ErrorCategory::INTERNAL
-            ? RunFailure::INTERNAL
-            : RunFailure::PROGRAM);
+    return failed(error != nullptr && error_category_for(error->err_code) == ErrorCategory::INTERNAL ? RunFailure::INTERNAL : RunFailure::PROGRAM);
 }
 
 RunResult report_host_error(ErrorCode code, std::string const& detail = "")
@@ -138,16 +132,14 @@ RunResult report_execution_error(RuntimeError const& error)
     // Deferred parsing/imports can return an error whose original diagnostic
     // is already recorded. Report returned-only errors, but never duplicate
     // an existing parser diagnostic or its source information.
-    if (!diagnostic::has_errors())
-        ErrorRenderer().report(error);
+    if (!diagnostic::has_errors()) ErrorRenderer().report(error);
     diagnostic::dump();
     return failed(error.kind == ErrorCategory::INTERNAL ? RunFailure::INTERNAL : RunFailure::PROGRAM);
 }
 
 RunResult run_file(char const* filepath, RunContext& context)
 {
-    if (filepath == nullptr || *filepath == '\0')
-        return report_host_error(ErrorCode::FILE_NOT_OPEN, "input path is empty");
+    if (filepath == nullptr || *filepath == '\0') return report_host_error(ErrorCode::FILE_NOT_OPEN, "input path is empty");
 
     FileManager file(filepath);
     diagnostic::SourceScope source_scope(&file);
@@ -166,34 +158,27 @@ RunResult run_file(char const* filepath, RunContext& context)
 
     if (options.dump_ast) {
         AST::ASTPrinter printer(true);
-        for (auto* statement : statements)
-            printer.print(statement);
+        for (auto* statement : statements) printer.print(statement);
     }
 
     Compiler compiler(std::move(source));
     auto compiled = compiler.compile(statements);
-    if (compiled.has_error())
-        return report_execution_error(compiled.error());
+    if (compiled.has_error()) return report_execution_error(compiled.error());
     if (diagnostic::has_errors()) {
         diagnostic::dump();
         return diagnostic_failure();
     }
 
     auto* chunk = compiled.value();
-    if (chunk == nullptr)
-        return report_host_error(ErrorCode::INTERNAL_ERROR, "compilation produced no bytecode");
+    if (chunk == nullptr) return report_host_error(ErrorCode::INTERNAL_ERROR, "compilation produced no bytecode");
 
     if (options.check_only) {
         auto validation = Compiler::compile_all(chunk);
-        if (validation.has_error())
-            return report_execution_error(validation.error());
-        if (diagnostic::has_errors())
-            return diagnostic_failure();
+        if (validation.has_error()) return report_execution_error(validation.error());
+        if (diagnostic::has_errors()) return diagnostic_failure();
     }
-    if (options.dump_bytecode)
-        chunk->disassemble();
-    if (options.check_only)
-        return { ExitStatus::SUCCESS, RunFailure::NONE };
+    if (options.dump_bytecode) chunk->disassemble();
+    if (options.check_only) return { ExitStatus::SUCCESS, RunFailure::NONE };
 
     context.preserve_compile_diagnostics();
 
@@ -203,8 +188,7 @@ RunResult run_file(char const* filepath, RunContext& context)
     auto start = std::chrono::steady_clock::now();
     auto executed = virtual_machine.run(chunk);
     auto end = std::chrono::steady_clock::now();
-    if (executed.has_error())
-        return report_execution_error(executed.error());
+    if (executed.has_error()) return report_execution_error(executed.error());
     if (diagnostic::has_errors()) {
         diagnostic::dump();
         return diagnostic_failure();
@@ -226,19 +210,16 @@ RunResult run_with_error_translation(char const* filepath, RunContext& context)
     } catch (diagnostic::DiagnosticAbort const&) {
         // Lexing and explicit panic paths normally rendered their diagnostic
         // before throwing. dump() prints only what has not been printed yet.
-        if (!diagnostic::has_errors())
-            return report_host_error(ErrorCode::INTERNAL_ERROR, "diagnostic abort without an error");
+        if (!diagnostic::has_errors()) return report_host_error(ErrorCode::INTERNAL_ERROR, "diagnostic abort without an error");
         diagnostic::dump();
         return diagnostic_failure();
     } catch (RuntimeRaised const& raised) {
-        if (raised.error == nullptr)
-            return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime raised an empty error");
+        if (raised.error == nullptr) return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime raised an empty error");
         return report_execution_error(*raised.error);
     } catch (RuntimeHalt const&) {
         // Legacy payload-free transport must never turn into successful
         // execution. Do not fabricate a source or silently lose the failure.
-        if (!diagnostic::has_errors())
-            return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime halted without a diagnostic");
+        if (!diagnostic::has_errors()) return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime halted without a diagnostic");
         diagnostic::dump();
         return diagnostic_failure();
     } catch (FileError const& error) {
@@ -259,10 +240,7 @@ RunResult run_with_error_translation(char const* filepath, RunContext& context)
 
 } // namespace
 
-ExitStatus run_protected(char const* filepath) noexcept
-{
-    return run_protected(filepath, RunOptions { }).status;
-}
+ExitStatus run_protected(char const* filepath) noexcept { return run_protected(filepath, RunOptions { }).status; }
 
 RunResult run_protected(char const* filepath, RunOptions const& options) noexcept
 {

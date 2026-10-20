@@ -70,29 +70,24 @@ void GarbageCollector::collect(VM* vm)
 void GarbageCollector::mark_roots(VM* vm)
 {
     for (int i = 0; i < vm->m_stack_top && i < VM::STACK_SIZE; i++) {
-        if (vm->m_stack[i].is_obj())
-            mark_object(vm->m_stack[i].as_obj());
+        if (vm->m_stack[i].is_obj()) mark_object(vm->m_stack[i].as_obj());
     }
 
     for (int i = 0; i < vm->m_frames_top && i < VM::MAX_FRAMES; i++) {
-        if (vm->m_frames[i].func != nullptr)
-            mark_object(&vm->m_frames[i].func->obj);
+        if (vm->m_frames[i].func != nullptr) mark_object(&vm->m_frames[i].func->obj);
     }
 
     for (Value value : vm->m_builtin_functions.values()) {
-        if (value.is_obj())
-            mark_object(value.as_obj());
+        if (value.is_obj()) mark_object(value.as_obj());
     }
     mark_value_array(vm->m_builtin_environment.slots);
     mark_value_array(vm->m_root_environment.slots);
     for (auto const& env : vm->m_module_environments) {
-        if (env != nullptr)
-            mark_value_array(env->slots);
+        if (env != nullptr) mark_value_array(env->slots);
     }
     for (auto const& [path, module] : vm->m_module_cache) {
         (void)path;
-        if (module != nullptr)
-            mark_object(&module->obj);
+        if (module != nullptr) mark_object(&module->obj);
     }
 
     // Interned strings are deliberately strong roots. This trades bounded
@@ -100,15 +95,13 @@ void GarbageCollector::mark_roots(VM* vm)
     // dangling raw pointers after a collection.
     for (auto [name, string] : vm->m_string_table) {
         (void)name;
-        if (string != nullptr)
-            mark_object(&string->obj);
+        if (string != nullptr) mark_object(&string->obj);
     }
 }
 
 void GarbageCollector::mark_object(ObjHeader* p)
 {
-    if (p == nullptr || p->is_marked)
-        return;
+    if (p == nullptr || p->is_marked) return;
 
     p->is_marked = true;
     m_grays.push(p);
@@ -116,13 +109,11 @@ void GarbageCollector::mark_object(ObjHeader* p)
 
 void GarbageCollector::mark_chunk_constants(Chunk* chunk)
 {
-    if (chunk == nullptr)
-        return;
+    if (chunk == nullptr) return;
 
     mark_value_array(chunk->constants);
 
-    for (auto* fn : chunk->functions)
-        mark_chunk_constants(fn);
+    for (auto* fn : chunk->functions) mark_chunk_constants(fn);
 }
 
 void GarbageCollector::blacken_object(ObjHeader* obj)
@@ -130,23 +121,19 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
     switch (obj->type) {
     case ObjType::FUNCTION: {
         ObjFunction* fn = reinterpret_cast<ObjFunction*>(obj);
-        if (fn->chunk != nullptr)
-            mark_chunk_constants(fn->chunk);
+        if (fn->chunk != nullptr) mark_chunk_constants(fn->chunk);
         break;
     }
     case ObjType::NATIVE: {
         ObjNative* native = reinterpret_cast<ObjNative*>(obj);
-        if (native->name != nullptr)
-            mark_object(&native->name->obj);
+        if (native->name != nullptr) mark_object(&native->name->obj);
         break;
     }
     case ObjType::CLASS: {
         ObjClass* klass = reinterpret_cast<ObjClass*>(obj);
-        if (klass->parent != nullptr)
-            mark_object(&klass->parent->obj);
+        if (klass->parent != nullptr) mark_object(&klass->parent->obj);
         for (u32 i = 0, n = klass->vtable.size(); i < n; i++) {
-            if (klass->vtable[i] != nullptr)
-                mark_chunk_constants(klass->vtable[i]);
+            if (klass->vtable[i] != nullptr) mark_chunk_constants(klass->vtable[i]);
         }
         break;
     }
@@ -164,20 +151,16 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
     case ObjType::DICT: {
         ObjDict* dict = reinterpret_cast<ObjDict*>(obj);
         for (auto [k, v] : dict->data) {
-            if (k.is_obj())
-                mark_object(k.as_obj());
-            if (v.is_obj())
-                mark_object(v.as_obj());
+            if (k.is_obj()) mark_object(k.as_obj());
+            if (v.is_obj()) mark_object(v.as_obj());
         }
         break;
     }
     case ObjType::FILE_HANDLE: break;
     case ObjType::MODULE: {
         ObjModule* module = reinterpret_cast<ObjModule*>(obj);
-        if (module->globals != nullptr)
-            mark_value_array(module->globals->slots);
-        if (module->chunk != nullptr)
-            mark_chunk_constants(module->chunk);
+        if (module->globals != nullptr) mark_value_array(module->globals->slots);
+        if (module->chunk != nullptr) mark_chunk_constants(module->chunk);
         break;
     }
     case ObjType::STRING: break;
@@ -207,8 +190,7 @@ void GarbageCollector::sweep()
 void GarbageCollector::sweep_all()
 {
     for (auto* object : m_all) {
-        if (object != nullptr)
-            fa_delete_object(object);
+        if (object != nullptr) fa_delete_object(object);
     }
 
     m_all.clear();
@@ -216,10 +198,7 @@ void GarbageCollector::sweep_all()
     m_current_size = 0;
 }
 
-ObjBigInt* GarbageCollector::make_obj_int(i64 const v)
-{
-    return make_obj_int(integer::from_i64(v));
-}
+ObjBigInt* GarbageCollector::make_obj_int(i64 const v) { return make_obj_int(integer::from_i64(v)); }
 ObjBigInt* GarbageCollector::make_obj_int(integer::Data data)
 {
     auto* result = make<ObjBigInt>(std::move(data));
@@ -243,16 +222,12 @@ ObjString* GarbageCollector::make_obj_string(char const* str)
     return ret;
 }
 
-ObjString* GarbageCollector::make_obj_string(char* str)
-{
-    return make_obj_string(static_cast<char const*>(str));
-}
+ObjString* GarbageCollector::make_obj_string(char* str) { return make_obj_string(static_cast<char const*>(str)); }
 
 ObjList* GarbageCollector::make_obj_list()
 {
     void* mem = ::operator new(sizeof(ObjList), std::nothrow);
-    if (mem == nullptr)
-        diagnostic::panic(ErrorCode::ALLOC_FAILED);
+    if (mem == nullptr) diagnostic::panic(ErrorCode::ALLOC_FAILED);
 
     auto elems = Array<Value, /*_Alloc=*/GarbageCollector> { this };
 
@@ -307,11 +282,7 @@ ObjNative* GarbageCollector::make_obj_native(NativeFn fn, ObjString* name, int a
     return ret;
 }
 
-ObjClass* GarbageCollector::make_obj_class(
-    StringRef name,
-    StringArr& fields,
-    StringArr& methods,
-    Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
+ObjClass* GarbageCollector::make_obj_class(StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
 {
     auto ret = make<ObjClass>(fields, methods, vtable);
     ret->name = name;
@@ -324,9 +295,7 @@ ObjInstance* GarbageCollector::make_obj_instance(ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Array<Value, /*_Alloc=*/GarbageCollector> fields {
-        klass->field_names.size(), Value::nil(), this
-    };
+    Array<Value, /*_Alloc=*/GarbageCollector> fields { klass->field_names.size(), Value::nil(), this };
     auto ret = make<ObjInstance>(fields);
     ret->klass = klass;
 

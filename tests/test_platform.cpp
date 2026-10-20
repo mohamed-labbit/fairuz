@@ -61,8 +61,7 @@ TEST(PlatformProcess, PreservesArgumentsOutputAndExitCode)
 {
     std::vector<std::string> args { "", "with spaces", "a\"b", "trailing\\", "back\\\"quote", "مرحبا 😀", "& | %PATH% $HOME" };
     std::string expected;
-    for (auto const& arg : args)
-        expected += std::to_string(arg.size()) + ":" + arg + "\n";
+    for (auto const& arg : args) expected += std::to_string(arg.size()) + ":" + arg + "\n";
     auto result = test_process::run(fairuz::platform::path(FAIRUZ_TEST_PROCESS_PROBE), args);
     EXPECT_FALSE(result.crashed);
     EXPECT_FALSE(result.timed_out);
@@ -73,8 +72,7 @@ TEST(PlatformProcess, PreservesArgumentsOutputAndExitCode)
 
 TEST(PlatformProcess, TerminatesAndReapsTimedOutChild)
 {
-    auto result = test_process::run(fairuz::platform::path(FAIRUZ_TEST_PROCESS_PROBE),
-        { "sleep" }, { }, std::chrono::seconds(1));
+    auto result = test_process::run(fairuz::platform::path(FAIRUZ_TEST_PROCESS_PROBE), { "sleep" }, { }, std::chrono::seconds(1));
     EXPECT_TRUE(result.timed_out);
     EXPECT_NE(result.exit_code, 0);
 }

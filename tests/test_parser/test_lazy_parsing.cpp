@@ -145,10 +145,9 @@ TEST_F(LazyParsing, HeadersAndMissingSuitesAreStillValidatedImmediately)
 
 TEST_F(LazyParsing, InlineAndIndentedSuitesPreserveFollowingDefinitions)
 {
-    for (auto* text : {
-             "دالة قيمة(): ارجع 42\n"
-             "دالة اخر(): ارجع 0\n"
-             "قيمة()",
+    for (auto* text : { "دالة قيمة(): ارجع 42\n"
+                        "دالة اخر(): ارجع 0\n"
+                        "قيمة()",
              "دالة قيمة():\n"
              "    # comment\n"
              "\n"
@@ -185,8 +184,9 @@ TEST_F(LazyParsing, InlineAndIndentedSuitesPreserveFollowingDefinitions)
 
 TEST_F(LazyParsing, EndOfFileAndNestedDefinitionsPreserveReplayBoundaries)
 {
-    for (auto* ending : { "", "\n", "\n"
-                                    "\n" }) {
+    for (auto* ending : { "", "\n",
+             "\n"
+             "\n" }) {
         diagnostic::reset();
         std::string text = "دالة خارج():\n"
                            "    دالة داخل(): ارجع 42";
@@ -204,8 +204,7 @@ TEST_F(LazyParsing, EndOfFileAndNestedDefinitionsPreserveReplayBoundaries)
         ASSERT_TRUE(inner_body.has_value());
         EXPECT_EQ(as_block(run_success(inner_body))->stmts[0]->get_location().line, 2u);
         lex::Lexer replay(inner->tokens, inner->source);
-        while (!replay.current()->is(tok::TokenType::ENDMARKER))
-            replay.next();
+        while (!replay.current()->is(tok::TokenType::ENDMARKER)) replay.next();
         EXPECT_EQ(replay.next(), replay.current());
         EXPECT_EQ(replay.peek(), replay.current());
     }
