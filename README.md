@@ -348,6 +348,14 @@ packaging/       Homebrew formula template
 main.cpp         CLI entry point
 ```
 
+As of 2026-10-19 (source commit `ad323255`), the core engine under `include/`
+and `lib/` contains **79 files and 21,026 physical source lines**. The VM/runtime
+and native builtins account for **29 files and 7,187 lines** within that total.
+Counts include comments and blank lines, but exclude the CLI `main.cpp`, tests,
+tools, Fairuz stdlib modules, dependencies, and generated files. See the
+[architecture guide](docs/implementation/architecture.md#source-size) for the
+component breakdown, counting command, and shared protected execution entry.
+
 ## Editor support
 
 A VS Code extension is included in [`editors/vscode/fairuz`](editors/vscode/fairuz).
