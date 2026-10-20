@@ -257,7 +257,8 @@ RuntimeError VM::raise_runtime_error(ErrorCode errc, std::string const& detail)
 
 void VM::update_ic_binary(Chunk* ch, u32 nop_ip, Value lhs, Value rhs, Value result)
 {
-    if (ch == nullptr)
+    if (ch == nullptr || nop_ip >= ch->code.size()
+        || instr_op(ch->code[nop_ip]) != OpCode::NOP)
         return;
 
     u32 nop = ch->code[nop_ip];
