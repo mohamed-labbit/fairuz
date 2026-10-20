@@ -57,13 +57,6 @@
         frame().ip = PCType { ip }; \
     } while (0)
 
-#define RECORD_BINARY_IC(lhs, rhs, result)                     \
-    do {                                                       \
-        if (ip < cur_chunk->code.size()                        \
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)   \
-            update_ic_binary(cur_chunk, ip, lhs, rhs, result); \
-    } while (0)
-
 #define REQUIRE_NUMBER(v)                                            \
     do {                                                             \
         if (!v.is_number())                                          \
@@ -292,24 +285,30 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_ADD)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
+
         bool both_str = lhs.is_string() && rhs.is_string();
 
         if (both_str) {
             // String concatenation
             res = m_gc.make_string(lhs.as_string()->str + rhs.as_string()->str);
-            RECORD_BINARY_IC(lhs, rhs, res);
-            // VM_ABC(OpCode::OP_ADD_SS);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_int() && rhs.is_int()) {
             // Integer addition
             res = integer::add(lhs, rhs, m_gc);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             // Float addition (includes mixed int/float)
             res = Value::from_real(lhs.as_double_any() + rhs.as_double_any());
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::ADD, instr, cur_frame_base, ip);
@@ -326,16 +325,22 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_SUB)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = integer::sub(lhs, rhs, m_gc);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_real(lhs.as_double_any() - rhs.as_double_any());
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::SUB, instr, cur_frame_base, ip);
@@ -352,16 +357,22 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_MUL)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = integer::mul(lhs, rhs, m_gc);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_real(lhs.as_double_any() * rhs.as_double_any());
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::MUL, instr, cur_frame_base, ip);
@@ -378,6 +389,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_DIV)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
@@ -386,12 +403,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             if (!rhs.is_truthy())
                 return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
             res = integer::div(lhs, rhs, m_gc);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
                 return raise_runtime_error(ErrorCode::DIVISION_BY_ZERO);
             res = Value::from_real(lhs.as_double_any() / rhs.as_double_any());
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::DIV, instr, cur_frame_base, ip);
@@ -408,6 +425,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_MOD)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
@@ -416,12 +439,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             if (!rhs.is_truthy())
                 return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
             res = integer::div(lhs, rhs, m_gc, true);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
                 return raise_runtime_error(ErrorCode::MODULO_BY_ZERO);
             res = Value::from_real(std::fmod(lhs.as_double_any(), rhs.as_double_any()));
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::MOD, instr, cur_frame_base, ip);
@@ -573,6 +596,12 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_EQ)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
@@ -592,12 +621,18 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             DISPATCH();
         }
         res = Value::from_bool(values_equal(lhs, rhs));
-        RECORD_BINARY_IC(lhs, rhs, res);
+        update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
 
         DISPATCH();
     }
     CASE(OP_NEQ)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
@@ -617,25 +652,31 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
             DISPATCH();
         }
         res = Value::from_bool(!values_equal(lhs, rhs));
-        RECORD_BINARY_IC(lhs, rhs, res);
+        update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
 
         DISPATCH();
     }
     CASE(OP_LT)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = Value::from_bool(integer::compare(lhs, rhs) < 0);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str < rhs.as_string()->str);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_bool(integer::compare_numbers(lhs, rhs) == -1);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::LT, instr, cur_frame_base, ip);
@@ -652,19 +693,25 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_LTE)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = Value::from_bool(integer::compare(lhs, rhs) <= 0);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str <= rhs.as_string()->str);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_bool((integer::compare_numbers(lhs, rhs) == -1 || integer::compare_numbers(lhs, rhs) == 0));
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::LTE, instr, cur_frame_base, ip);
@@ -681,19 +728,25 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_GT)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = Value::from_bool(integer::compare(lhs, rhs) > 0);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str > rhs.as_string()->str);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_bool(integer::compare_numbers(lhs, rhs) == 1);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::GT, instr, cur_frame_base, ip);
@@ -710,19 +763,25 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
     }
     CASE(OP_GTE)
     {
+        u32 payload_ip = ip;
+
+        if (ip < cur_chunk->code.size()
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)
+            ++ip;
+
         Value& res = RA();
         Value lhs = RB();
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
             res = Value::from_bool(integer::compare(lhs, rhs) >= 0);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str >= rhs.as_string()->str);
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_bool((integer::compare_numbers(lhs, rhs) == 1 || integer::compare_numbers(lhs, rhs) == 0));
-            RECORD_BINARY_IC(lhs, rhs, res);
+            update_ic_binary(cur_chunk, payload_ip, lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             {
                 auto op_result = run_instance_op(lhs, rhs, ObjClass::GTE, instr, cur_frame_base, ip);
