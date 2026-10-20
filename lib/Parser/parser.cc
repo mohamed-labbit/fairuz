@@ -343,21 +343,21 @@ void Parser::synchronize(size_t statement_indent)
 
 Array<AST::StmtPtr> Parser::parse_sequence(Sequence kind, Array<AST::ExprPtr>* members)
 {
-    assert((kind == Sequence::Method || kind == Sequence::Class) == (members != nullptr));
+    assert((kind == Sequence::METHOD || kind == Sequence::CLASS) == (members != nullptr));
     Array<AST::StmtPtr> statements;
     while (!we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
         if (we_done()) break;
         if (check(TT::DEDENT)) {
-            if (kind != Sequence::Program) break;
+            if (kind != Sequence::PROGRAM) break;
             (void)fail(ErrorCode::UNEXPECTED_TOKEN);
             advance();
             continue;
         }
         size_t const before = m_consumed;
         size_t const indentation = m_indent_depth;
-        auto statement = kind == Sequence::Class ? parse_class_method(*members)
-            : kind == Sequence::Method           ? parse_class_method_statement(*members)
+        auto statement = kind == Sequence::CLASS ? parse_class_method(*members)
+            : kind == Sequence::METHOD           ? parse_class_method_statement(*members)
                                                  : parse_statement();
         if (statement.has_value()) {
             assert(statement.value() != nullptr);
@@ -372,7 +372,7 @@ Array<AST::StmtPtr> Parser::parse_sequence(Sequence kind, Array<AST::ExprPtr>* m
 
 Array<AST::StmtPtr> Parser::parse_program()
 {
-    auto statements = parse_sequence(Sequence::Program);
+    auto statements = parse_sequence(Sequence::PROGRAM);
     if (diagnostic::has_errors()) diagnostic::dump();
     return statements;
 }
@@ -518,7 +518,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
         return fail(ErrorCode::EXPECTED_INDENT);
     }
     FA_PARSE_REQUIRE(expect(TT::INDENT, ErrorCode::EXPECTED_INDENT));
-    auto statements = parse_sequence(members ? Sequence::Method : Sequence::Block, members);
+    auto statements = parse_sequence(members ? Sequence::METHOD : Sequence::BLOCK, members);
     // Saturation is a terminal state for this parse. Preserve the partial AST
     // without issuing a misleading missing-DEDENT diagnostic at the stop point.
     if (!diagnostic::is_saturated()) FA_PARSE_REQUIRE(expect(TT::DEDENT, ErrorCode::EXPECTED_DEDENT));
@@ -560,7 +560,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_function_def()
     FA_PARSE_TRY(name, expect(TT::IDENTIFIER, ErrorCode::EXPECTED_FN_NAME));
     FA_PARSE_TRY(parameters, parse_parameters_list());
     FA_PARSE_REQUIRE(expect(TT::COLON, ErrorCode::EXPECTED_COLON_FN));
-    FA_PARSE_TRY(body, m_body_parsing == BodyParsing::Lazy ? defer_body(start->location()) : parse_block());
+    FA_PARSE_TRY(body, m_body_parsing == BodyParsing::LAZY ? defer_body(start->location()) : parse_block());
     return m_builder.make_function(m_builder.make_identifier(name->lexeme(), name->location()), std::move(parameters), body, start->location());
 }
 
@@ -666,7 +666,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
             return fail(ErrorCode::EXPECTED_INDENT);
         }
         FA_PARSE_REQUIRE(expect(TT::INDENT, ErrorCode::EXPECTED_INDENT));
-        methods = parse_sequence(Sequence::Class, &members);
+        methods = parse_sequence(Sequence::CLASS, &members);
         if (!diagnostic::is_saturated()) FA_PARSE_REQUIRE(expect(TT::DEDENT, ErrorCode::EXPECTED_DEDENT));
     } else {
         FA_PARSE_TRY(method, parse_class_method(members));

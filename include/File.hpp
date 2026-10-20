@@ -20,7 +20,7 @@ namespace fairuz {
 // File I/O failures carry data only; callers decide how to report them.
 class FileError : public std::runtime_error {
 public:
-    enum class Kind { NotFound, NotOpen, Read };
+    enum class Kind { NOT_FOUND, NOT_OPEN, READ };
 
     FileError(Kind kind, std::string path);
     Kind kind() const noexcept { return m_kind; }

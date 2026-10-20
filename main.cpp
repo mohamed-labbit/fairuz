@@ -177,7 +177,7 @@ ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& fil
 {
     fairuz::lex::FileManager fm(filename);
     fairuz::diagnostic::set_source(&fm);
-    fairuz::parser::Parser parser(&fm, fairuz::parser::BodyParsing::Eager);
+    fairuz::parser::Parser parser(&fm, fairuz::parser::BodyParsing::EAGER);
     fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
     if (fairuz::diagnostic::has_errors()) {
         fairuz::diagnostic::dump();
@@ -357,8 +357,8 @@ int run_main(int argc, char** argv)
     } catch (fairuz::diagnostic::DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (fairuz::FileError const& ex) {
-        auto code = ex.kind() == fairuz::FileError::Kind::NotFound ? fairuz::ErrorCode::FILE_NOT_FOUND
-            : ex.kind() == fairuz::FileError::Kind::Read           ? fairuz::ErrorCode::READ_ERROR
+        auto code = ex.kind() == fairuz::FileError::Kind::NOT_FOUND ? fairuz::ErrorCode::FILE_NOT_FOUND
+            : ex.kind() == fairuz::FileError::Kind::READ           ? fairuz::ErrorCode::READ_ERROR
                                                                    : fairuz::ErrorCode::FILE_NOT_OPEN;
         fairuz::diagnostic::SourceScope source_scope(fairuz::diagnostic::SourcePtr { });
         fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, code, ex.path());

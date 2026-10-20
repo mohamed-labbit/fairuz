@@ -305,7 +305,7 @@ StringRef Formatter::format(StringRef const& source)
         if (kind != after[i]->type() || (kind != Kind::COMMA && kind != Kind::NEWLINE && before[i]->lexeme() != after[i]->lexeme()))
             throw std::runtime_error("Formatting changed a token; input left unchanged");
     }
-    parser::Parser parser(&formatted, parser::BodyParsing::Eager);
+    parser::Parser parser(&formatted, parser::BodyParsing::EAGER);
     (void)parser.parse_program();
     if (diagnostic::has_errors()) throw std::runtime_error("Formatted output is invalid; input left unchanged");
     return StringRef(output.c_str());

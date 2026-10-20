@@ -36,7 +36,7 @@ public:
     StringRef format() const;
 };
 
-enum class BodyParsing { Lazy, Eager };
+enum class BodyParsing { LAZY, EAGER };
 
 // Parser contract
 // ---------------
@@ -72,8 +72,8 @@ class Parser {
 public:
     // An empty parser is a valid, already-complete bounded stream.
     Parser();
-    explicit Parser(lex::FileManager*, BodyParsing = BodyParsing::Lazy);
-    explicit Parser(Array<TokenPtr> const&, diagnostic::SourcePtr, BodyParsing = BodyParsing::Lazy);
+    explicit Parser(lex::FileManager*, BodyParsing = BodyParsing::LAZY);
+    explicit Parser(Array<TokenPtr> const&, diagnostic::SourcePtr, BodyParsing = BodyParsing::LAZY);
 
     Parser(Parser const&) = delete;
     Parser& operator=(Parser const&) = delete;
@@ -129,7 +129,7 @@ public:
 private:
     lex::Lexer m_lexer;
     AST::ASTBuilder m_builder;
-    BodyParsing m_body_parsing { BodyParsing::Lazy };
+    BodyParsing m_body_parsing { BodyParsing::LAZY };
     size_t m_consumed { 0 };
     size_t m_indent_depth { 0 };
     std::optional<size_t> m_recovery_boundary;
@@ -155,7 +155,7 @@ private:
         Parser* m_parser;
     };
 
-    enum class Sequence { Program, Block, Method, Class };
+    enum class Sequence { PROGRAM, BLOCK, METHOD, CLASS };
     Array<AST::StmtPtr> parse_sequence(Sequence, Array<AST::ExprPtr>* = nullptr);
     void synchronize(size_t statement_indent);
     void skip_newlines();

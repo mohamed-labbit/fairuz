@@ -154,41 +154,41 @@ private:
 
     void classify_imports()
     {
-        enum class State { None, FromModule, DirectModule, Member, Alias } state = State::None;
+        enum class State { NONE, FROM_MODULE, DIRECT_MODULE, MEMBER, ALIAS } state = State::NONE;
         bool from_import = false;
         Token* direct_binding = nullptr;
         u32 line = 0;
         for (Span& span : m_spans) {
             if (span.token.line != line) {
                 line = span.token.line;
-                state = State::None;
+                state = State::NONE;
                 from_import = false;
                 direct_binding = nullptr;
             }
             switch (span.lexical_type) {
             case tok::TokenType::KW_FROM:
                 from_import = true;
-                state = State::FromModule;
+                state = State::FROM_MODULE;
                 break;
-            case tok::TokenType::KW_IMPORT: state = from_import ? State::Member : State::DirectModule; break;
-            case tok::TokenType::KW_AS: state = State::Alias; break;
+            case tok::TokenType::KW_IMPORT: state = from_import ? State::MEMBER : State::DIRECT_MODULE; break;
+            case tok::TokenType::KW_AS: state = State::ALIAS; break;
             case tok::TokenType::NAME:
-                if (state == State::FromModule) {
+                if (state == State::FROM_MODULE) {
                     span.token.type = "namespace";
-                } else if (state == State::DirectModule) {
+                } else if (state == State::DIRECT_MODULE) {
                     if (direct_binding) direct_binding->declaration = false;
                     span.token.type = "namespace";
                     span.token.declaration = true;
                     direct_binding = &span.token;
-                } else if (state == State::Member) {
+                } else if (state == State::MEMBER) {
                     span.token.type = "variable";
                     span.token.declaration = true;
-                    state = State::None;
-                } else if (state == State::Alias) {
+                    state = State::NONE;
+                } else if (state == State::ALIAS) {
                     if (direct_binding) direct_binding->declaration = false;
                     span.token.type = from_import ? "variable" : "namespace";
                     span.token.declaration = true;
-                    state = State::None;
+                    state = State::NONE;
                 }
                 break;
             default: break;
@@ -374,7 +374,7 @@ Result Highlighter::highlight(StringRef const& source)
     file.buffer().assign(source.data(), source.len());
     diagnostic::set_source(&file);
     try {
-        parser::Parser parser(&file, parser::BodyParsing::Eager);
+        parser::Parser parser(&file, parser::BodyParsing::EAGER);
         Array<AST::StmtPtr> statements = parser.parse_program();
         result.ast_valid = !diagnostic::has_errors();
         AstClassifier(by_offset).program(statements);

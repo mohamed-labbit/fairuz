@@ -77,8 +77,8 @@ ErrorOr<ObjModule*, RuntimeError> VM::load_module(StringRef const& name)
     try {
         source = std::make_unique<lex::FileManager>(key);
     } catch (FileError const& error) {
-        auto code = error.kind() == FileError::Kind::NotFound ? ErrorCode::FILE_NOT_FOUND
-            : error.kind() == FileError::Kind::Read           ? ErrorCode::READ_ERROR
+        auto code = error.kind() == FileError::Kind::NOT_FOUND ? ErrorCode::FILE_NOT_FOUND
+            : error.kind() == FileError::Kind::READ           ? ErrorCode::READ_ERROR
                                                               : ErrorCode::FILE_NOT_OPEN;
         return raise_runtime_error(code, error.path());
     }

@@ -18,8 +18,8 @@
 namespace fairuz {
 
 FileError::FileError(Kind kind, std::string path)
-    : std::runtime_error((kind == Kind::NotFound         ? "File not found: "
-                                 : kind == Kind::NotOpen ? "File is not open: "
+    : std::runtime_error((kind == Kind::NOT_FOUND         ? "File not found: "
+                                 : kind == Kind::NOT_OPEN ? "File is not open: "
                                                          : "Failed to read from file: ")
           + path)
     , m_kind(kind)
@@ -34,18 +34,18 @@ std::string FileManager::load(std::string const& filepath, bool replace)
     auto path = platform::path(filepath);
     std::error_code ec;
     bool exists = std::filesystem::exists(path, ec);
-    if (!exists && !ec) throw FileError(FileError::Kind::NotFound, filepath);
-    if (ec || !std::filesystem::is_regular_file(path, ec) || ec) throw FileError(FileError::Kind::NotOpen, filepath);
+    if (!exists && !ec) throw FileError(FileError::Kind::NOT_FOUND, filepath);
+    if (ec || !std::filesystem::is_regular_file(path, ec) || ec) throw FileError(FileError::Kind::NOT_OPEN, filepath);
 
     std::ifstream in(path, std::ios::binary);
-    if (!in) throw FileError(FileError::Kind::NotOpen, filepath);
+    if (!in) throw FileError(FileError::Kind::NOT_OPEN, filepath);
     std::string content;
     try {
         content.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
     } catch (std::ios_base::failure const&) {
-        throw FileError(FileError::Kind::Read, filepath);
+        throw FileError(FileError::Kind::READ, filepath);
     }
-    if (in.bad()) throw FileError(FileError::Kind::Read, filepath);
+    if (in.bad()) throw FileError(FileError::Kind::READ, filepath);
 
     // Preserve every byte, including trailing whitespace and malformed UTF-8.
     // Commit only after a successful read so failed reloads preserve the source.

@@ -83,7 +83,7 @@ TEST(SourceManagerTest, FailedReloadPreservesFileAndReturnsTypedFailure)
         file.load(first.path.string() + ".missing", true);
         FAIL() << "Missing file should fail";
     } catch (FileError const& error) {
-        EXPECT_EQ(error.kind(), FileError::Kind::NotFound);
+        EXPECT_EQ(error.kind(), FileError::Kind::NOT_FOUND);
         EXPECT_EQ(error.path(), first.path.string() + ".missing");
     }
     EXPECT_EQ(file.buffer(), "first\n");
@@ -100,6 +100,6 @@ TEST(SourceManagerTest, DirectoryIsNotAnInputFile)
         FileManager file(std::filesystem::temp_directory_path().string());
         FAIL() << "Directory should fail";
     } catch (FileError const& error) {
-        EXPECT_EQ(error.kind(), FileError::Kind::NotOpen);
+        EXPECT_EQ(error.kind(), FileError::Kind::NOT_OPEN);
     }
 }

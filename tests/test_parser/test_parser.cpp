@@ -167,7 +167,7 @@ protected:
     void compare_program(Array<AST::StmtPtr> const& expected)
     {
         diagnostic::SourceScope source_scope(&file_manager);
-        Parser parser(&file_manager, BodyParsing::Eager);
+        Parser parser(&file_manager, BodyParsing::EAGER);
         auto actual = parser.parse_program();
         ASSERT_FALSE(diagnostic::has_errors());
         if (test_config::print_ast) {
@@ -200,7 +200,7 @@ protected:
         file_manager.load(parser_test_cases_dir() / filepath, true);
         diagnostic::SourceScope source_scope(&file_manager);
         auto parse = [&] {
-            Parser parser(&file_manager, BodyParsing::Eager);
+            Parser parser(&file_manager, BodyParsing::EAGER);
             (void)parser.parse_program();
         };
         if (lexical_abort) EXPECT_THROW(parse(), diagnostic::DiagnosticAbort);
@@ -283,7 +283,7 @@ TEST_F(ParserTest, InlineBlocksRejectMissingBodies)
             SCOPED_TRACE(source);
             diagnostic::reset();
             file_manager.buffer() = source.c_str();
-            Parser parser(&file_manager, BodyParsing::Eager);
+            Parser parser(&file_manager, BodyParsing::EAGER);
             (void)parser.parse_program();
             EXPECT_TRUE(diagnostic::has_errors());
         }
@@ -311,7 +311,7 @@ TEST_F(ParserTest, InlineBodiesRejectExtraStatementsOnTheSameLine)
         SCOPED_TRACE(source);
         diagnostic::reset();
         file_manager.buffer() = source;
-        Parser parser(&file_manager, BodyParsing::Eager);
+        Parser parser(&file_manager, BodyParsing::EAGER);
         (void)parser.parse_program();
         EXPECT_TRUE(diagnostic::has_errors());
     }
@@ -327,7 +327,7 @@ TEST_P(ParserAssignmentContext, RejectsAssignmentInValueContext)
     SCOPED_TRACE(GetParam());
     FileManager source;
     source.buffer() = GetParam();
-    Parser parser(&source, BodyParsing::Eager);
+    Parser parser(&source, BodyParsing::EAGER);
     auto result = parser.parse_statement();
     // Class/block recovery can return a partial AST; recorded errors still
     // prevent compilation. Check the diagnostic as well as propagated errors.
@@ -359,7 +359,7 @@ TEST_F(ParserTest, AssignmentContextExpressionEntryPointRejectsAssignment)
 {
     FileManager source;
     source.buffer() = "س := 2";
-    Parser parser(&source, BodyParsing::Eager);
+    Parser parser(&source, BodyParsing::EAGER);
     auto result = parser.parse_expression();
     ASSERT_TRUE(result.has_error());
     EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
@@ -396,7 +396,7 @@ TEST_F(ParserTest, AssignmentContextAugmentedOperatorsAreStatementOnly)
         diagnostic::reset();
         auto nested = "اكتب(" + source + ")";
         file_manager.buffer() = nested.c_str();
-        Parser parser(&file_manager, BodyParsing::Eager);
+        Parser parser(&file_manager, BodyParsing::EAGER);
         auto result = parser.parse_statement();
         ASSERT_TRUE(result.has_error());
         EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
@@ -428,7 +428,7 @@ TEST_F(ParserTest, OutOfRangeDecimalDoesNotBecomeInteger)
     std::string source(400, '9');
     source += ".0";
     file_manager.buffer() = source.c_str();
-    Parser parser(&file_manager, BodyParsing::Eager);
+    Parser parser(&file_manager, BodyParsing::EAGER);
     auto result = parser.parse_expression();
     ASSERT_TRUE(result.has_error());
     EXPECT_EQ(result.error().get_code(), ErrorCode::INVALID_NUMBER_LITERAL);
@@ -506,14 +506,14 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
 {
     file_manager.load(parser_test_cases_dir() / "unmatched_paren.fa", true);
-    Parser parser(&file_manager, BodyParsing::Eager);
+    Parser parser(&file_manager, BodyParsing::EAGER);
     EXPECT_TRUE(parser.parse().has_error());
 }
 
 TEST_F(ParserTest, ParseExtraClosingParenthesis)
 {
     file_manager.load(parser_test_cases_dir() / "extra_paren.fa", true);
-    Parser parser(&file_manager, BodyParsing::Eager);
+    Parser parser(&file_manager, BodyParsing::EAGER);
     auto actual = run_success(parser.parse());
     EXPECT_TRUE(actual->equals(binary(EK::OP_ADD, id("ا"), id("ب"))));
     EXPECT_FALSE(parser.we_done());
@@ -1065,7 +1065,7 @@ TEST_F(ParserTest, RecoveryRetainsCompleteStatementsInOrder)
 {
     file_manager.load(parser_test_cases_dir() / "recovery_multiple_errors.fa", true);
     diagnostic::SourceScope source_scope(&file_manager);
-    Parser parser(&file_manager, BodyParsing::Eager);
+    Parser parser(&file_manager, BodyParsing::EAGER);
     auto actual = parser.parse_program();
 
     ASSERT_EQ(diagnostic::error_count(), 2u);
@@ -1080,7 +1080,7 @@ TEST_F(ParserTest, ObsoleteReturnSpellingReportsErrorsAndPreservesValidStatement
 {
     file_manager.load(parser_test_cases_dir() / "test_file.fa", true);
     diagnostic::SourceScope source_scope(&file_manager);
-    Parser parser(&file_manager, BodyParsing::Eager);
+    Parser parser(&file_manager, BodyParsing::EAGER);
     auto actual = parser.parse_program();
 
     ASSERT_EQ(diagnostic::error_count(), 2u);

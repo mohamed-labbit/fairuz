@@ -106,7 +106,7 @@ struct Program : SourceFile {
     fairuz::SourcePtr source;
     fairuz::Array<fairuz::AST::StmtPtr> statements;
 
-    explicit Program(std::string const& text, fairuz::parser::BodyParsing mode = fairuz::parser::BodyParsing::Eager)
+    explicit Program(std::string const& text, fairuz::parser::BodyParsing mode = fairuz::parser::BodyParsing::EAGER)
         : SourceFile(text)
     {
         fairuz::FileManager file(fairuz::platform::utf8(path));

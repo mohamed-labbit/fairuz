@@ -149,7 +149,7 @@ RunResult run_file(char const* filepath, RunContext& context)
     // definition's source even after the top-level parser has finished.
     SourcePtr source = diagnostic::engine.source();
     auto const& options = context.options;
-    parser::Parser parser(&file, options.dump_ast ? parser::BodyParsing::Eager : parser::BodyParsing::Lazy);
+    parser::Parser parser(&file, options.dump_ast ? parser::BodyParsing::EAGER : parser::BodyParsing::LAZY);
     auto statements = parser.parse_program();
     if (diagnostic::has_errors()) {
         diagnostic::dump(); // Printing is incremental; parse_program may have printed already.
@@ -223,8 +223,8 @@ RunResult run_with_error_translation(char const* filepath, RunContext& context)
         diagnostic::dump();
         return diagnostic_failure();
     } catch (FileError const& error) {
-        ErrorCode code = error.kind() == FileError::Kind::NotFound ? ErrorCode::FILE_NOT_FOUND
-            : error.kind() == FileError::Kind::Read                ? ErrorCode::READ_ERROR
+        ErrorCode code = error.kind() == FileError::Kind::NOT_FOUND ? ErrorCode::FILE_NOT_FOUND
+            : error.kind() == FileError::Kind::READ                ? ErrorCode::READ_ERROR
                                                                    : ErrorCode::FILE_NOT_OPEN;
         return report_host_error(code, error.path());
     } catch (std::bad_alloc const&) {

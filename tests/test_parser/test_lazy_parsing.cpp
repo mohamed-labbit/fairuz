@@ -32,7 +32,7 @@ protected:
         diagnostic::set_source(nullptr);
     }
 
-    Array<StmtPtr> parse(char const* text, parser::BodyParsing mode = parser::BodyParsing::Lazy)
+    Array<StmtPtr> parse(char const* text, parser::BodyParsing mode = parser::BodyParsing::LAZY)
     {
         lex::FileManager file;
         file.buffer() = text;
@@ -122,11 +122,11 @@ TEST_F(LazyParsing, ExplicitValidationFindsUnusedSyntaxErrors)
 
 TEST_F(LazyParsing, EagerModeBuildsBodiesAndReportsSyntaxErrorsImmediately)
 {
-    auto program = parse("دالة قيمة(): ارجع 42\n", parser::BodyParsing::Eager);
+    auto program = parse("دالة قيمة(): ارجع 42\n", parser::BodyParsing::EAGER);
     ASSERT_FALSE(diagnostic::has_errors());
     ASSERT_EQ(program.size(), 1u);
     EXPECT_TRUE(is_block(as_function_def(program[0])->body));
-    parse("دالة خطأ(): ارجع +\n", parser::BodyParsing::Eager);
+    parse("دالة خطأ(): ارجع +\n", parser::BodyParsing::EAGER);
     EXPECT_TRUE(diagnostic::has_errors());
 }
 
