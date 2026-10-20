@@ -8,16 +8,115 @@
                                                              جامع القمامة
 ```
 
-ينتج [المحلل المعجمي](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/flexer.cc) الرموز وأحداث الإزاحة بالاعتماد على [جدول المحارف](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fctype.hpp). يبني [المحلل النحوي](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fparser.cc) العقد المعرفة في [fAST.hpp](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fAST.hpp). يحل [المترجم](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fcompiler.cc) الأسماء ويصدر التعليمات المعرفة في [fopcode.hpp](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fopcode.hpp). تنفذها [الآلة الافتراضية](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fvm.cc) وتحمل الوحدات وترفع أخطاء التشغيل.
+تقع الترويسات العامة في `include/`، وملفات التنفيذ في `lib/`. ينتج المحلل
+المعجمي في `lib/Parser/lexer.cc` الرموز وأحداث الإزاحة بالاعتماد على جدول
+المحارف في `include/Util/ctype.hpp`. يبني المحلل النحوي في `lib/Parser/parser.cc`
+العقد المعرفة في `include/Parser/ast.hpp`. يحل المترجم في `lib/Compiler/`
+الأسماء ويصدر التعليمات المعرفة في `include/Compiler/opcode.hpp`، وتحتفظ
+مقاطع `Chunk` بالتعليمات والثوابت. تنفذ الآلة الافتراضية في `lib/Interpreter/`
+هذه المقاطع، وتعيد أخطاء التشغيل، وتحمل الوحدات.
 
-تحدد [fvalue.hpp](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fvalue.hpp) و[fobject.hpp](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fobject.hpp) و[finteger.cc](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/finteger.cc) القيم والكائنات ومسارات الأعداد. يجمع [fgc.cc](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fgc.cc) غير القابل للوصول. تسجل [fbuiltins.cc](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/fairuz/fbuiltins.cc) الدوال الأصلية؛ وكل ملف `.ف` في [stdlib](https://github.com/mohamed-labbit/fairuz/tree/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/stdlib) وحدة فيروز. تنفذ [main.cpp](https://github.com/mohamed-labbit/fairuz/blob/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/main.cpp) أوضاع سطر الأوامر. تحتوي [tests](https://github.com/mohamed-labbit/fairuz/tree/86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4/tests) اختبارات ++C وحالات مصدرية، وفي `stdlib/tests` برامج اختبار قابلة للتنفيذ. بعد بناء الاختبارات شغّل `ctest --test-dir build --output-on-failure`.
+تحدد الملفات `include/Interpreter/value.hpp` و`include/Interpreter/object.hpp`
+و`lib/Support/integer.cc` القيم والكائنات وعمليات الأعداد الصحيحة. يجمع
+`lib/Interpreter/gc.cc` الكائنات غير القابلة للوصول. تسجل الدوال الأصلية في
+`lib/Interpreter/builtins/registry.cc`، وتقع تطبيقاتها في المجلد نفسه. أما
+الوحدات المكتوبة بفيروز فتقع في `stdlib/`، خارج نواة ++C. يستخدم التنفيذ
+قيمًا مضغوطة بأسلوب NaN على المنصات المدعومة، مع تمثيل بديل عند الحاجة.
+بنية القيم وصيغة التعليمات الوسيطة تفاصيل داخلية.
 
-يستخدم التنفيذ الحالي قيمًا مضغوطة بأسلوب NaN على المنصات المدعومة، مع تمثيل بديل عند الحاجة. هذه البنية وصيغة التعليمات الوسيطة تفاصيل داخلية.
+## حجم المصدر
+
+لقطة بتاريخ **2026-10-19**، عند الإيداع `ad323255`.
+
+تتكون النواة من **79 ملفًا متتبعًا في Git و21,026 سطرًا فعليًا** ضمن
+`include/` و`lib/`. وتشكل الآلة الافتراضية ووقت التشغيل، بما فيهما الدوال
+الأصلية، **29 ملفًا و7,187 سطرًا** من هذا المجموع.
+
+| المكوّن | الملفات | الأسطر الفعلية |
+|---|---:|---:|
+| الآلة الافتراضية ووقت التشغيل والدوال الأصلية (`include/Interpreter/`، `lib/Interpreter/`) | 29 | 7,187 |
+| المحلل المعجمي والنحوي وAST (`include/Parser/`، `lib/Parser/`) | 10 | 4,207 |
+| المترجم والتعليمات الوسيطة (`include/Compiler/`، `lib/Compiler/`) | 11 | 2,884 |
+| التشخيصات (`include/Diag/`، `lib/Diag/`) | 6 | 1,178 |
+| بقية ملفات النواة: الدعم والأدوات المساعدة وإدارة الملفات والمصدر والمنصة ومشغّل البرامج | 23 | 5,570 |
+| **مجموع النواة** | **79** | **21,026** |
+
+يشمل العد الترويسات وملفات التنفيذ والقوالب وجداول التعريفات والتعليقات والأسطر
+الفارغة؛ ولا يمثل عدد التعليمات القابلة للتنفيذ أو أسطر الشيفرة بعد حذف
+التعليقات. يستثني الاختبارات والأدوات ووحدات المكتبة المكتوبة بفيروز والتوثيق
+وملفات المحرر والاعتماديات وملفات البناء المولدة. كما يستثني `main.cpp` الخاص
+بسطر الأوامر، الذي يضيف **407 أسطر في ملف واحد**.
+
+لإعادة عد النواة ووقت التشغيل من جذر المستودع دون بناء المشروع:
+
+```sh
+python3 - <<'PY'
+import pathlib
+import subprocess
+
+files = subprocess.check_output(
+    ["git", "ls-files", "-z", "--", "include", "lib"]
+).decode("utf-8").split("\0")
+files = [path for path in files if path]
+
+def physical_lines(path):
+    data = pathlib.Path(path).read_bytes()
+    return data.count(b"\n") + int(bool(data) and not data.endswith(b"\n"))
+
+runtime = [path for path in files if path.startswith(
+    ("include/Interpreter/", "lib/Interpreter/")
+)]
+for label, paths in [("Core engine", files), ("VM/runtime", runtime)]:
+    print(f"{label}: {len(paths)} files, {sum(map(physical_lines, paths)):,} lines")
+PY
+```
+
+يقرأ الأمر المحتوى الحالي لملفات المصدر المتتبعة. أعد العد وحدّث اللقطة عند
+تغيير المصدر. المكوّنات أجزاء من مجموع النواة، فلا تجمعها معه مرة ثانية.
+
+## مدخل تشغيل البرامج المحمي
+
+يتولى `main.cpp` تحليل وسائط سطر الأوامر واختيار رموز الخروج. يمر تشغيل
+البرامج و`--check` وطباعة AST والتعليمات الوسيطة وقياس زمن التنفيذ عبر
+`run_protected()` المعرفة في `include/VMRunner.hpp` و`lib/VMRunner.cc`.
+يبقى التنسيق وإنتاج الرموز الدلالية عمليتين منفصلتين للأدوات.
+
+يملك المشغّل ساحة تخصيص جديدة لكل استدعاء، وآلة افتراضية جديدة عند تنفيذ
+البرنامج. يحفظ سياق تخصيص
+المستدعي وحالة التشخيصات كاملة، ثم يستعيدهما عند العودة، ويبلغ عن الإخفاقات
+ويحتوي استثناءات ++C. تعيد الصيغة المبسطة `ExitStatus`، وتضيف الصيغة ذات
+الخيارات تصنيف الإخفاق ليختار سطر الأوامر رمز الخروج المناسب. لا تعبر AST أو
+المقاطع أو قيم `Value` حدود عمر الساحة الخاصة. تصدر تشخيصات JSON قبل استعادة
+محرك المستدعي، وتُحفظ تشخيصات الترجمة رغم إعادة ضبط المحرك عند بدء الآلة
+الافتراضية.
+
+تستخدم اختبارات البرامج الكاملة المدخل نفسه عبر `tests/test_source_program.hpp`،
+وتتحقق من النتائج داخل البرنامج المصدري. تحتفظ الاختبارات التي تفحص التعليمات
+الوسيطة أو القيم والأخطاء المعادة أو تكرر التنفيذ في الآلة نفسها بوصول مباشر
+إلى المترجم والآلة الافتراضية. تقع اختبارات المشغّل في `tests/test_vm_runner.cpp`.
+
+هذا المدخل ليس بيئة عزل، ولا يعترض تأكيدات ++C أو الإشارات أو أعطال العملية
+الأصلية. سياق التخصيص ومحرك التشخيصات عامّان على مستوى العملية؛ لذا يجب
+تسلسل العمليات التي تستخدمهما بدل تشغيلها بالتوازي.
+
+## هويات السجلات ومعاملات التعليمات
+
+يمثل `RegType` هوية سجل، ويمثل `PCType` موضع تعليمة. تملك جداول الثوابت
+والأعداد الكبيرة والدوال وواصفات الأنواع أنواع فهارس مستقلة، كما تختلف هوية
+خانة التخزين المؤقت عن هوية خانة الطريقة. تدعم هذه الأغلفة الإنشاء الصريح
+والمقارنة، لا الحساب العام على الأعداد.
+
+تملك كل `CompilerState` مخصص سجلاتها. يستخدم المؤشر ونقاط الرجوع وأقصى عدد
+خانات أنواعًا عددية أوسع من هوية السجل: عند امتلاء إطار ذي 250 خانة يكون
+المؤشر التالي 250، لكن أعلى هوية سجل هي 249. تبقى كلمات التعليمات والحقول
+المفككة أعدادًا عادية، لأن الحقل قد يمثل سجلًا أو عددًا أو قيمة مباشرة أو
+فهرسًا أو بيانات ملحقة. يتحقق مصدر التعليمات من القيم الواسعة قبل تضييقها
+إلى الحقول المرمزة.
 
 ## بناء AST والتحليل المؤجل لأجسام الدوال
 
 ينشئ `Parser` عقد التعبيرات والتعليمات عبر `AST::ASTBuilder` في
-`fairuz/fASTBuilder.hpp`. تستخدم العقد والرموز وأسماؤها عمر الذاكرة الحالي في
+`include/Parser/ast_builder.hpp`. تستخدم العقد والرموز وأسماؤها عمر الذاكرة الحالي في
 الساحة (arena)، ويعيد `parse_program()` تعليمات المستوى الأعلى. لا يملك الباني
 برنامجًا آخر أو مخصص ذاكرة مستقلًا.
 
@@ -45,8 +144,8 @@
 تبقى طرائق الأنواع محللة فورًا لأن إسناداتها تحدد حقول النوع، لكن ترجمة تعليماتها
 الوسيطة تؤجل إلى أول استدعاء. لا يدعم المترجم تعريف الدوال المتداخلة.
 
-تغطي الاختبارات الجديدة هذه المسارات في `tests/test_lazy_parsing.cpp`، إلى جانب
-`tests/test_lazy_compilation.cpp` واختبارات المحلل وسطر الأوامر والتنسيق:
+تغطي الاختبارات هذه المسارات في `tests/test_parser/test_lazy_parsing.cpp`، إلى جانب
+`tests/test_compiler/test_lazy_compilation.cpp` واختبارات المحلل وسطر الأوامر والتنسيق:
 
 ```sh
 cmake --build build --target fairuz_tests -j4
