@@ -89,7 +89,8 @@ public:
             if (IS_DIGIT(cp)) {
                 advance();
                 if (cp == '0' && m_offset < m_source.len()
-                    && (current() == 'x' || current() == 'X' || current() == 'o' || current() == 'O' || current() == 'b' || current() == 'B')) {
+                    && (current() == 'x' || current() == 'X' || current() == 'o' || current() == 'O' || current() == 'b'
+                        || current() == 'B')) {
                     advance();
                     while (m_offset < m_source.len() && (IS_XDIGIT(current()) || current() == '_')) advance();
                 } else {
@@ -137,8 +138,8 @@ private:
 
     static bool is_operator(u32 cp)
     {
-        return cp == '+' || cp == '-' || cp == '*' || cp == '/' || cp == '%' || cp == 0x066a || cp == '&' || cp == '|' || cp == '^' || cp == '~'
-            || cp == '<' || cp == '>' || cp == '=' || cp == '!' || cp == ':';
+        return cp == '+' || cp == '-' || cp == '*' || cp == '/' || cp == '%' || cp == 0x066a || cp == '&' || cp == '|'
+            || cp == '^' || cp == '~' || cp == '<' || cp == '>' || cp == '=' || cp == '!' || cp == ':';
     }
 
     void add(u64 offset, u32 line, u32 column, char const* type, tok::TokenType lexical)

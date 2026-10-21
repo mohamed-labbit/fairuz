@@ -19,7 +19,7 @@ class Formatter {
 public:
     // Format validated source, preserving its tokens and comments. Throws if
     // the result does not parse or changes the significant token stream.
-    [[nodiscard]] StringRef format(StringRef const& source);
+    FAIRUZ_NODISCARD StringRef format(StringRef const& source);
 };
 
 } // namespace fairuz
