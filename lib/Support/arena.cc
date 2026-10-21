@@ -45,8 +45,8 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     m_begin = static_cast<unsigned char*>(VirtualAlloc(nullptr, m_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
     if (!m_begin) diagnostic::panic(ErrorCode::MMAP_FAILED);
 #else
-    m_begin = reinterpret_cast<unsigned char*>(
-        mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    m_begin = reinterpret_cast<unsigned char*>(mmap(
+        reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
     if (m_begin == MAP_FAILED) diagnostic::panic(ErrorCode::MMAP_FAILED);
 #endif
 
@@ -98,7 +98,8 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
     if (UNLIKELY(size == 0)) return nullptr;
 
-    if (UNLIKELY(size > MAX_BLOCK_SIZE)) diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
+    if (UNLIKELY(size > MAX_BLOCK_SIZE))
+        diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
 
     uintptr_t cur = reinterpret_cast<uintptr_t>(m_next);
     uintptr_t aligned = (cur + alignment - 1) & ~(alignment - 1);
@@ -191,7 +192,8 @@ unsigned char* ArenaAllocator::allocate_block(size_t requested, size_t alignment
     size_t block_size = std::max(requested + alignment, m_next_block_size);
 
     if (block_size > m_max_block_size) {
-        if (retry_on_oom && m_oom_handler && m_oom_handler(block_size)) return allocate_block(requested, alignment, false);
+        if (retry_on_oom && m_oom_handler && m_oom_handler(block_size))
+            return allocate_block(requested, alignment, false);
 
         return nullptr;
     }
@@ -203,7 +205,8 @@ unsigned char* ArenaAllocator::allocate_block(size_t requested, size_t alignment
         m_end = blk.end();
         return blk.begin();
     } catch (std::bad_alloc const&) {
-        if (retry_on_oom && m_oom_handler && m_oom_handler(block_size)) return allocate_block(requested, alignment, false);
+        if (retry_on_oom && m_oom_handler && m_oom_handler(block_size))
+            return allocate_block(requested, alignment, false);
 
         return nullptr;
     }

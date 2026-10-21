@@ -40,8 +40,8 @@ RunResult run_cli(std::vector<std::string> const& args)
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path
-        = std::filesystem::temp_directory_path() / fairuz::platform::path("fairuz_cli_program_" + std::to_string(test_process::process_id()) + ".ف");
+    auto path = std::filesystem::temp_directory_path()
+        / fairuz::platform::path("fairuz_cli_program_" + std::to_string(test_process::process_id()) + ".ف");
     std::ofstream out(path);
     out << source;
     return path;
@@ -134,7 +134,8 @@ TEST(CliE2E, ValidProgramDoesNotWriteDiagnostics)
 
 TEST(CliE2E, MissingFile)
 {
-    RunResult r = run_cli({ fairuz::platform::utf8(std::filesystem::temp_directory_path() / "definitely_missing_fairuz_input.fa") });
+    RunResult r = run_cli(
+        { fairuz::platform::utf8(std::filesystem::temp_directory_path() / "definitely_missing_fairuz_input.fa") });
     EXPECT_EQ(r.exit_code, 66);
     EXPECT_NE(r.err.find("Input file not found"), std::string::npos);
 }
@@ -172,7 +173,8 @@ TEST(CliE2E, FormatCheckReportsChangesWithoutWriting)
 
 TEST(CliE2E, FormatDirectoryReportsInvalidSource)
 {
-    auto directory = std::filesystem::temp_directory_path() / ("fairuz_format_dir_" + std::to_string(test_process::process_id()));
+    auto directory
+        = std::filesystem::temp_directory_path() / ("fairuz_format_dir_" + std::to_string(test_process::process_id()));
     std::filesystem::create_directory(directory);
     auto invalid = directory / fairuz::platform::path("invalid.ف");
     std::string const source = "اذا صحيح\n"
@@ -189,7 +191,8 @@ TEST(CliE2E, FormatDirectoryReportsInvalidSource)
 
 TEST(CliE2E, FormatCheckDirectoryReportsFilesInStableOrder)
 {
-    auto directory = std::filesystem::temp_directory_path() / ("fairuz_format_check_dir_" + std::to_string(test_process::process_id()));
+    auto directory = std::filesystem::temp_directory_path()
+        / ("fairuz_format_check_dir_" + std::to_string(test_process::process_id()));
     std::filesystem::create_directory(directory);
     auto first = directory / fairuz::platform::path("a.ف");
     auto second = directory / fairuz::platform::path("b.ف");

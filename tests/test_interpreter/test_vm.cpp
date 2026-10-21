@@ -2155,7 +2155,8 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
                         "    ارجع استدعاء_ذيلي((ن - 1))\n";
 
     VMRunner tc;
-    tc.compile({ tc_fn, (std::string((std::string("استدعاء_ذيلي(") + (std::string(std::to_string(DEPTH))) + ")")) + "\n") });
+    tc.compile(
+        { tc_fn, (std::string((std::string("استدعاء_ذيلي(") + (std::string(std::to_string(DEPTH))) + ")")) + "\n") });
 
     auto t0 = std::chrono::high_resolution_clock::now();
     Value tc_result = run_success(tc.run());
@@ -2264,11 +2265,13 @@ static Array<std::string> make_fib_program(int n, int reps)
                       "    ارجع (فيبوناتشي((س - 1)) + فيبوناتشي((س - 2)))\n";
 
     std::string test = (std::string("دالة اختبار():\n")
-        + test_source::indent((std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(reps))) + "\n") + "ناتج := 0\n"
+        + test_source::indent((std::string("فهرس := 0\n")
+            + (std::string((std::string("حد := ") + std::to_string(reps))) + "\n") + "ناتج := 0\n"
             + (std::string("طالما (فهرس < حد):\n")
                 + test_source::indent(
-                    (std::string(
-                         (std::string((std::string("ناتج := ") + (std::string("فيبوناتشي(") + (std::string(std::to_string(n))) + ")"))) + "\n"))
+                    (std::string((std::string((std::string("ناتج := ")
+                                      + (std::string("فيبوناتشي(") + (std::string(std::to_string(n))) + ")")))
+                         + "\n"))
                         + "فهرس := (فهرس + 1)\n")))
             + "ارجع ناتج\n")));
 

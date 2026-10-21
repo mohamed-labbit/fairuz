@@ -87,7 +87,8 @@ private:
             std::cout << color("Int Literal", Color::GREEN) << "("
                       << (as_literal_int(e)->large_literal.empty()
                                  ? std::to_string(as_literal_int(e)->value)
-                                 : std::string(as_literal_int(e)->large_literal.data(), as_literal_int(e)->large_literal.len()))
+                                 : std::string(
+                                       as_literal_int(e)->large_literal.data(), as_literal_int(e)->large_literal.len()))
                       << ")\n";
             break;
         }
@@ -96,7 +97,8 @@ private:
             break;
         }
         case ExprKind::BOOL_LITERAL: {
-            std::cout << color("Bool Literal", Color::GREEN) << "(" << (as_literal_bool(e)->value ? "صحيح" : "خطا") << ")\n";
+            std::cout << color("Bool Literal", Color::GREEN) << "(" << (as_literal_bool(e)->value ? "صحيح" : "خطا")
+                      << ")\n";
             break;
         }
         case ExprKind::STRING_LITERAL: {
@@ -150,14 +152,16 @@ private:
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             print_expr(c->callee, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->args.size(); i++) print_expr(c->args[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args.size() });
+            for (size_t i = 0; i < c->args.size(); i++)
+                print_expr(c->args[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args.size() });
             break;
         }
 
         case Expr::Kind::LIST: {
             auto l = as_list(e);
             std::cout << color("List", Color::BLUE) << " [" << l->elements.size() << "]\n";
-            for (size_t i = 0; i < l->elements.size(); i++) print_expr(l->elements[i], { p.indent + pipe(p.last), i + 1 == l->elements.size() });
+            for (size_t i = 0; i < l->elements.size(); i++)
+                print_expr(l->elements[i], { p.indent + pipe(p.last), i + 1 == l->elements.size() });
             break;
         }
 
@@ -223,7 +227,8 @@ private:
             auto f = static_cast<FuncDefStmt const*>(s);
             std::cout << color("FuncDefStmt", Color::BOLD) << " " << f->name->spelling << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->params.size(); i++) print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
+            for (size_t i = 0; i < f->params.size(); i++)
+                print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->body, { p.indent + pipe(p.last) + "    ", true });
         } break;
@@ -265,7 +270,8 @@ private:
         case Stmt::Kind::BLOCK: {
             auto b = static_cast<BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->stmts.size() << " stmts}\n";
-            for (size_t i = 0; i < b->stmts.size(); i++) print_stmt(b->stmts[i], { p.indent + pipe(p.last), i + 1 == b->stmts.size() });
+            for (size_t i = 0; i < b->stmts.size(); i++)
+                print_stmt(b->stmts[i], { p.indent + pipe(p.last), i + 1 == b->stmts.size() });
         } break;
 
         case Stmt::Kind::FOR: {
@@ -293,11 +299,13 @@ private:
             bool const has_methods = !methods.empty();
             std::cout << p.indent + pipe(p.last) << (has_methods ? "├─" : "└─") << " members:\n";
             std::string const members_prefix = p.indent + pipe(p.last) + (has_methods ? "│  " : "   ");
-            for (size_t i = 0; i < members.size(); i++) print_expr(members[i], { members_prefix, i + 1 == members.size() });
+            for (size_t i = 0; i < members.size(); i++)
+                print_expr(members[i], { members_prefix, i + 1 == members.size() });
 
             if (has_methods) {
                 std::cout << p.indent + pipe(p.last) << "└─ methods:\n";
-                for (size_t i = 0; i < methods.size(); i++) print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
+                for (size_t i = 0; i < methods.size(); i++)
+                    print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
             }
         } break;
 

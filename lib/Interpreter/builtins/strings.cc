@@ -17,7 +17,8 @@ namespace fairuz::runtime {
 
 VM::RuntimeResult VM::join(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_list() || !argv[1].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     ObjList* list = argv[0].as_list();
@@ -35,7 +36,8 @@ VM::RuntimeResult VM::join(int argc, Value* argv)
 
 VM::RuntimeResult VM::substr(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
 
     if (UNLIKELY(!argv[0].is_string() || !argv[1].is_int() || !argv[2].is_int()))
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "substr expects (string, integer, integer)");
@@ -68,7 +70,8 @@ VM::RuntimeResult VM::substr(int argc, Value* argv)
 
 VM::RuntimeResult VM::contains(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef haystack = argv[0].as_string()->str;
@@ -80,7 +83,8 @@ VM::RuntimeResult VM::contains(int argc, Value* argv)
 
 VM::RuntimeResult VM::trim(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef str = argv[0].as_string()->str;
@@ -97,7 +101,8 @@ VM::RuntimeResult VM::trim(int argc, Value* argv)
 
 VM::RuntimeResult VM::split(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef src = argv[0].as_string()->str;

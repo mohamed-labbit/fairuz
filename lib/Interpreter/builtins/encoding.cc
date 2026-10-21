@@ -101,13 +101,15 @@ VM::RuntimeResult VM::char_from_codepoint(int argc, Value* argv)
     if (argc != 1 || argv == nullptr || !argv[0].is_int())
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "character conversion expects one integer");
     i64 value = argv[0].as_int();
-    if (value < 0 || value > 0x10FFFF || (value >= 0xD800 && value <= 0xDFFF)) return raise_runtime_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+    if (value < 0 || value > 0x10FFFF || (value >= 0xD800 && value <= 0xDFFF))
+        return raise_runtime_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
     return m_gc.make_string(util::encode_utf8_str(static_cast<u32>(value)));
 }
 
 VM::RuntimeResult VM::base64_encode(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_bool()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string encoded = encode_base64(string_bytes(argv[0]), argv[1].as_bool());
     return m_gc.make_string(byte_string(encoded));
@@ -115,16 +117,19 @@ VM::RuntimeResult VM::base64_encode(int argc, Value* argv)
 
 VM::RuntimeResult VM::base64_decode(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_bool()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string decoded;
-    if (!decode_base64(string_bytes(argv[0]), argv[1].as_bool(), decoded)) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!decode_base64(string_bytes(argv[0]), argv[1].as_bool(), decoded))
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(decoded));
 }
 
 VM::RuntimeResult VM::hex_encode(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto bytes = string_bytes(argv[0]);
     std::string encoded = hex_string(reinterpret_cast<u8 const*>(bytes.data()), bytes.size());
@@ -133,7 +138,8 @@ VM::RuntimeResult VM::hex_encode(int argc, Value* argv)
 
 VM::RuntimeResult VM::hex_decode(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto input = string_bytes(argv[0]);
     if (input.size() % 2 != 0) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);

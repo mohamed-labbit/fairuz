@@ -65,7 +65,8 @@ VM::RuntimeResult VM::dict_keys(int argc, Value* argv)
 
 VM::RuntimeResult VM::append(int argc, Value* argv)
 {
-    if (argc < 2 || argv == nullptr) return raise_runtime_error(ErrorCode::APPEND_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc < 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::APPEND_ARG_COUNT, "got " + std::to_string(argc));
 
     Value& list_v = argv[0];
     if (!list_v.is_list()) return raise_runtime_error(ErrorCode::APPEND_TYPE_ERROR);
@@ -80,7 +81,8 @@ VM::RuntimeResult VM::append(int argc, Value* argv)
 
 VM::RuntimeResult VM::pop(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::POP_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::POP_ARG_COUNT, "got " + std::to_string(argc));
 
     Value& list_v = argv[0];
     if (!list_v.is_list()) return raise_runtime_error(ErrorCode::POP_TYPE_ERROR);
@@ -95,7 +97,8 @@ VM::RuntimeResult VM::pop(int argc, Value* argv)
 
 VM::RuntimeResult VM::len(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::LEN_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::LEN_ARG_COUNT, "got " + std::to_string(argc));
 
     if (argv[0].is_string()) {
         StringRef const& str = argv[0].as_string()->str;
@@ -147,19 +150,22 @@ VM::RuntimeResult VM::slice(int argc, Value* argv)
     /// a, b are the indices
     /// if b is null then cut [start:]
 
-    if (argc < 2 || argc > 3 || argv == nullptr) return raise_runtime_error(ErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc < 2 || argc > 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
 
     Value container = argv[0];
     Value start_value = argv[1];
     Value end_value = argc < 3 ? Value::nil() : argv[2];
 
     if (UNLIKELY(!container.is_string() && !container.is_list()))
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "slice expects a string or list as its first argument");
-    if (UNLIKELY(!start_value.is_int() || !(end_value.is_nil() || end_value.is_int()))) return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+        return raise_runtime_error(
+            ErrorCode::NATIVE_TYPE_ERROR, "slice expects a string or list as its first argument");
+    if (UNLIKELY(!start_value.is_int() || !(end_value.is_nil() || end_value.is_int())))
+        return raise_runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
     i64 start_i = start_value.as_int();
-    size_t container_size
-        = container.is_string() ? static_cast<size_t>(len(1, &container).value().as_int()) : static_cast<size_t>(container.as_list()->size());
+    size_t container_size = container.is_string() ? static_cast<size_t>(len(1, &container).value().as_int())
+                                                  : static_cast<size_t>(container.as_list()->size());
 
     if (container_size == 0) {
         if (start_i == 0 && end_value.is_nil()) return container.is_string() ? m_gc.make_string("") : m_gc.make_list();
@@ -168,8 +174,8 @@ VM::RuntimeResult VM::slice(int argc, Value* argv)
 
     i64 end_i = end_value.is_nil() ? static_cast<i64>(container_size - 1) : end_value.as_int();
 
-    if (UNLIKELY(
-            start_i < 0 || end_i < 0 || start_i > end_i || static_cast<u64>(start_i) >= container_size || static_cast<u64>(end_i) >= container_size))
+    if (UNLIKELY(start_i < 0 || end_i < 0 || start_i > end_i || static_cast<u64>(start_i) >= container_size
+            || static_cast<u64>(end_i) >= container_size))
         return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
     size_t start = static_cast<size_t>(start_i);
@@ -177,7 +183,8 @@ VM::RuntimeResult VM::slice(int argc, Value* argv)
 
     if (container.is_string()) {
         ObjString* str_obj = container.as_string();
-        if (!simdutf::validate_utf8(str_obj->str.data(), str_obj->str.len())) return m_gc.make_string(str_obj->str.slice(start, end + 1));
+        if (!simdutf::validate_utf8(str_obj->str.data(), str_obj->str.len()))
+            return m_gc.make_string(str_obj->str.slice(start, end + 1));
         Value args[] = { container, Value::from_int(start_i, m_gc), Value::from_int(end_i + 1, m_gc) };
         return substr(3, args);
     } else if (container.is_list()) {

@@ -184,7 +184,8 @@ PublicApiCase const cases[] = {
     { "CodecsRejectMalformedBase64", "من ترميزات استورد base64_فك\nbase64_فك(\"not base64!\")\n", "Runtime error" },
     { "CodecsRejectOddHex", "من ترميزات استورد hex_فك\nhex_فك(\"abc\")\n", "Runtime error" },
     { "CodecsRejectInvalidHex", "من ترميزات استورد hex_فك\nhex_فك(\"gg\")\n", "Runtime error" },
-    { "CodecsRejectUnsupportedHmac", "من ترميزات استورد HMAC\nHMAC(\"unsupported\"، \"key\"، \"data\")\n", "wrong type" },
+    { "CodecsRejectUnsupportedHmac", "من ترميزات استورد HMAC\nHMAC(\"unsupported\"، \"key\"، \"data\")\n",
+        "wrong type" },
     { "CompressionBinaryAndEmptyRoundTrip", R"fa(
 من ضغط استورد اضغط، gzip، gunzip
 من ترميزات استورد hex_فك
@@ -549,6 +550,7 @@ gunzip(gzip("abc"، 6)، 0)
         "executor is closed" },
 };
 
-INSTANTIATE_TEST_SUITE_P(PublicApi, StdlibE2E, ::testing::ValuesIn(cases), [](auto const& info) { return info.param.name; });
+INSTANTIATE_TEST_SUITE_P(
+    PublicApi, StdlibE2E, ::testing::ValuesIn(cases), [](auto const& info) { return info.param.name; });
 
 } // namespace

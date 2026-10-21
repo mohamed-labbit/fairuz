@@ -117,6 +117,7 @@ TEST(PropertyExpr, RandomArithmeticMatchesHost)
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
 
-        EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS) << source << " should evaluate to " << expected;
+        EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS)
+            << source << " should evaluate to " << expected;
     }
 }

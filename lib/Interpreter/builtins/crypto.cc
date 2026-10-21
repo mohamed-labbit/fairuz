@@ -222,8 +222,10 @@ std::array<u8, 32> hmac_sha256(std::string_view key, std::string_view data)
 
 VM::RuntimeResult VM::hash_new(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
-    if (!argv[0].is_string() || string_bytes(argv[0]) != "sha256") return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || string_bytes(argv[0]) != "sha256")
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     VM::RuntimeResult handle = dict(0, nullptr);
     dict_put(&handle.value(), m_gc.make_string("__algorithm"), argv[0]);
@@ -233,7 +235,8 @@ VM::RuntimeResult VM::hash_new(int argc, Value* argv)
 
 VM::RuntimeResult VM::hash_update(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_dict() || !argv[1].is_string()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     Value key = m_gc.make_string("__data");
     Value existing = dict_get(&argv[0], key);
@@ -245,11 +248,13 @@ VM::RuntimeResult VM::hash_update(int argc, Value* argv)
 
 VM::RuntimeResult VM::hash_digest(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_dict() || !argv[1].is_bool()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     Value algorithm = dict_get(&argv[0], m_gc.make_string("__algorithm"));
     Value data = dict_get(&argv[0], m_gc.make_string("__data"));
-    if (!algorithm.is_string() || string_bytes(algorithm) != "sha256" || !data.is_string()) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!algorithm.is_string() || string_bytes(algorithm) != "sha256" || !data.is_string())
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     auto digest = sha256(string_bytes(data));
     if (argv[1].as_bool()) {
@@ -261,7 +266,8 @@ VM::RuntimeResult VM::hash_digest(int argc, Value* argv)
 
 VM::RuntimeResult VM::hmac(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_string() || string_bytes(argv[0]) != "sha256")
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto digest = hmac_sha256(string_bytes(argv[1]), string_bytes(argv[2]));

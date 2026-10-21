@@ -39,8 +39,8 @@ bool ObjList::empty() const { return elements.empty(); }
 StringRef ObjFunction::name() const { return chunk->name; }
 u32 ObjFunction::arity() const { return chunk->arity; }
 
-ObjClass::ObjClass(
-    Array<StringRef, /*_Alloc=*/GarbageCollector> f, Array<StringRef, /*_Alloc=*/GarbageCollector> m, Array<Chunk*, /*_Alloc=*/GarbageCollector> vt)
+ObjClass::ObjClass(Array<StringRef, /*_Alloc=*/GarbageCollector> f, Array<StringRef, /*_Alloc=*/GarbageCollector> m,
+    Array<Chunk*, /*_Alloc=*/GarbageCollector> vt)
     : field_names(f)
     , method_names(m)
     , vtable(vt)

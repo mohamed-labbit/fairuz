@@ -29,7 +29,8 @@ constexpr size_t max_limbs = 1u << 19;
 
 void check_size(size_t a, size_t b = 0)
 {
-    if (a > max_limbs || b > max_limbs - a) diagnostic::fatal_error(ErrorCode::ALLOC_FAILED, "integer exceeds the 2^24-bit resource limit");
+    if (a > max_limbs || b > max_limbs - a)
+        diagnostic::fatal_error(ErrorCode::ALLOC_FAILED, "integer exceeds the 2^24-bit resource limit");
 }
 
 void normalize(Data& d)
@@ -287,7 +288,8 @@ Value neg(Value v, GarbageCollector& gc)
 
 int compare(Value lhs, Value rhs) noexcept
 {
-    if (!lhs.is_big_int() && !rhs.is_big_int()) return lhs.as_int() < rhs.as_int() ? -1 : lhs.as_int() > rhs.as_int() ? 1 : 0;
+    if (!lhs.is_big_int() && !rhs.is_big_int())
+        return lhs.as_int() < rhs.as_int() ? -1 : lhs.as_int() > rhs.as_int() ? 1 : 0;
 
     Operand a(lhs), b(rhs);
     if (a.positive != b.positive) return a.positive ? 1 : -1;
@@ -349,7 +351,8 @@ Value div(Value lhs, Value rhs, GarbageCollector& gc, bool remainder)
     if (b.limbs.empty()) diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
 
     if (b.limbs.size() == 1 && b.limbs[0] == 1) {
-        return remainder ? Value::from_int(0) : finish({ std::vector<u32>(a.limbs.begin(), a.limbs.end()), a.positive == b.positive }, gc);
+        return remainder ? Value::from_int(0)
+                         : finish({ std::vector<u32>(a.limbs.begin(), a.limbs.end()), a.positive == b.positive }, gc);
     }
 
     auto [q, r] = divmod(a.limbs, b.limbs);
@@ -364,8 +367,9 @@ Value div(Value lhs, Value rhs, GarbageCollector& gc, bool remainder)
         return x;
     };
 
-    long exponent
-        = (static_cast<long>(a.limbs.size() > 3 ? a.limbs.size() - 3 : 0) - static_cast<long>(b.limbs.size() > 3 ? b.limbs.size() - 3 : 0)) * 32;
+    long exponent = (static_cast<long>(a.limbs.size() > 3 ? a.limbs.size() - 3 : 0)
+                        - static_cast<long>(b.limbs.size() > 3 ? b.limbs.size() - 3 : 0))
+        * 32;
     double ratio = std::ldexp(head(a.limbs) / head(b.limbs), static_cast<int>(exponent));
     return Value::from_real(a.positive == b.positive ? ratio : -ratio);
 }
@@ -412,7 +416,8 @@ Value shift(Value value, Value count, bool left, GarbageCollector& gc)
         if (!left) return Value::from_int(amount >= 64 ? (a.positive ? 0 : -1) : value.as_int() >> amount);
 #if defined(__GNUC__) || defined(__clang__)
         i64 result;
-        if (amount < 63 && !__builtin_mul_overflow(value.as_int(), i64 { 1 } << amount, &result)) return Value::from_int(result, gc);
+        if (amount < 63 && !__builtin_mul_overflow(value.as_int(), i64 { 1 } << amount, &result))
+            return Value::from_int(result, gc);
 #endif
     }
 
@@ -458,7 +463,8 @@ Value shift(Value value, Value count, bool left, GarbageCollector& gc)
 
 Value pow(Value base, Value exponent, GarbageCollector& gc)
 {
-    if (compare(exponent, Value::from_int(0)) < 0) return Value::from_real(std::pow(to_double(base), to_double(exponent)));
+    if (compare(exponent, Value::from_int(0)) < 0)
+        return Value::from_real(std::pow(to_double(base), to_double(exponent)));
 
     Operand e(exponent);
     Value out = Value::from_int(1);
@@ -558,7 +564,8 @@ int compare_numbers(Value lhs, Value rhs)
     else {
         Data d = double_data(f);
         Operand a(iv);
-        c = a.positive != d.positive ? (a.positive ? 1 : -1) : (a.positive ? cmp(a.limbs, d.limbs) : -cmp(a.limbs, d.limbs));
+        c = a.positive != d.positive ? (a.positive ? 1 : -1)
+                                     : (a.positive ? cmp(a.limbs, d.limbs) : -cmp(a.limbs, d.limbs));
         if (!c && f != std::trunc(f)) c = f > 0 ? -1 : 1;
     }
 

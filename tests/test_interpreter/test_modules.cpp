@@ -36,7 +36,8 @@ namespace {
 void set_environment(std::string const& name, std::string const& value)
 {
 #ifdef _WIN32
-    if (_wputenv_s(platform::path(name).c_str(), platform::path(value).c_str()) != 0) throw std::runtime_error("Failed to update test environment");
+    if (_wputenv_s(platform::path(name).c_str(), platform::path(value).c_str()) != 0)
+        throw std::runtime_error("Failed to update test environment");
 #else
     if (setenv(name.c_str(), value.c_str(), 1) != 0) throw std::runtime_error("Failed to update test environment");
 #endif
@@ -84,7 +85,8 @@ protected:
     void SetUp() override
     {
         diagnostic::reset();
-        directory = std::filesystem::temp_directory_path() / ("fairuz-modules-" + std::to_string(reinterpret_cast<uintptr_t>(this)));
+        directory = std::filesystem::temp_directory_path()
+            / ("fairuz-modules-" + std::to_string(reinterpret_cast<uintptr_t>(this)));
         std::filesystem::create_directories(directory);
     }
 

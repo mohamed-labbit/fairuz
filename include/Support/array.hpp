@@ -146,13 +146,17 @@ public:
     Array& operator=(Array const& other);
     Array& operator=(Array&& other) noexcept;
 
-    [[nodiscard]] bool operator==(Array const& other) const { return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr); }
+    FAIRUZ_NODISCARD bool operator==(Array const& other) const
+    {
+        return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
+    }
 
     ~Array()
     {
         if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
         if constexpr (!IS_ARENA) {
-            if (m_allocator != nullptr && m_arr != nullptr) m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+            if (m_allocator != nullptr && m_arr != nullptr)
+                m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
         }
     }
 
@@ -269,7 +273,8 @@ requires(!Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
+        diagnostic::fatal_error(
+            ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
     if (capacity == 0) return;
 
@@ -297,7 +302,8 @@ requires Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
+        diagnostic::fatal_error(
+            ErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
     if (capacity == 0) return;
 
@@ -442,10 +448,10 @@ template<typename T, class _Alloc> Array<T, _Alloc>& Array<T, _Alloc>::operator=
 template<typename T, class _Alloc> Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array&& other) noexcept
 {
     if (this == &other) return *this;
-
     if (m_arr != nullptr) destroy_range(m_arr, m_arr + m_size);
     if constexpr (!IS_ARENA) {
-        if (m_allocator != nullptr && m_arr != nullptr) m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        if (m_allocator != nullptr && m_arr != nullptr)
+            m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
     }
 
     m_arr = other.m_arr;

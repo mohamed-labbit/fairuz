@@ -63,8 +63,8 @@ static inline std::string wildcard_regex(std::string const& pattern)
         if (ch == '*') result += ".*";
         else if (ch == '?') result += '.';
         else {
-            if (ch == '.' || ch == '+' || ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}' || ch == '^' || ch == '$'
-                || ch == '|' || ch == '\\')
+            if (ch == '.' || ch == '+' || ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '{' || ch == '}'
+                || ch == '^' || ch == '$' || ch == '|' || ch == '\\')
                 result.push_back('\\');
             result.push_back(ch);
         }
@@ -236,7 +236,8 @@ static inline void print_runtime_value(Value v)
     print_runtime_value_impl(v, active_containers, 0);
 }
 
-static void append_rendered_value(StringRef& out, Value value, bool quote_strings, std::unordered_set<ObjHeader*>& active_containers, u32 depth)
+static void append_rendered_value(
+    StringRef& out, Value value, bool quote_strings, std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (value.is_nil()) {
         out += "nil";
@@ -252,7 +253,8 @@ static void append_rendered_value(StringRef& out, Value value, bool quote_string
     }
     if (value.is_double()) {
         f64 d = value.as_double();
-        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15) out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
+        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
+            out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
         else out += format_double_string(d);
         return;
     }

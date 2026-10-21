@@ -22,7 +22,7 @@
 
 namespace fairuz {
 
-class [[nodiscard]] Error {
+class FAIRUZ_NODISCARD Error {
 public:
     explicit Error(ErrorCode code, SourceLocation loc)
         : m_code(code)
@@ -58,7 +58,7 @@ private:
 // std::expected owns the active alternative and provides safe state transitions.
 // Its assignment constraints require a nothrow-movable alternative when needed
 // for rollback. Unsupported payload combinations are rejected at compile time.
-template<typename T, typename E = Error> class [[nodiscard]] ErrorOr {
+template<typename T, typename E = Error> class FAIRUZ_NODISCARD ErrorOr {
 public:
     ErrorOr() = delete;
 
@@ -154,7 +154,7 @@ private:
 }; // class ErrorOr
 
 /// partial specialization for T = void
-template<typename E> class [[nodiscard]] ErrorOr<void, E> {
+template<typename E> class FAIRUZ_NODISCARD ErrorOr<void, E> {
 public:
     // For void, default construction represents success.
     ErrorOr() noexcept = default;

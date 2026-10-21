@@ -116,7 +116,10 @@ bool same_name(AST::ExprPtr expr, StringRef const& name)
     return expr != nullptr && AST::is_identifier(expr) && AST::as_identifier(expr)->spelling == name;
 }
 
-bool starts_compound(TT type) { return type == TT::KW_IF || type == TT::KW_WHILE || type == TT::KW_FOR || type == TT::KW_FN || type == TT::KW_CLASS; }
+bool starts_compound(TT type)
+{
+    return type == TT::KW_IF || type == TT::KW_WHILE || type == TT::KW_FOR || type == TT::KW_FN || type == TT::KW_CLASS;
+}
 
 lex::FileManager* checked_file(lex::FileManager* file)
 {
@@ -132,7 +135,8 @@ Array<TokenPtr> const& checked_stream(Array<TokenPtr> const& tokens)
         if (token == nullptr) diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Parser received a null replay token");
         if (token->is(TT::ENDMARKER) != (i + 1 == tokens.size()))
             diagnostic::panic(ErrorCode::INTERNAL_ERROR, "ENDMARKER must occur exactly once, at the end");
-        if (i != 0 && token->is(TT::BEGINMARKER)) diagnostic::panic(ErrorCode::INTERNAL_ERROR, "BEGINMARKER is only valid at stream start");
+        if (i != 0 && token->is(TT::BEGINMARKER))
+            diagnostic::panic(ErrorCode::INTERNAL_ERROR, "BEGINMARKER is only valid at stream start");
     }
     return tokens;
 }
@@ -174,7 +178,8 @@ IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& res
         if (byte >= '0' && byte <= '9') digit = byte - '0';
         else if (byte >= 'a' && byte <= 'f') digit = byte - 'a' + 10;
         else if (byte >= 'A' && byte <= 'F') digit = byte - 'A' + 10;
-        else if (byte == 0xD9 && i < text.size() && static_cast<unsigned char>(text[i]) >= 0xA0 && static_cast<unsigned char>(text[i]) <= 0xA9)
+        else if (byte == 0xD9 && i < text.size() && static_cast<unsigned char>(text[i]) >= 0xA0
+            && static_cast<unsigned char>(text[i]) <= 0xA9)
             digit = static_cast<unsigned char>(text[i++]) - 0xA0;
         else return IntegerStatus::INVALID;
         if (digit >= base) return IntegerStatus::INVALID;
@@ -186,8 +191,9 @@ IntegerStatus integer_literal(StringRef const& spelling, unsigned base, i64& res
     }
     if (!saw_digit) return IntegerStatus::INVALID;
     if (overflow) return IntegerStatus::LARGE;
-    result
-        = negative ? (magnitude == (u64 { 1 } << 63) ? std::numeric_limits<i64>::min() : -static_cast<i64>(magnitude)) : static_cast<i64>(magnitude);
+    result = negative
+        ? (magnitude == (u64 { 1 } << 63) ? std::numeric_limits<i64>::min() : -static_cast<i64>(magnitude))
+        : static_cast<i64>(magnitude);
     return IntegerStatus::SMALL;
 }
 
@@ -361,7 +367,8 @@ Array<AST::StmtPtr> Parser::parse_sequence(Sequence kind, Array<AST::ExprPtr>* m
                                                  : parse_statement();
         if (statement.has_value()) {
             assert(statement.value() != nullptr);
-            if (m_consumed == before) diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Successful statement parser made no progress");
+            if (m_consumed == before)
+                diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Successful statement parser made no progress");
             statements.push(statement.value());
         } else if (!diagnostic::is_saturated()) {
             synchronize(indentation);
@@ -492,7 +499,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_if_stmt(u16 clause_column)
         tail = otherwise;
         break;
     }
-    for (auto it = arms.rbegin(); it != arms.rend(); ++it) tail = m_builder.make_if(it->condition, it->body, it->location, tail);
+    for (auto it = arms.rbegin(); it != arms.rend(); ++it)
+        tail = m_builder.make_if(it->condition, it->body, it->location, tail);
     assert(tail != nullptr);
     return tail;
 }
@@ -525,7 +533,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
     return m_builder.make_block(std::move(statements), start);
 }
 
-template<class T, class ReadItem> ErrorOr<Array<T>> Parser::parse_delimited(TT close, ErrorCode missing_close, ReadItem&& read_item, bool* had_comma)
+template<class T, class ReadItem>
+ErrorOr<Array<T>> Parser::parse_delimited(TT close, ErrorCode missing_close, ReadItem&& read_item, bool* had_comma)
 {
     if (had_comma != nullptr) *had_comma = false;
     Array<T> items;
@@ -561,7 +570,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_function_def()
     FA_PARSE_TRY(parameters, parse_parameters_list());
     FA_PARSE_REQUIRE(expect(TT::COLON, ErrorCode::EXPECTED_COLON_FN));
     FA_PARSE_TRY(body, m_body_parsing == BodyParsing::LAZY ? defer_body(start->location()) : parse_block());
-    return m_builder.make_function(m_builder.make_identifier(name->lexeme(), name->location()), std::move(parameters), body, start->location());
+    return m_builder.make_function(
+        m_builder.make_identifier(name->lexeme(), name->location()), std::move(parameters), body, start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_function_body()
@@ -639,7 +649,8 @@ ErrorOr<AST::StmtPtr> Parser::defer_body(SourceLocation definition)
     tokens.push(make_token(TT::ENDMARKER, "", end));
     auto source = m_lexer.source();
     StringRef text;
-    if (source && start.offset <= end.offset && end.offset <= source->text.size()) text = m_lexer.source_slice(start.offset, end.offset);
+    if (source && start.offset <= end.offset && end.offset <= source->text.size())
+        text = m_lexer.source_slice(start.offset, end.offset);
     return m_builder.make_function_stub(std::move(tokens), std::move(source), std::move(text), start);
 }
 
@@ -704,7 +715,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method(Array<AST::ExprPtr>& members)
     if (diagnostic::error_count() == errors_before) {
         for (auto* member : discovered) push_member_once(members, AST::as_identifier(member));
     }
-    return m_builder.make_function(m_builder.make_identifier(spelling, name->location()), std::move(parameters), body, start->location());
+    return m_builder.make_function(
+        m_builder.make_identifier(spelling, name->location()), std::move(parameters), body, start->location());
 }
 
 void Parser::push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name)
@@ -874,7 +886,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_assignment_tail(AST::ExprPtr left, bool allo
     }
     // Right fold gives a := (b := value) without C++ recursion proportional
     // to the number of assignment operators in the source.
-    for (auto it = targets.rbegin(); it != targets.rend(); ++it) left = m_builder.make_assignment_expr(*it, left, (*it)->get_location());
+    for (auto it = targets.rbegin(); it != targets.rend(); ++it)
+        left = m_builder.make_assignment_expr(*it, left, (*it)->get_location());
     return left;
 }
 
@@ -921,7 +934,9 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
     FA_PARSE_TRY(expression, parse_primary_expr());
     for (;;) {
         if (consume(TT::LPAREN)) {
-            FA_PARSE_TRY(arguments, parse_delimited<AST::ExprPtr>(TT::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR, [&] { return parse_expression(); }));
+            FA_PARSE_TRY(arguments, parse_delimited<AST::ExprPtr>(TT::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR, [&] {
+                return parse_expression();
+            }));
             expression = m_builder.make_call(expression, std::move(arguments), expression->get_location());
         } else if (consume(TT::LBRACKET)) {
             FA_PARSE_TRY(index, parse_expression());
@@ -929,7 +944,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
             expression = m_builder.make_index(expression, index, expression->get_location());
         } else if (consume(TT::DOT)) {
             FA_PARSE_TRY(name, expect(TT::IDENTIFIER, ErrorCode::EXPECTED_MEMBER_NAME));
-            expression = m_builder.make_get_expr(expression, m_builder.make_identifier(name->lexeme(), name->location()), expression->get_location());
+            expression = m_builder.make_get_expr(
+                expression, m_builder.make_identifier(name->lexeme(), name->location()), expression->get_location());
         } else {
             return expression;
         }
@@ -944,7 +960,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         if (token->is(TT::DECIMAL)) {
             diagnostic::SourceScope source_scope(m_lexer.source());
             f64 value = 0.0;
-            if (!util::try_parse_float_literal(token->lexeme(), value)) return fail(ErrorCode::INVALID_NUMBER_LITERAL, token->location());
+            if (!util::try_parse_float_literal(token->lexeme(), value))
+                return fail(ErrorCode::INVALID_NUMBER_LITERAL, token->location());
             return m_builder.make_literal_float(value, token->location());
         }
         unsigned base = token->is(TT::HEX) ? 16 : token->is(TT::OCTAL) ? 8 : token->is(TT::BINARY) ? 2 : 10;
@@ -968,8 +985,9 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
     case TT::LPAREN: {
         advance();
         bool had_comma = false;
-        FA_PARSE_TRY(
-            elements, parse_delimited<AST::ExprPtr>(TT::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR, [&] { return parse_expression(); }, &had_comma));
+        FA_PARSE_TRY(elements,
+            parse_delimited<AST::ExprPtr>(
+                TT::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR, [&] { return parse_expression(); }, &had_comma));
         if (elements.size() == 1 && !had_comma) return elements[0];
         return m_builder.make_list(std::move(elements), token->location());
     }
@@ -982,7 +1000,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
 
 ErrorOr<AST::ExprPtr> Parser::parse_list_literal(SourceLocation opening)
 {
-    FA_PARSE_TRY(elements, parse_delimited<AST::ExprPtr>(TT::RBRACKET, ErrorCode::EXPECTED_RBRACKET, [&] { return parse_expression(); }));
+    FA_PARSE_TRY(elements,
+        parse_delimited<AST::ExprPtr>(TT::RBRACKET, ErrorCode::EXPECTED_RBRACKET, [&] { return parse_expression(); }));
     return m_builder.make_list(std::move(elements), opening);
 }
 

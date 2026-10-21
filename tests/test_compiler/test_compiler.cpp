@@ -80,8 +80,8 @@ public:
 
     BytecodeChecker& done()
     {
-        EXPECT_EQ(pos_, chunk_.code.size()) << "expected end of code at instruction " << pos_ << " but " << (chunk_.code.size() - pos_)
-                                            << " more remain";
+        EXPECT_EQ(pos_, chunk_.code.size()) << "expected end of code at instruction " << pos_ << " but "
+                                            << (chunk_.code.size() - pos_) << " more remain";
         return *this;
     }
 
@@ -276,7 +276,8 @@ TEST(CompilerLiteral, StringsDeduplicated)
     Chunk* chunk = compile_ok(test_source::join(std::move(stmts), ""));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode) dump(chunk);
-    long string_constants = std::count_if(chunk->constants.begin(), chunk->constants.end(), [](Value const& v) { return v.is_string(); });
+    long string_constants
+        = std::count_if(chunk->constants.begin(), chunk->constants.end(), [](Value const& v) { return v.is_string(); });
     EXPECT_EQ(string_constants, 1);
 }
 
@@ -828,7 +829,8 @@ TEST(CompilerList, EmptyList)
 TEST(CompilerList, ListWithElements)
 {
     Array<std::string> elems = { "1", "2", "3" };
-    Chunk* chunk = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
+    Chunk* chunk
+        = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode) dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -950,7 +952,8 @@ TEST(CompilerLoop, ContinueOutsideLoopIsRejected)
 TEST(CompilerIntegration, MixedLiteralsInList)
 {
     Array<std::string> elems = { "صحيح", "42", "3.14", "\"mohamed\"" };
-    Chunk* chunk = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
+    Chunk* chunk
+        = compile_ok((std::string((std::string("[") + test_source::join(std::move(elems), ", ") + "]")) + "\n"));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode) dump(chunk);
     int appends = 0;

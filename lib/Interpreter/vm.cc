@@ -47,13 +47,15 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
     auto consider = [&](StringRef const& name) {
         if (++examined > 1000) return;
         auto candidate = points(name);
-        if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size()) return;
+        if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size())
+            return;
         std::vector<size_t> previous(candidate.size() + 1), current(candidate.size() + 1);
         for (size_t j = 0; j <= candidate.size(); ++j) previous[j] = j;
         for (size_t i = 1; i <= wanted.size(); ++i) {
             current[0] = i;
             for (size_t j = 1; j <= candidate.size(); ++j)
-                current[j] = std::min({ previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (wanted[i - 1] != candidate[j - 1]) });
+                current[j] = std::min(
+                    { previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (wanted[i - 1] != candidate[j - 1]) });
             previous.swap(current);
         }
         std::string text(name.data(), name.len());
@@ -81,8 +83,8 @@ static void check_stack_index(int index, int stack_size, char const* m_context)
     if (index < 0 || index >= stack_size)
         // This is a VM internal error, not a user error.
         diagnostic::panic(ErrorCode::INTERNAL_ERROR,
-            std::string(" : ") + std::string("VM internal error: stack index ") + std::to_string(index) + " out of range [0,"
-                + std::to_string(stack_size) + ") in " + m_context);
+            std::string(" : ") + std::string("VM internal error: stack index ") + std::to_string(index)
+                + " out of range [0," + std::to_string(stack_size) + ") in " + m_context);
 }
 
 VM::VM()
@@ -165,7 +167,8 @@ VM::RuntimeResult VM::run(Chunk* chunk, Compiler*)
     m_stack[0] = Value::from_obj(reinterpret_cast<ObjHeader*>(fn));
     m_stack_top = static_cast<int>(chunk->local_count) + 2;
 
-    m_frames[m_frames_top] = CallFrame(fn, chunk, PCType { 0 }, 1, static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
+    m_frames[m_frames_top]
+        = CallFrame(fn, chunk, PCType { 0 }, 1, static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
     m_frames_top++;
     intern_chunk_constants(fn->chunk);
 
@@ -199,7 +202,8 @@ void VM::intern_chunk_constants(Chunk* ch)
     if (ch == nullptr) return;
 
     for (u32 i = 0; i < ch->constants.size(); i++) {
-        if (ch->constants[i].is_string()) ch->constants[i] = Value::from_obj(reinterpret_cast<ObjHeader*>(intern(ch->constants[i].as_string()->str)));
+        if (ch->constants[i].is_string())
+            ch->constants[i] = Value::from_obj(reinterpret_cast<ObjHeader*>(intern(ch->constants[i].as_string()->str)));
     }
 
     for (auto* fn : ch->functions) intern_chunk_constants(fn);

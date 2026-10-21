@@ -28,7 +28,8 @@ std::filesystem::path temporary_parent(Value value)
     return path.empty() ? std::filesystem::temp_directory_path() : platform::path(path);
 }
 
-std::filesystem::path unique_temporary_path(std::filesystem::path const& parent, std::string const& prefix, std::string const& suffix)
+std::filesystem::path unique_temporary_path(
+    std::filesystem::path const& parent, std::string const& prefix, std::string const& suffix)
 {
     static std::atomic<unsigned long long> counter { 0 };
     auto seed = static_cast<unsigned long long>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -130,7 +131,8 @@ VM::RuntimeResult VM::file_open(int argc, Value* argv)
 VM::RuntimeResult VM::file_read(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_file_handle() || !argv[1].is_int() || argv[1].as_int() < 0)
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "file read expects an open handle and non-negative byte count");
+        return raise_runtime_error(
+            ErrorCode::NATIVE_TYPE_ERROR, "file read expects an open handle and non-negative byte count");
     ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     size_t requested = static_cast<size_t>(argv[1].as_int());
@@ -160,7 +162,8 @@ VM::RuntimeResult VM::path_glob(int argc, Value* argv)
     Value result = m_gc.make_list();
     std::error_code error;
     if (argv[1].as_bool()) {
-        for (std::filesystem::recursive_directory_iterator it(parent, error), end; !error && it != end; it.increment(error)) {
+        for (std::filesystem::recursive_directory_iterator it(parent, error), end; !error && it != end;
+            it.increment(error)) {
             if (std::regex_match(platform::utf8(it->path().filename()), matcher))
                 result.as_list()->elements.push(m_gc.make_string(platform::utf8(it->path()).c_str()));
         }
@@ -175,9 +178,12 @@ VM::RuntimeResult VM::path_glob(int argc, Value* argv)
 
 VM::RuntimeResult VM::temp_file(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string() || !(argv[2].is_nil() || argv[2].is_string()))
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "temporary file expects prefix, suffix, and optional directory");
-    std::filesystem::path path = unique_temporary_path(temporary_parent(argv[2]), native_path(argv[0]), native_path(argv[1]));
+    if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
+        || !(argv[2].is_nil() || argv[2].is_string()))
+        return raise_runtime_error(
+            ErrorCode::NATIVE_TYPE_ERROR, "temporary file expects prefix, suffix, and optional directory");
+    std::filesystem::path path
+        = unique_temporary_path(temporary_parent(argv[2]), native_path(argv[0]), native_path(argv[1]));
     if (path.empty()) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     std::ofstream created(path, std::ios::binary | std::ios::trunc);
     if (!created) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
@@ -190,10 +196,12 @@ VM::RuntimeResult VM::temp_file(int argc, Value* argv)
 VM::RuntimeResult VM::temp_directory(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !(argv[1].is_nil() || argv[1].is_string()))
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "temporary directory expects prefix and optional parent");
+        return raise_runtime_error(
+            ErrorCode::NATIVE_TYPE_ERROR, "temporary directory expects prefix and optional parent");
     std::filesystem::path path = unique_temporary_path(temporary_parent(argv[1]), native_path(argv[0]), "");
     std::error_code error;
-    if (path.empty() || !std::filesystem::create_directory(path, error) || error) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (path.empty() || !std::filesystem::create_directory(path, error) || error)
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(platform::utf8(path).c_str());
 }
 
@@ -243,7 +251,8 @@ VM::RuntimeResult VM::append_file(int argc, Value* argv)
     if (!content.is_string()) return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
 
     ObjFileHandle* file_handle = file.as_file_handle();
-    if (!file_handle->is_open || file_handle->fp == nullptr) return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR, "file handle is closed");
+    if (!file_handle->is_open || file_handle->fp == nullptr)
+        return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR, "file handle is closed");
 
     ObjString* str_obj = content.as_string();
     FILE* fp = file_handle->fp;

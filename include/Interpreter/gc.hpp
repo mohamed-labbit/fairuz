@@ -63,7 +63,8 @@ public:
     ObjDict* make_obj_dict(DictType data = { });
     ObjFunction* make_obj_function(Chunk* chunk, GlobalEnvironment* globals = nullptr);
     ObjNative* make_obj_native(NativeFn fn, ObjString* name, int arity);
-    ObjClass* make_obj_class(StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
+    ObjClass* make_obj_class(
+        StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
     ObjInstance* make_obj_instance(ObjClass* klass);
     ObjFileHandle* make_obj_file_handle(FILE* fp);
     ObjModule* make_obj_module(StringRef name, StringRef path, GlobalEnvironment* globals);
@@ -88,18 +89,31 @@ public:
     /* --- Value constructors --- */
 
     Value make_int(i64 const v) { return integer::finish(integer::from_i64(v), *this); }
-    Value make_int(Array<u32>& limbs, bool sign) { return integer::finish({ integer::Limbs(limbs.begin(), limbs.end()), sign }, *this); }
+    Value make_int(Array<u32>& limbs, bool sign)
+    {
+        return integer::finish({ integer::Limbs(limbs.begin(), limbs.end()), sign }, *this);
+    }
     Value make_string(StringRef str) { return Value::from_string(make_obj_string(str)); }
     Value make_string(char const* str) { return Value::from_string(make_obj_string(str)); }
     Value make_string(char* str) { return Value::from_string(make_obj_string(str)); }
     Value make_list() { return Value::from_list(make_obj_list()); }
     Value make_dict(DictType data = { }) { return Value::from_dict(make_obj_dict(data)); }
-    Value make_function(Chunk* chunk, GlobalEnvironment* globals = nullptr) { return Value::from_func(make_obj_function(chunk, globals)); }
-    Value make_native(NativeFn fn, ObjString* name, int arity) { return Value::from_native(make_obj_native(fn, name, arity)); }
+    Value make_function(Chunk* chunk, GlobalEnvironment* globals = nullptr)
+    {
+        return Value::from_func(make_obj_function(chunk, globals));
+    }
+    Value make_native(NativeFn fn, ObjString* name, int arity)
+    {
+        return Value::from_native(make_obj_native(fn, name, arity));
+    }
     Value make_instance(ObjClass* klass) { return Value::from_instance(make_obj_instance(klass)); }
     Value make_file_handle(FILE* fp) { return Value::from_file_handle(make_obj_file_handle(fp)); }
-    Value make_module(StringRef name, StringRef path, GlobalEnvironment* globals) { return Value::from_module(make_obj_module(name, path, globals)); }
-    Value make_class(StringRef name, StringArr fields, StringArr methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
+    Value make_module(StringRef name, StringRef path, GlobalEnvironment* globals)
+    {
+        return Value::from_module(make_obj_module(name, path, globals));
+    }
+    Value make_class(
+        StringRef name, StringArr fields, StringArr methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
     {
         return Value::from_class(make_obj_class(name, fields, methods, vtable));
     }

@@ -34,8 +34,14 @@ public:
         return get_allocator().allocate_object<UnaryExpr>(kind, operand, loc);
     }
     static NilExpr* make_nil(SourceLocation loc) { return get_allocator().allocate_object<NilExpr>(loc); }
-    static IntLiteralExpr* make_literal_int(int value, SourceLocation loc) { return get_allocator().allocate_object<IntLiteralExpr>(value, loc); }
-    static IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc) { return get_allocator().allocate_object<IntLiteralExpr>(value, loc); }
+    static IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
+    {
+        return get_allocator().allocate_object<IntLiteralExpr>(value, loc);
+    }
+    static IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
+    {
+        return get_allocator().allocate_object<IntLiteralExpr>(value, loc);
+    }
     static FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
     {
         return get_allocator().allocate_object<FloatLiteralExpr>(value, loc);
@@ -44,7 +50,10 @@ public:
     {
         return get_allocator().allocate_object<StringLiteralExpr>(str, loc);
     }
-    static BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc) { return get_allocator().allocate_object<BoolLiteralExpr>(value, loc); }
+    static BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
+    {
+        return get_allocator().allocate_object<BoolLiteralExpr>(value, loc);
+    }
     static IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
     {
         return get_allocator().allocate_object<IdentifierExpr>(str, loc);
@@ -69,12 +78,18 @@ public:
     {
         return get_allocator().allocate_object<AssignExpr>(target, value, loc);
     }
-    static IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc) { return get_allocator().allocate_object<IndexExpr>(obj, idx, loc); }
+    static IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc)
+    {
+        return get_allocator().allocate_object<IndexExpr>(obj, idx, loc);
+    }
     static BlockStmt* make_block(Array<StmtPtr> stmts, SourceLocation loc)
     {
         return get_allocator().allocate_object<BlockStmt>(std::move(stmts), loc);
     }
-    static ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc) { return get_allocator().allocate_object<ExprStmt>(expr, loc); }
+    static ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
+    {
+        return get_allocator().allocate_object<ExprStmt>(expr, loc);
+    }
     // Wrap an assignment expression in a statement.
     static ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
     {
@@ -93,7 +108,8 @@ public:
     {
         return get_allocator().allocate_object<ForStmt>(target, iter, body, loc);
     }
-    static FunctionStub* make_function_stub(Array<tok::Token const*> tokens, diagnostic::SourcePtr source, StringRef body_span, SourceLocation loc)
+    static FunctionStub* make_function_stub(
+        Array<tok::Token const*> tokens, diagnostic::SourcePtr source, StringRef body_span, SourceLocation loc)
     {
         return get_allocator().allocate_object<FunctionStub>(std::move(tokens), std::move(source), body_span, loc);
     }
@@ -101,21 +117,30 @@ public:
     {
         return get_allocator().allocate_object<FuncDefStmt>(name, std::move(params), body, loc);
     }
-    static ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr) { return get_allocator().allocate_object<ReturnStmt>(value, loc); }
-    static ClassDefStmt* make_class_def(ExprPtr name, Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
+    static ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
+    {
+        return get_allocator().allocate_object<ReturnStmt>(value, loc);
+    }
+    static ClassDefStmt* make_class_def(
+        ExprPtr name, Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
     {
         return get_allocator().allocate_object<ClassDefStmt>(name, nullptr, members, methods, loc);
     }
-    static ClassDefStmt* make_class_def(ExprPtr name, ExprPtr parent, Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
+    static ClassDefStmt* make_class_def(
+        ExprPtr name, ExprPtr parent, Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
     {
         return get_allocator().allocate_object<ClassDefStmt>(name, parent, std::move(members), std::move(methods), loc);
     }
-    static ImportStmt* make_import(StringRef const module, Array<StringRef> name, Array<StringRef> aliases, SourceLocation loc)
+    static ImportStmt* make_import(
+        StringRef const module, Array<StringRef> name, Array<StringRef> aliases, SourceLocation loc)
     {
         return get_allocator().allocate_object<ImportStmt>(module, name, std::move(aliases), loc);
     }
     static BreakStmt* make_break(SourceLocation loc) { return get_allocator().allocate_object<BreakStmt>(loc); }
-    static ContinueStmt* make_continue(SourceLocation loc) { return get_allocator().allocate_object<ContinueStmt>(loc); }
+    static ContinueStmt* make_continue(SourceLocation loc)
+    {
+        return get_allocator().allocate_object<ContinueStmt>(loc);
+    }
 };
 
 } // namespace AST

@@ -66,7 +66,8 @@ StringBase<Allocator>::StringBase(char const* s, size_t n, Allocator* allocator)
         m_storage.heap.cap = n + 1;
         m_storage.heap.ptr = m_allocator->template allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
+            diagnostic::panic(ErrorCode::ALLOC_FAILED,
+                "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n);
         m_storage.heap.ptr[n] = 0;
     }
@@ -91,7 +92,8 @@ StringBase<Allocator>::StringBase(char const* s, Allocator* allocator)
         m_storage.heap.cap = n + 1;
         m_storage.heap.ptr = m_allocator->template allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
+            diagnostic::panic(ErrorCode::ALLOC_FAILED,
+                "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
 }
@@ -276,13 +278,15 @@ template<class Allocator> void StringRefImpl<Allocator>::expand(size_t const new
     char const* old_ptr = data();
     size_t old_len = len();
 
-    size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
+    size_t new_capacity
+        = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
     char* new_ptr = m_allocator->template allocate_array<char>(new_capacity);
 
     if (old_ptr != nullptr && old_len > 0) ::memcpy(new_ptr, old_ptr, old_len);
 
     if (m_string_data->is_heap() && m_string_data->m_storage.heap.ptr)
-        m_allocator->template deallocate_array<char>(m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.cap);
+        m_allocator->template deallocate_array<char>(
+            m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.cap);
 
     m_string_data->m_storage.heap.ptr = new_ptr;
     m_string_data->m_storage.heap.cap = new_capacity;
@@ -350,7 +354,10 @@ template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::op
     return *this;
 }
 
-template<class Allocator> char StringRefImpl<Allocator>::operator[](size_t const i) const { return (*m_string_data)[i + m_offset]; }
+template<class Allocator> char StringRefImpl<Allocator>::operator[](size_t const i) const
+{
+    return (*m_string_data)[i + m_offset];
+}
 
 template<class Allocator> char& StringRefImpl<Allocator>::operator[](size_t const i)
 {
@@ -360,7 +367,8 @@ template<class Allocator> char& StringRefImpl<Allocator>::operator[](size_t cons
 
 template<class Allocator> char StringRefImpl<Allocator>::at(size_t const i) const
 {
-    if (UNLIKELY(i >= m_length)) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
+    if (UNLIKELY(i >= m_length))
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
@@ -368,7 +376,8 @@ template<class Allocator> char StringRefImpl<Allocator>::at(size_t const i) cons
 template<class Allocator> char& StringRefImpl<Allocator>::at(size_t const i)
 {
     ensure_unique();
-    if (UNLIKELY(i >= m_length)) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
+    if (UNLIKELY(i >= m_length))
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
@@ -405,7 +414,8 @@ template<class Allocator> std::optional<size_t> StringRefImpl<Allocator>::find_p
     return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
-template<class Allocator> StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
+template<class Allocator>
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
 {
     if (leading) {
         while (m_length > 0 && util::is_whitespace(data()[0])) {
@@ -456,10 +466,12 @@ template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::sli
 template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, size_t end) const
 {
     if (m_length == 0) return StringRefImpl(static_cast<size_t>(0), m_allocator);
-    if (start > m_length) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
+    if (start > m_length)
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
 
     if (end > m_length || end == SIZE_MAX) end = m_length;
-    if (end < start) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
+    if (end < start)
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "StringRefImpl::substrCopy: start index out of range");
 
     size_t copy_len = end - start;
 
@@ -473,7 +485,8 @@ template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::sub
     return StringRefImpl(ret, 0, copy_len);
 }
 
-template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
+template<class Allocator>
+StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
 {
     Allocator* used_allocator = resolve_allocator(allocator);
 
@@ -485,10 +498,12 @@ template<class Allocator> StringRefImpl<Allocator> StringRefImpl<Allocator>::fro
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
     if (validation.error != simdutf::error_code::SUCCESS)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-16 at code unit " + std::to_string(validation.count));
+        diagnostic::fatal_error(
+            ErrorCode::INTERNAL_ERROR, "Invalid UTF-16 at code unit " + std::to_string(validation.count));
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
-    StringBase<Allocator>* ret_data = used_allocator->template allocate_object<StringBase<Allocator>>(utf8_len, used_allocator);
+    StringBase<Allocator>* ret_data
+        = used_allocator->template allocate_object<StringBase<Allocator>>(utf8_len, used_allocator);
     char* dest = ret_data->ptr();
     size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
     assert(written == utf8_len);

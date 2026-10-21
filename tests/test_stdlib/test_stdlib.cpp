@@ -403,7 +403,8 @@ TEST(StdlibFilesystem, TemporaryResourcesGlobAndDeletion)
     Value file_path = *file_info.as_dict()->data.find_ptr(path_key);
     EXPECT_TRUE(std::filesystem::exists(platform::path(as_std_string(file_path))));
 
-    Value pattern = vm.gc().make_string(platform::utf8(std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").c_str());
+    Value pattern
+        = vm.gc().make_string(platform::utf8(std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").c_str());
     Value recursive = Value::from_bool(false);
     Value glob_args[] = { pattern, recursive };
     Value matches = run_success(vm.path_glob(2, glob_args));
@@ -515,7 +516,8 @@ TEST(StdlibCodecs, Sha256SupportsIncrementalAndRawDigests)
     EXPECT_TRUE(run_success(vm.hash_update(2, second_args)).as_bool());
 
     Value hex_args[] = { handle, Value::from_bool(true) };
-    EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, hex_args))), "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+    EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, hex_args))),
+        "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
     Value raw_args[] = { handle, Value::from_bool(false) };
     EXPECT_EQ(as_std_string(run_success(vm.hash_digest(2, raw_args))).size(), 32u);
 
@@ -531,7 +533,8 @@ TEST(StdlibCodecs, HmacSha256MatchesPublishedVector)
         vm.gc().make_string("key"),
         vm.gc().make_string("The quick brown fox jumps over the lazy dog"),
     };
-    EXPECT_EQ(as_std_string(run_success(vm.hmac(3, args))), "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8");
+    EXPECT_EQ(as_std_string(run_success(vm.hmac(3, args))),
+        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8");
 }
 
 TEST(StdlibCompression, GzipRoundTripsAllSupportedBoundaryLevelsAndBinaryData)

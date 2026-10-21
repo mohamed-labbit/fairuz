@@ -25,7 +25,10 @@ struct SourceLocation {
 }; // struct SourceLocation
 
 struct VoidPtrHash {
-    size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
+    size_t operator()(void const* ptr) const noexcept
+    {
+        return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr));
+    }
 }; // struct VoidPtrHash
 
 struct VoidPtrEqual {
@@ -52,7 +55,7 @@ std::string const GRAY = "\033[90m";
 #define DEFAULT_CAPACITY 4096
 #define DEFAULT_BLOCK_SIZE 1024
 #define MAX_BLOCK_SIZE 4294967296
-#define DEFAULT_STRING_CAPACITY 100 [[nodiscard]]
+#define DEFAULT_STRING_CAPACITY 100 FAIRUZ_NODISCARD
 #define FAIRUZ_NODISCARD [[nodiscard]]
 #define MAIN_PROGRAM "__main__"
 

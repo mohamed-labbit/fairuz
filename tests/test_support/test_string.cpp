@@ -1173,7 +1173,8 @@ TEST_F(StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
     }
     f64 mutate_us = microseconds_since(t0);
 
-    std::printf("  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n", shallow_us, mutate_us, mutate_us / shallow_us);
+    std::printf(
+        "  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n", shallow_us, mutate_us, mutate_us / shallow_us);
 
     // Shallow copy must be at least 2x faster than copy+mutate.
     // If CoW is working, it should be much more than 2x.

@@ -63,9 +63,15 @@ Compiler::CompileExprResult Compiler::compile_literal_int_impl(AST::IntLiteralEx
     return ExprResult::kint(e->value);
 }
 
-Compiler::CompileExprResult Compiler::compile_literal_float_impl(AST::FloatLiteralExpr* e) { return ExprResult::kfloat(e->value); }
+Compiler::CompileExprResult Compiler::compile_literal_float_impl(AST::FloatLiteralExpr* e)
+{
+    return ExprResult::kfloat(e->value);
+}
 
-Compiler::CompileExprResult Compiler::compile_literal_bool_impl(AST::BoolLiteralExpr* e) { return ExprResult::kbool(e->value); }
+Compiler::CompileExprResult Compiler::compile_literal_bool_impl(AST::BoolLiteralExpr* e)
+{
+    return ExprResult::kbool(e->value);
+}
 
 Compiler::CompileExprResult Compiler::compile_literal_string_impl(AST::StringLiteralExpr* e)
 {
@@ -91,8 +97,9 @@ Compiler::CompileExprResult Compiler::compile_identifier_impl(AST::IdentifierExp
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr) return raise_compile_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
         // 0xFF is the named-field sentinel, not a directly encodable slot.
-        PCType pc = field_idx < 0xFF ? m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg.value, field_idx, loc)
-                                     : m_bytecode_emitter.get_named_field({ }, self->reg, intern_string(e->spelling), loc);
+        PCType pc = field_idx < 0xFF
+            ? m_bytecode_emitter.emit_ABC(OpCode::GET_FIELD, 0, self->reg.value, field_idx, loc)
+            : m_bytecode_emitter.get_named_field({ }, self->reg, intern_string(e->spelling), loc);
         return ExprResult::reloc(pc);
     }
 
@@ -196,7 +203,8 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
         && AST::as_literal_int(e->rhs)->value <= 255) {
         auto* amount_expr = AST::as_literal_int(e->rhs);
         i64 amount = amount_expr->value;
-        if (amount < 0 || amount > 255) return raise_compile_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
+        if (amount < 0 || amount > 255)
+            return raise_compile_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
         RegMark mark(m_current);
         FA_COMPILE_TRY(expr_result, compile_expr_impl(e->lhs));
@@ -298,7 +306,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         FA_COMPILE_TRY(value_expr_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_expr_result, loc, value_reg);
 
-        m_bytecode_emitter.emit_ABC(OpCode::INDEX_WRITE, target_object_reg.value, index_reg.value, value_reg.value, loc);
+        m_bytecode_emitter.emit_ABC(
+            OpCode::INDEX_WRITE, target_object_reg.value, index_reg.value, value_reg.value, loc);
         return ExprResult::reg(value_reg);
     }
 
@@ -313,7 +322,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
             auto it = std::find(desc->field_names.begin(), desc->field_names.end(), member_name->spelling);
             if (it != desc->field_names.end()) field_idx = std::distance(desc->field_names.begin(), it);
         }
-        if (field_idx < 0 && is_this_reference(get_expr->object)) field_idx = current_method_field_index(member_name->spelling);
+        if (field_idx < 0 && is_this_reference(get_expr->object))
+            field_idx = current_method_field_index(member_name->spelling);
 
         RegMark mark(m_current);
 
@@ -322,7 +332,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         FA_COMPILE_TRY(value_expr_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_expr_result, loc, value_reg);
 
-        if (field_idx >= 0 && field_idx < 0xFF) m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg.value, field_idx, value_reg.value, loc);
+        if (field_idx >= 0 && field_idx < 0xFF)
+            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, object_reg.value, field_idx, value_reg.value, loc);
         else m_bytecode_emitter.set_named_field(object_reg, value_reg, intern_string(member_name->spelling), loc);
         return ExprResult::reg(value_reg);
     }
@@ -360,7 +371,8 @@ Compiler::CompileExprResult Compiler::compile_assign_impl(AST::AssignExpr* e)
         RegMark mark(m_current);
         FA_COMPILE_TRY(value_result, compile_expr_impl(e->value));
         ANY_REG_BIND(value_result, loc, value_reg);
-        if (field_idx < 0xFF) m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg.value, field_idx, value_reg.value, loc);
+        if (field_idx < 0xFF)
+            m_bytecode_emitter.emit_ABC(OpCode::SET_FIELD, self->reg.value, field_idx, value_reg.value, loc);
         else m_bytecode_emitter.set_named_field(self->reg, value_reg, intern_string(name_value), loc);
         return ExprResult::reg(value_reg);
     }
@@ -410,7 +422,8 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
         return { };
     };
 
-    auto compile_object = [&](AST::ExprPtr object, SourceLocation loc) -> ErrorOr<std::tuple<RegType, RegType>, RuntimeError> {
+    auto compile_object
+        = [&](AST::ExprPtr object, SourceLocation loc) -> ErrorOr<std::tuple<RegType, RegType>, RuntimeError> {
         ALLOC_REG(object_reg, loc);
         FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
         m_bytecode_emitter.discharge(object_cmp_ret, object_reg, object->get_location());
@@ -442,10 +455,12 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 auto [object_reg, _] = regs;
                 FA_COMPILE_DISCARD_TRY(compile_args());
                 auto argc = e->args.size() + 1;
-                if (slot <= 0xFF) m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
+                if (slot <= 0xFF)
+                    m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
                 else m_bytecode_emitter.invoke_named(object_reg, argc, intern_string(method_name), loc);
 
-                if (tail && !m_current->is_top_level) m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
+                if (tail && !m_current->is_top_level)
+                    m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
 
                 m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
                 return ExprResult::reg(object_reg);
@@ -477,7 +492,8 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
             auto idx = intern_string(AST::as_identifier(member)->spelling);
             m_bytecode_emitter.invoke_named(object_reg, argc, idx, loc);
-            if (tail && !m_current->is_top_level) m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
+            if (tail && !m_current->is_top_level)
+                m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
             /// move the cursor back where it was before compiling 'member'
             m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
             return ExprResult::reg(object_reg);

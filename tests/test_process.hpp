@@ -29,8 +29,8 @@ struct Result {
 std::filesystem::path temporary_directory();
 unsigned long process_id();
 inline std::filesystem::path executable() { return fairuz::platform::path(FAIRUZ_TEST_EXECUTABLE); }
-Result run(std::filesystem::path const& executable, std::vector<std::string> const& args, std::filesystem::path const& working_directory = { },
-    std::chrono::seconds timeout = std::chrono::seconds(15));
+Result run(std::filesystem::path const& executable, std::vector<std::string> const& args,
+    std::filesystem::path const& working_directory = { }, std::chrono::seconds timeout = std::chrono::seconds(15));
 
 }
 #endif

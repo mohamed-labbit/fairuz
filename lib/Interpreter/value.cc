@@ -30,7 +30,8 @@ i64 Value::as_int() const
     if (is_big_int()) {
         i64 result;
         if (!integer::to_i64(*this, result))
-            diagnostic::fatal_error(ErrorCode::NUMERIC_OUT_OF_RANGE, "integer does not fit the native API's signed 64-bit parameter");
+            diagnostic::fatal_error(
+                ErrorCode::NUMERIC_OUT_OF_RANGE, "integer does not fit the native API's signed 64-bit parameter");
         return result;
     }
 #if FA_USE_NANBOX

@@ -93,7 +93,10 @@ u32 next_codepoint(std::string_view text, size_t& offset)
 {
     auto first = static_cast<unsigned char>(text[offset++]);
     if (first < 0x80) return first;
-    int extra = first >= 0xC2 && first <= 0xDF ? 1 : first >= 0xE0 && first <= 0xEF ? 2 : first >= 0xF0 && first <= 0xF4 ? 3 : 0;
+    int extra = first >= 0xC2 && first <= 0xDF ? 1
+        : first >= 0xE0 && first <= 0xEF       ? 2
+        : first >= 0xF0 && first <= 0xF4       ? 3
+                                               : 0;
     if (!extra || offset + extra > text.size()) return 0xFFFD;
     u32 cp = first & ((1u << (6 - extra)) - 1);
     for (int i = 0; i < extra; ++i) {
@@ -102,7 +105,8 @@ u32 next_codepoint(std::string_view text, size_t& offset)
         cp = (cp << 6) | (byte & 0x3F);
     }
     offset += extra;
-    if (cp < (extra == 1 ? 0x80u : extra == 2 ? 0x800u : 0x10000u) || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return 0xFFFD;
+    if (cp < (extra == 1 ? 0x80u : extra == 2 ? 0x800u : 0x10000u) || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+        return 0xFFFD;
     return cp;
 }
 
@@ -124,7 +128,8 @@ std::string json_string(std::string_view text)
         }
         ++offset;
         if (c == '"' || c == '\\') out << '\\' << c;
-        else if (c < 0x20) out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<unsigned>(c) << std::dec;
+        else if (c < 0x20)
+            out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<unsigned>(c) << std::dec;
         else out << c;
     }
     out << '"';
@@ -148,12 +153,14 @@ int cell_width(u32 cp)
         text[0] = static_cast<wchar_t>(cp);
     }
     WORD type[2] { };
-    if (GetStringTypeW(CT_CTYPE3, text, count, type) && (type[0] & (C3_NONSPACING | C3_DIACRITIC | C3_VOWELMARK))) return 0;
+    if (GetStringTypeW(CT_CTYPE3, text, count, type) && (type[0] & (C3_NONSPACING | C3_DIACRITIC | C3_VOWELMARK)))
+        return 0;
     if (cp == 0x200b || cp == 0x200c || cp == 0x200d || cp == 0xfeff || (cp >= 0xfe00 && cp <= 0xfe0f)) return 0;
     if (cp >= 0x1100
-        && (cp <= 0x115f || cp == 0x2329 || cp == 0x232a || (cp >= 0x2e80 && cp <= 0xa4cf && cp != 0x303f) || (cp >= 0xac00 && cp <= 0xd7a3)
-            || (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe10 && cp <= 0xfe19) || (cp >= 0xfe30 && cp <= 0xfe6f) || (cp >= 0xff00 && cp <= 0xff60)
-            || (cp >= 0xffe0 && cp <= 0xffe6) || (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x20000 && cp <= 0x3fffd)))
+        && (cp <= 0x115f || cp == 0x2329 || cp == 0x232a || (cp >= 0x2e80 && cp <= 0xa4cf && cp != 0x303f)
+            || (cp >= 0xac00 && cp <= 0xd7a3) || (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe10 && cp <= 0xfe19)
+            || (cp >= 0xfe30 && cp <= 0xfe6f) || (cp >= 0xff00 && cp <= 0xff60) || (cp >= 0xffe0 && cp <= 0xffe6)
+            || (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x20000 && cp <= 0x3fffd)))
         return 2;
     return 1;
 #else
@@ -214,7 +221,10 @@ void DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, SourceLocati
     m_diagnostics[id].traceback.push_back({ std::move(source), loc, std::move(function) });
 }
 
-void DiagnosticEngine::emit_error(std::string const& msg, Severity const sv) { std::cerr << sv_to_str(sv) << ": " << escape_terminal(msg) << "\n"; }
+void DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
+{
+    std::cerr << sv_to_str(sv) << ": " << escape_terminal(msg) << "\n";
+}
 
 [[noreturn]] void DiagnosticEngine::_panic(std::string const& msg) const
 {
@@ -280,7 +290,8 @@ void DiagnosticEngine::print_snippet(SourcePtr const& source, SourceLocation con
         } else if (cp < 0x20 || cp == 0x7F || (cp >= 0x80 && cp <= 0x9F) || cp == 0x061C || cp == 0x200E || cp == 0x200F
             || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069)) {
             std::ostringstream escaped;
-            escaped << (cp <= 0xFF ? "\\x" : "\\u") << std::hex << std::uppercase << std::setw(cp <= 0xFF ? 2 : 4) << std::setfill('0') << cp;
+            escaped << (cp <= 0xFF ? "\\x" : "\\u") << std::hex << std::uppercase << std::setw(cp <= 0xFF ? 2 : 4)
+                    << std::setfill('0') << cp;
             rendered += escaped.str();
             cells += escaped.str().size();
         } else {
@@ -294,8 +305,9 @@ void DiagnosticEngine::print_snippet(SourcePtr const& source, SourceLocation con
     size_t width = end_cells > start_cells ? end_cells - start_cells : 1;
     auto number = std::to_string(loc.line);
     std::cerr << "  " << number << " | " << rendered << '\n'
-              << "  " << std::string(number.size(), ' ') << " | " << std::string(start_cells, ' ') << terminal_color(Color::RED)
-              << std::string(std::min<size_t>(width, 140), '^') << terminal_color(Color::RESET) << '\n';
+              << "  " << std::string(number.size(), ' ') << " | " << std::string(start_cells, ' ')
+              << terminal_color(Color::RED) << std::string(std::min<size_t>(width, 140), '^')
+              << terminal_color(Color::RESET) << '\n';
 }
 
 std::string DiagnosticEngine::to_json() const
@@ -307,12 +319,14 @@ std::string DiagnosticEngine::to_json() const
     for (auto const& d : m_diagnostics) {
         if (!first) out << ',';
         first = false;
-        out << "{\"severity\":" << static_cast<int>(d.severity) << ",\"type\":" << json_string(error_type_for(d.err_code))
-            << ",\"errorCode\":" << json_string(error_name_for(d.err_code)) << ",\"errorNumber\":" << static_cast<u16>(d.err_code)
-            << ",\"path\":" << json_string(d.source ? d.source->path : "") << ",\"line\":" << d.src_loc.line << ",\"column\":" << d.src_loc.column
-            << ",\"length\":" << d.src_loc.length << ",\"message\":" << json_string(error_message_for(d.err_code))
-            << ",\"code\":" << json_string(d.code) << ",\"source\":" << json_string(d.source ? d.source->line(d.src_loc.line) : "")
-            << ",\"suggestions\":[";
+        out << "{\"severity\":" << static_cast<int>(d.severity)
+            << ",\"type\":" << json_string(error_type_for(d.err_code))
+            << ",\"errorCode\":" << json_string(error_name_for(d.err_code))
+            << ",\"errorNumber\":" << static_cast<u16>(d.err_code)
+            << ",\"path\":" << json_string(d.source ? d.source->path : "") << ",\"line\":" << d.src_loc.line
+            << ",\"column\":" << d.src_loc.column << ",\"length\":" << d.src_loc.length
+            << ",\"message\":" << json_string(error_message_for(d.err_code)) << ",\"code\":" << json_string(d.code)
+            << ",\"source\":" << json_string(d.source ? d.source->line(d.src_loc.line) : "") << ",\"suggestions\":[";
         for (size_t i = 0; i < d.suggestions.size(); ++i) {
             if (i) out << ',';
             out << json_string(d.suggestions[i]);
@@ -326,8 +340,9 @@ std::string DiagnosticEngine::to_json() const
         for (size_t i = 0; i < d.traceback.size(); ++i) {
             if (i) out << ',';
             auto const& frame = d.traceback[i];
-            out << "{\"path\":" << json_string(frame.source ? frame.source->path : "") << ",\"line\":" << frame.location.line
-                << ",\"column\":" << frame.location.column << ",\"function\":" << json_string(frame.function)
+            out << "{\"path\":" << json_string(frame.source ? frame.source->path : "")
+                << ",\"line\":" << frame.location.line << ",\"column\":" << frame.location.column
+                << ",\"function\":" << json_string(frame.function)
                 << ",\"source\":" << json_string(frame.source ? frame.source->line(frame.location.line) : "") << '}';
         }
         out << "]}";
@@ -344,14 +359,14 @@ void DiagnosticEngine::pretty_print() const
         if (!diag.traceback.empty()) {
             std::cerr << "Traceback (most recent call last):\n";
             for (auto const& frame : diag.traceback) {
-                std::cerr << "  File " << json_string(frame.source ? frame.source->path : "<input>") << ", line " << frame.location.line << ", in "
-                          << escape_terminal(frame.function) << '\n';
+                std::cerr << "  File " << json_string(frame.source ? frame.source->path : "<input>") << ", line "
+                          << frame.location.line << ", in " << escape_terminal(frame.function) << '\n';
                 print_snippet(frame.source, frame.location);
             }
         }
         if (diag.source) std::cerr << escape_terminal(diag.source->path) << ": ";
-        std::cerr << sv_to_str(diag.severity) << terminal_color(Color::RESET) << ": " << error_type_for(diag.err_code) << ": "
-                  << error_message_for(diag.err_code);
+        std::cerr << sv_to_str(diag.severity) << terminal_color(Color::RESET) << ": " << error_type_for(diag.err_code)
+                  << ": " << error_message_for(diag.err_code);
         if (!diag.code.empty()) std::cerr << ": " << escape_terminal(diag.code);
         std::cerr << '\n';
         if (diag.src_loc.line > 0) {

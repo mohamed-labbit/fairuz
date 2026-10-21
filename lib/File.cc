@@ -20,7 +20,7 @@ namespace fairuz {
 FileError::FileError(Kind kind, std::string path)
     : std::runtime_error((kind == Kind::NOT_FOUND         ? "File not found: "
                                  : kind == Kind::NOT_OPEN ? "File is not open: "
-                                                         : "Failed to read from file: ")
+                                                          : "Failed to read from file: ")
           + path)
     , m_kind(kind)
     , m_path(std::move(path))

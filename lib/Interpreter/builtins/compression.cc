@@ -80,7 +80,8 @@ bool gzip_decompress(std::string_view input, size_t maximum, std::string& output
 
 VM::RuntimeResult VM::compress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_int() || string_bytes(argv[0]) != "gzip")
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     i64 level = argv[2].as_int();
@@ -93,11 +94,14 @@ VM::RuntimeResult VM::compress(int argc, Value* argv)
 
 VM::RuntimeResult VM::decompress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
-    if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_int() || string_bytes(argv[0]) != "gzip" || argv[2].as_int() <= 0)
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string() || !argv[2].is_int() || string_bytes(argv[0]) != "gzip"
+        || argv[2].as_int() <= 0)
         return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string output;
-    if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output)) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output))
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(output));
 }
 

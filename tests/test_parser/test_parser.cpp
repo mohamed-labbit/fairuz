@@ -47,17 +47,38 @@ protected:
     AST::ExprPtr text(StringRef value) { return ast_builder.make_literal_string(value, { }); }
     AST::ExprPtr boolean(bool value) { return ast_builder.make_literal_bool(value, { }); }
     AST::ExprPtr nil() { return ast_builder.make_nil({ }); }
-    AST::ExprPtr binary(EK op, AST::ExprPtr lhs, AST::ExprPtr rhs) { return ast_builder.make_binary(op, lhs, rhs, { }); }
+    AST::ExprPtr binary(EK op, AST::ExprPtr lhs, AST::ExprPtr rhs)
+    {
+        return ast_builder.make_binary(op, lhs, rhs, { });
+    }
     AST::ExprPtr unary(EK op, AST::ExprPtr operand) { return ast_builder.make_unary(op, operand, { }); }
     AST::ExprPtr list(Array<AST::ExprPtr> elements) { return ast_builder.make_list(std::move(elements), { }); }
-    AST::ExprPtr dict(Array<std::pair<AST::ExprPtr, AST::ExprPtr>> entries) { return ast_builder.make_dict(std::move(entries), { }); }
-    AST::ExprPtr call(AST::ExprPtr callee, Array<AST::ExprPtr> args = { }) { return ast_builder.make_call(callee, std::move(args), { }); }
-    AST::ExprPtr get(AST::ExprPtr object, StringRef member) { return ast_builder.make_get_expr(object, id(member), { }); }
+    AST::ExprPtr dict(Array<std::pair<AST::ExprPtr, AST::ExprPtr>> entries)
+    {
+        return ast_builder.make_dict(std::move(entries), { });
+    }
+    AST::ExprPtr call(AST::ExprPtr callee, Array<AST::ExprPtr> args = { })
+    {
+        return ast_builder.make_call(callee, std::move(args), { });
+    }
+    AST::ExprPtr get(AST::ExprPtr object, StringRef member)
+    {
+        return ast_builder.make_get_expr(object, id(member), { });
+    }
     AST::ExprPtr field(StringRef member) { return get(id("__class$instance"), member); }
-    AST::ExprPtr index(AST::ExprPtr object, AST::ExprPtr subscript) { return ast_builder.make_index(object, subscript, { }); }
-    AST::ExprPtr assignment(AST::ExprPtr target, AST::ExprPtr value) { return ast_builder.make_assignment_expr(target, value, { }); }
+    AST::ExprPtr index(AST::ExprPtr object, AST::ExprPtr subscript)
+    {
+        return ast_builder.make_index(object, subscript, { });
+    }
+    AST::ExprPtr assignment(AST::ExprPtr target, AST::ExprPtr value)
+    {
+        return ast_builder.make_assignment_expr(target, value, { });
+    }
     AST::StmtPtr expr(AST::ExprPtr value) { return ast_builder.make_expr_stmt(value, { }); }
-    AST::StmtPtr assign(AST::ExprPtr target, AST::ExprPtr value) { return ast_builder.make_assignment_stmt(target, value, { }); }
+    AST::StmtPtr assign(AST::ExprPtr target, AST::ExprPtr value)
+    {
+        return ast_builder.make_assignment_stmt(target, value, { });
+    }
     AST::StmtPtr augmented(AST::ExprPtr target, EK op, AST::ExprPtr rhs)
     {
         auto* result = ast_builder.make_assignment_expr(target, binary(op, target, rhs), { });
@@ -69,14 +90,21 @@ protected:
     {
         return ast_builder.make_if(condition, then_body, { }, else_body);
     }
-    AST::StmtPtr while_loop(AST::ExprPtr condition, AST::StmtPtr body) { return ast_builder.make_while(condition, body, { }); }
-    AST::StmtPtr for_loop(StringRef name, AST::ExprPtr iterable, AST::StmtPtr body) { return ast_builder.make_for(id(name), iterable, body, { }); }
+    AST::StmtPtr while_loop(AST::ExprPtr condition, AST::StmtPtr body)
+    {
+        return ast_builder.make_while(condition, body, { });
+    }
+    AST::StmtPtr for_loop(StringRef name, AST::ExprPtr iterable, AST::StmtPtr body)
+    {
+        return ast_builder.make_for(id(name), iterable, body, { });
+    }
     AST::StmtPtr function(StringRef name, Array<AST::ExprPtr> params, AST::StmtPtr body)
     {
         return ast_builder.make_function(id(name), std::move(params), body, { });
     }
     AST::StmtPtr returns(AST::ExprPtr value = nullptr) { return ast_builder.make_return({ }, value); }
-    AST::StmtPtr klass(StringRef name, Array<AST::ExprPtr> members, Array<AST::StmtPtr> methods, AST::ExprPtr parent = nullptr)
+    AST::StmtPtr klass(
+        StringRef name, Array<AST::ExprPtr> members, Array<AST::StmtPtr> methods, AST::ExprPtr parent = nullptr)
     {
         return ast_builder.make_class_def(id(name), parent, std::move(members), std::move(methods), { });
     }
@@ -237,10 +265,12 @@ TEST_F(ParserTest, InlineMethodsPreserveClassAndStatementBoundaries)
                 "دالة مستقل(): ارجع 5\n"
                 "نتيجة := مستقل()\n",
         { klass("اول", { id("قيمة") },
-              { function("بداية", { }, block({ assign(field("قيمة"), integer(1)) })), function("اقرأ", { }, block({ returns(field("قيمة")) })),
-                  function("متعدد", { }, block({ returns(integer(2)) })), function("اخير", { }, block({ returns(integer(3)) })) }),
-            klass("ثاني", { }, { function("اقرأ", { }, block({ returns(integer(4)) })) }), function("مستقل", { }, block({ returns(integer(5)) })),
-            assign(id("نتيجة"), call(id("مستقل"))) });
+              { function("بداية", { }, block({ assign(field("قيمة"), integer(1)) })),
+                  function("اقرأ", { }, block({ returns(field("قيمة")) })),
+                  function("متعدد", { }, block({ returns(integer(2)) })),
+                  function("اخير", { }, block({ returns(integer(3)) })) }),
+            klass("ثاني", { }, { function("اقرأ", { }, block({ returns(integer(4)) })) }),
+            function("مستقل", { }, block({ returns(integer(5)) })), assign(id("نتيجة"), call(id("مستقل"))) });
 }
 
 TEST_F(ParserTest, InlineMethodAtEndOfFilePreservesEnclosingDedents)
@@ -250,8 +280,9 @@ TEST_F(ParserTest, InlineMethodAtEndOfFilePreservesEnclosingDedents)
                                   "    نوع مثال:\n"
                                   "        دالة قيمة(): ارجع 1")
             + ending;
-        test_source(
-            source.c_str(), { function("مستقل", { }, block({ klass("مثال", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) })) });
+        test_source(source.c_str(),
+            { function("مستقل", { },
+                block({ klass("مثال", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) })) });
     }
 }
 
@@ -261,16 +292,20 @@ TEST_F(ParserTest, InlineBlocksLeaveFollowingStatementsOutside)
         char const* source;
         AST::StmtPtr first;
     };
-    for (auto const& test : { Case { "اذا صحيح: س := 1\nص := 2\n", branch(boolean(true), block({ assign(id("س"), integer(1)) })) },
-             Case { "اذا خطا: س := 1\nغيره اذا صحيح: س := 2\nغيره: س := 3\nص := 2\n",
-                 branch(boolean(false), block({ assign(id("س"), integer(1)) }),
-                     branch(boolean(true), block({ assign(id("س"), integer(2)) }), block({ assign(id("س"), integer(3)) }))) },
-             Case { "طالما صحيح: اخرج\nص := 2\n", while_loop(boolean(true), block({ breaks() })) },
-             Case { "لكل س في [1]: اكمل\nص := 2\n", for_loop("س", list({ integer(1) }), block({ continues() })) },
-             Case { "دالة مثال(): ارجع 1\nص := 2\n", function("مثال", { }, block({ returns(integer(1)) })) },
-             Case { "نوع مثال: دالة قيمة(): ارجع 1\nص := 2\n", klass("مثال", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) },
-             Case { "نوع مثال: دالة بداية(): .قيمة := 1\nص := 2\n",
-                 klass("مثال", { id("قيمة") }, { function("بداية", { }, block({ assign(field("قيمة"), integer(1)) })) }) } }) {
+    for (auto const& test :
+        { Case { "اذا صحيح: س := 1\nص := 2\n", branch(boolean(true), block({ assign(id("س"), integer(1)) })) },
+            Case { "اذا خطا: س := 1\nغيره اذا صحيح: س := 2\nغيره: س := 3\nص := 2\n",
+                branch(boolean(false), block({ assign(id("س"), integer(1)) }),
+                    branch(boolean(true), block({ assign(id("س"), integer(2)) }),
+                        block({ assign(id("س"), integer(3)) }))) },
+            Case { "طالما صحيح: اخرج\nص := 2\n", while_loop(boolean(true), block({ breaks() })) },
+            Case { "لكل س في [1]: اكمل\nص := 2\n", for_loop("س", list({ integer(1) }), block({ continues() })) },
+            Case { "دالة مثال(): ارجع 1\nص := 2\n", function("مثال", { }, block({ returns(integer(1)) })) },
+            Case { "نوع مثال: دالة قيمة(): ارجع 1\nص := 2\n",
+                klass("مثال", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) },
+            Case { "نوع مثال: دالة بداية(): .قيمة := 1\nص := 2\n",
+                klass("مثال", { id("قيمة") },
+                    { function("بداية", { }, block({ assign(field("قيمة"), integer(1)) })) }) } }) {
         test_source(test.source, { test.first, assign(id("ص"), integer(2)) });
     }
 }
@@ -297,9 +332,12 @@ TEST_F(ParserTest, InlineBareReturnAtEndOfFile)
         AST::StmtPtr expected;
     };
     for (auto const& test : { Case { "دالة مثال(): ارجع", function("مثال", { }, block({ returns() })) },
-             Case { "نوع مثال:\n    دالة قيمة(): ارجع", klass("مثال", { }, { function("قيمة", { }, block({ returns() })) }) },
-             Case { "دالة مثال():\n    اذا صحيح: ارجع", function("مثال", { }, block({ branch(boolean(true), block({ returns() })) })) },
-             Case { "نوع مثال: دالة قيمة(): ارجع", klass("مثال", { }, { function("قيمة", { }, block({ returns() })) }) } }) {
+             Case { "نوع مثال:\n    دالة قيمة(): ارجع",
+                 klass("مثال", { }, { function("قيمة", { }, block({ returns() })) }) },
+             Case { "دالة مثال():\n    اذا صحيح: ارجع",
+                 function("مثال", { }, block({ branch(boolean(true), block({ returns() })) })) },
+             Case { "نوع مثال: دالة قيمة(): ارجع",
+                 klass("مثال", { }, { function("قيمة", { }, block({ returns() })) }) } }) {
         test_source(test.source, { test.expected });
     }
 }
@@ -332,15 +370,17 @@ TEST_P(ParserAssignmentContext, RejectsAssignmentInValueContext)
     // Class/block recovery can return a partial AST; recorded errors still
     // prevent compilation. Check the diagnostic as well as propagated errors.
     ASSERT_TRUE(diagnostic::has_errors());
-    EXPECT_NE(diagnostic::engine.to_json().find("Assignment is a statement and cannot be used inside an expression"), std::string::npos);
+    EXPECT_NE(diagnostic::engine.to_json().find("Assignment is a statement and cannot be used inside an expression"),
+        std::string::npos);
     if (result.has_error()) EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
 }
 
 INSTANTIATE_TEST_SUITE_P(NestedAssignment, ParserAssignmentContext,
-    testing::Values("س + (س := 2)\n", "(س := 2) + 1\n", "س := (ص := 2)\n", "س := ص += 2\n", "س += ص := 2\n", "س += (ص := 2)\n", "(س := 2)\n",
-        "ليس (س := 2)\n", "صحيح او (س := 2)\n", "خطا و (س := 2)\n", "اكتب(س := 2)\n", "اكتب((س := 2))\n", "اكتب(1، س := 2)\n", "[س := 2]\n",
-        "(1، س := 2)\n", "{س := 2: 3}\n", "{1: س := 2}\n", "ق[س := 2]\n", "ق[(س := 2)] := 3\n", "(س := ق)[0] := 3\n", "(س := ق).حقل := 3\n",
-        "(س := دالة_اخرى)()\n", "ارجع س := 2\n",
+    testing::Values("س + (س := 2)\n", "(س := 2) + 1\n", "س := (ص := 2)\n", "س := ص += 2\n", "س += ص := 2\n",
+        "س += (ص := 2)\n", "(س := 2)\n", "ليس (س := 2)\n", "صحيح او (س := 2)\n", "خطا و (س := 2)\n", "اكتب(س := 2)\n",
+        "اكتب((س := 2))\n", "اكتب(1، س := 2)\n", "[س := 2]\n", "(1، س := 2)\n", "{س := 2: 3}\n", "{1: س := 2}\n",
+        "ق[س := 2]\n", "ق[(س := 2)] := 3\n", "(س := ق)[0] := 3\n", "(س := ق).حقل := 3\n", "(س := دالة_اخرى)()\n",
+        "ارجع س := 2\n",
         "اذا س := 2:\n"
         "    اكتب(س)\n",
         "طالما س := 2:\n"
@@ -368,17 +408,21 @@ TEST_F(ParserTest, AssignmentContextExpressionEntryPointRejectsAssignment)
 
 TEST_F(ParserTest, AssignmentContextPreservesStatementsAndEquality)
 {
-    test_source("س := 1 + (2 * 3)\n", { assign(id("س"), binary(EK::OP_ADD, integer(1), binary(EK::OP_MUL, integer(2), integer(3)))) });
+    test_source("س := 1 + (2 * 3)\n",
+        { assign(id("س"), binary(EK::OP_ADD, integer(1), binary(EK::OP_MUL, integer(2), integer(3)))) });
     test_source("س := ص := 5\n", { assign(id("س"), assignment(id("ص"), integer(5))) });
     test_source("ق[فهرس()] := قيمة()\n", { assign(index(id("ق"), call(id("فهرس"))), call(id("قيمة"))) });
     test_source("س.حقل := 2\n", { assign(get(id("س"), "حقل"), integer(2)) });
     test_source("اكتب(س = 2)\n", { expr(call(id("اكتب"), { binary(EK::OP_EQ, id("س"), integer(2)) })) });
-    test_source("اذا س = 2:\n    ص := 3\n", { branch(binary(EK::OP_EQ, id("س"), integer(2)), block({ assign(id("ص"), integer(3)) })) });
+    test_source("اذا س = 2:\n    ص := 3\n",
+        { branch(binary(EK::OP_EQ, id("س"), integer(2)), block({ assign(id("ص"), integer(3)) })) });
     test_source("دالة مثال():\n    س := 2\n    ارجع س + 1\n",
-        { function("مثال", { }, block({ assign(id("س"), integer(2)), returns(binary(EK::OP_ADD, id("س"), integer(1))) })) });
+        { function(
+            "مثال", { }, block({ assign(id("س"), integer(2)), returns(binary(EK::OP_ADD, id("س"), integer(1))) })) });
     test_source("نوع علبة:\n    دالة بداية():\n        .حقل := 2\n        .حقل += 3\n",
         { klass("علبة", { id("حقل") },
-            { function("بداية", { }, block({ assign(field("حقل"), integer(2)), augmented(field("حقل"), EK::OP_ADD, integer(3)) })) }) });
+            { function("بداية", { },
+                block({ assign(field("حقل"), integer(2)), augmented(field("حقل"), EK::OP_ADD, integer(3)) })) }) });
 }
 
 TEST_F(ParserTest, AssignmentContextAugmentedOperatorsAreStatementOnly)
@@ -387,9 +431,10 @@ TEST_F(ParserTest, AssignmentContextAugmentedOperatorsAreStatementOnly)
         char const* spelling;
         EK operation;
     };
-    for (auto const& test : { Case { "+=", EK::OP_ADD }, Case { "-=", EK::OP_SUB }, Case { "*=", EK::OP_MUL }, Case { "/=", EK::OP_DIV },
-             Case { "%=", EK::OP_MOD }, Case { "&=", EK::OP_BITAND }, Case { "|=", EK::OP_BITOR }, Case { "^=", EK::OP_BITXOR },
-             Case { "<<=", EK::OP_LSHIFT }, Case { ">>=", EK::OP_RSHIFT } }) {
+    for (auto const& test :
+        { Case { "+=", EK::OP_ADD }, Case { "-=", EK::OP_SUB }, Case { "*=", EK::OP_MUL }, Case { "/=", EK::OP_DIV },
+            Case { "%=", EK::OP_MOD }, Case { "&=", EK::OP_BITAND }, Case { "|=", EK::OP_BITOR },
+            Case { "^=", EK::OP_BITXOR }, Case { "<<=", EK::OP_LSHIFT }, Case { ">>=", EK::OP_RSHIFT } }) {
         auto source = std::string("س ") + test.spelling + " 1";
         test_source(source.c_str(), { augmented(id("س"), test.operation, integer(1)) });
 
@@ -417,8 +462,8 @@ TEST_F(ParserTest, DecimalLiteralsRoundOnce)
         char const* source;
         double expected;
     };
-    for (auto const& test : { Case { "9223372036854775808.0", 0x1p63 }, Case { "9_223_372_036_854_775_808.0", 0x1p63 }, Case { "0.1", 0.1 },
-             Case { "0.1234567890123456789", 0.1234567890123456789 } }) {
+    for (auto const& test : { Case { "9223372036854775808.0", 0x1p63 }, Case { "9_223_372_036_854_775_808.0", 0x1p63 },
+             Case { "0.1", 0.1 }, Case { "0.1234567890123456789", 0.1234567890123456789 } }) {
         test_source(test.source, { expr(real(test.expected)) });
     }
 }
@@ -448,19 +493,35 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
     test_stmts("call_expression_with_one_argument.fa", { expr(call(id("اطبع"), { id("المتنبي") })) });
 }
 
-TEST_F(ParserTest, ParseNestedCallExpression) { test_stmts("nested_call_expression.fa", { expr(call(id("ا"), { call(id("ب"), { id("د") }) })) }); }
+TEST_F(ParserTest, ParseNestedCallExpression)
+{
+    test_stmts("nested_call_expression.fa", { expr(call(id("ا"), { call(id("ب"), { id("د") }) })) });
+}
 
-TEST_F(ParserTest, ParseSimpleAddition) { test_stmts("simple_addition.fa", { expr(binary(EK::OP_ADD, id("ا"), id("ب"))) }); }
+TEST_F(ParserTest, ParseSimpleAddition)
+{
+    test_stmts("simple_addition.fa", { expr(binary(EK::OP_ADD, id("ا"), id("ب"))) });
+}
 
-TEST_F(ParserTest, ParseSimpleMultiplication) { test_stmts("simple_multiplication.fa", { expr(binary(EK::OP_MUL, id("ا"), id("ب"))) }); }
+TEST_F(ParserTest, ParseSimpleMultiplication)
+{
+    test_stmts("simple_multiplication.fa", { expr(binary(EK::OP_MUL, id("ا"), id("ب"))) });
+}
 
-TEST_F(ParserTest, ParseSimpleSubtraction) { test_stmts("simple_subtraction.fa", { expr(binary(EK::OP_SUB, id("ا"), id("ب"))) }); }
+TEST_F(ParserTest, ParseSimpleSubtraction)
+{
+    test_stmts("simple_subtraction.fa", { expr(binary(EK::OP_SUB, id("ا"), id("ب"))) });
+}
 
-TEST_F(ParserTest, ParseSimpleDivision) { test_stmts("simple_division.fa", { expr(binary(EK::OP_DIV, id("ا"), id("ب"))) }); }
+TEST_F(ParserTest, ParseSimpleDivision)
+{
+    test_stmts("simple_division.fa", { expr(binary(EK::OP_DIV, id("ا"), id("ب"))) });
+}
 
 TEST_F(ParserTest, ParseComplexExpression)
 {
-    test_stmts("complex_expression.fa", { expr(binary(EK::OP_ADD, integer(2), binary(EK::OP_MUL, integer(3), integer(4)))) });
+    test_stmts(
+        "complex_expression.fa", { expr(binary(EK::OP_ADD, integer(2), binary(EK::OP_MUL, integer(3), integer(4)))) });
 }
 
 TEST_F(ParserTest, BinaryOperatorsAssociateLeft)
@@ -473,22 +534,28 @@ TEST_F(ParserTest, BinaryOperatorsAssociateLeft)
         i64 second;
         i64 third;
     };
-    for (auto const& test : { Case { "8 - 3 - 1", EK::OP_SUB, EK::OP_SUB, 8, 3, 1 }, Case { "8 + 3 - 1", EK::OP_SUB, EK::OP_ADD, 8, 3, 1 },
-             Case { "8 / 4 / 2", EK::OP_DIV, EK::OP_DIV, 8, 4, 2 }, Case { "8 / 4 * 2", EK::OP_MUL, EK::OP_DIV, 8, 4, 2 },
-             Case { "8 >> 2 << 1", EK::OP_LSHIFT, EK::OP_RSHIFT, 8, 2, 1 } }) {
-        test_source(test.source, { expr(binary(test.outer, binary(test.inner, integer(test.first), integer(test.second)), integer(test.third))) });
+    for (auto const& test :
+        { Case { "8 - 3 - 1", EK::OP_SUB, EK::OP_SUB, 8, 3, 1 }, Case { "8 + 3 - 1", EK::OP_SUB, EK::OP_ADD, 8, 3, 1 },
+            Case { "8 / 4 / 2", EK::OP_DIV, EK::OP_DIV, 8, 4, 2 },
+            Case { "8 / 4 * 2", EK::OP_MUL, EK::OP_DIV, 8, 4, 2 },
+            Case { "8 >> 2 << 1", EK::OP_LSHIFT, EK::OP_RSHIFT, 8, 2, 1 } }) {
+        test_source(test.source,
+            { expr(binary(
+                test.outer, binary(test.inner, integer(test.first), integer(test.second)), integer(test.third))) });
     }
 }
 
 TEST_F(ParserTest, PowerAssociatesRightAndBindsInsideUnary)
 {
-    test_source(
-        "-2 ** 3 ** -4", { expr(unary(EK::OP_NEG, binary(EK::OP_POW, integer(2), binary(EK::OP_POW, integer(3), unary(EK::OP_NEG, integer(4)))))) });
+    test_source("-2 ** 3 ** -4",
+        { expr(unary(EK::OP_NEG,
+            binary(EK::OP_POW, integer(2), binary(EK::OP_POW, integer(3), unary(EK::OP_NEG, integer(4)))))) });
 }
 
 TEST_F(ParserTest, ParseNestedParentheses)
 {
-    test_stmts("nested_parens.fa", { expr(binary(EK::OP_MUL, binary(EK::OP_ADD, integer(2), integer(3)), integer(4))) });
+    test_stmts(
+        "nested_parens.fa", { expr(binary(EK::OP_MUL, binary(EK::OP_ADD, integer(2), integer(3)), integer(4))) });
 }
 
 TEST_F(ParserTest, ParseLogicalExpression)
@@ -496,11 +563,15 @@ TEST_F(ParserTest, ParseLogicalExpression)
     test_stmts("logical_expression.fa", { expr(binary(EK::OP_OR, binary(EK::OP_AND, id("ا"), id("ب")), id("ت"))) });
 }
 
-TEST_F(ParserTest, ParseUnaryChain) { test_stmts("unary_chain.fa", { expr(unary(EK::OP_NEG, unary(EK::OP_NEG, id("ب")))) }); }
+TEST_F(ParserTest, ParseUnaryChain)
+{
+    test_stmts("unary_chain.fa", { expr(unary(EK::OP_NEG, unary(EK::OP_NEG, id("ب")))) });
+}
 
 TEST_F(ParserTest, ParseComplexFunctionCall)
 {
-    test_stmts("complex_function_call.fa", { expr(call(id("علم"), { binary(EK::OP_ADD, id("ا"), id("ب")), binary(EK::OP_MUL, id("ت"), id("ث")) })) });
+    test_stmts("complex_function_call.fa",
+        { expr(call(id("علم"), { binary(EK::OP_ADD, id("ا"), id("ب")), binary(EK::OP_MUL, id("ت"), id("ث")) })) });
 }
 
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
@@ -535,36 +606,51 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
     test_stmts("long_identifier.fa", { expr(id(StringRef(name.c_str()))) });
 }
 
-TEST_F(ParserTest, ParseUnicodeIdentifiers) { test_stmts("unicode_identifiers.fa", { expr(binary(EK::OP_ADD, id("ا"), id("ب"))) }); }
+TEST_F(ParserTest, ParseUnicodeIdentifiers)
+{
+    test_stmts("unicode_identifiers.fa", { expr(binary(EK::OP_ADD, id("ا"), id("ب"))) });
+}
 
 TEST_F(ParserTest, ParseEmptyList) { test_stmts("empty_list.fa", { expr(list({ })) }); }
 
 TEST_F(ParserTest, ParseEmptyTuple) { test_stmts("empty_tuple.fa", { expr(list({ })) }); }
 
-TEST_F(ParserTest, ParseListWithTrailingComma) { test_stmts("list_trailing_comma.fa", { expr(list({ integer(1), integer(2), integer(3) })) }); }
+TEST_F(ParserTest, ParseListWithTrailingComma)
+{
+    test_stmts("list_trailing_comma.fa", { expr(list({ integer(1), integer(2), integer(3) })) });
+}
 
 TEST_F(ParserTest, ParseNestedLists)
 {
-    test_stmts("nested_lists.fa", { expr(list({ list({ integer(1), integer(2) }), list({ integer(3), integer(4) }) })) });
+    test_stmts(
+        "nested_lists.fa", { expr(list({ list({ integer(1), integer(2) }), list({ integer(3), integer(4) }) })) });
 }
 
 TEST_F(ParserTest, ParseAssignment) { test_stmts("assignment.fa", { assign(id("ا"), integer(42)) }); }
 
-TEST_F(ParserTest, ParseChainedAssignment) { test_stmts("chained_assignment.fa", { assign(id("ا"), assignment(id("ب"), integer(5))) }); }
+TEST_F(ParserTest, ParseChainedAssignment)
+{
+    test_stmts("chained_assignment.fa", { assign(id("ا"), assignment(id("ب"), integer(5))) });
+}
 
 TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
 {
-    test_stmts("chained_assignment_with_expression.fa", { assign(id("ا"), assignment(id("ب"), binary(EK::OP_ADD, id("م"), id("ل")))) });
+    test_stmts("chained_assignment_with_expression.fa",
+        { assign(id("ا"), assignment(id("ب"), binary(EK::OP_ADD, id("م"), id("ل")))) });
 }
 
 TEST_F(ParserTest, ParseDeeplyNestedExpression) { test_stmts("deeply_nested.fa", { expr(id("ا")) }); }
 
 TEST_F(ParserTest, ParseWhileLoop)
 {
-    test_stmts("while_loop.fa", { while_loop(binary(EK::OP_EQ, id("شيء"), boolean(true)), block({ assign(id("بسبسمياو"), boolean(false)) })) });
+    test_stmts("while_loop.fa",
+        { while_loop(binary(EK::OP_EQ, id("شيء"), boolean(true)), block({ assign(id("بسبسمياو"), boolean(false)) })) });
 }
 
-TEST_F(ParserTest, ParseForLoop) { test_stmts("for_loop.fa", { for_loop("عنصر", id("عناصر"), block({ assign(id("اجمع"), id("عنصر")) })) }); }
+TEST_F(ParserTest, ParseForLoop)
+{
+    test_stmts("for_loop.fa", { for_loop("عنصر", id("عناصر"), block({ assign(id("اجمع"), id("عنصر")) })) });
+}
 
 TEST_F(ParserTest, ParseBreakStatement) { test_stmts("break_stmt.fa", { breaks() }); }
 
@@ -574,25 +660,41 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
 {
     test_stmts("complexe_if_statement.fa",
         { branch(binary(EK::OP_NEQ, id("شيء"), boolean(true)),
-            block({ while_loop(binary(EK::OP_EQ, id("شيء"), boolean(true)), block({ assign(id("بسبسمياو"), boolean(false)) })) })) });
+            block({ while_loop(
+                binary(EK::OP_EQ, id("شيء"), boolean(true)), block({ assign(id("بسبسمياو"), boolean(false)) })) })) });
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentPlus) { test_stmts("augmented_assign_plus.fa", { augmented(id("ا"), EK::OP_ADD, id("ب")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentPlus)
+{
+    test_stmts("augmented_assign_plus.fa", { augmented(id("ا"), EK::OP_ADD, id("ب")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentMinus) { test_stmts("augmented_assign_minus.fa", { augmented(id("ا"), EK::OP_SUB, id("ب")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentMinus)
+{
+    test_stmts("augmented_assign_minus.fa", { augmented(id("ا"), EK::OP_SUB, id("ب")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentTimes) { test_stmts("augmented_assign_times.fa", { augmented(id("ا"), EK::OP_MUL, id("ب")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentTimes)
+{
+    test_stmts("augmented_assign_times.fa", { augmented(id("ا"), EK::OP_MUL, id("ب")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentDiv) { test_stmts("augmented_assign_div.fa", { augmented(id("ا"), EK::OP_DIV, id("ب")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentDiv)
+{
+    test_stmts("augmented_assign_div.fa", { augmented(id("ا"), EK::OP_DIV, id("ب")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentMod) { test_stmts("augmented_assign_mod.fa", { augmented(id("ا"), EK::OP_MOD, id("ب")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentMod)
+{
+    test_stmts("augmented_assign_mod.fa", { augmented(id("ا"), EK::OP_MOD, id("ب")) });
+}
 
 TEST_F(ParserTest, ParseArabicNumercLiterals)
 {
-    AST::Stmt* int_assign
-        = ast_builder.make_assignment_stmt(ast_builder.make_identifier("عدد_صحيح", { }), ast_builder.make_literal_int(123, { }), { });
-    AST::Stmt* float_assign
-        = ast_builder.make_assignment_stmt(ast_builder.make_identifier("عدد_حقيقي", { }), ast_builder.make_literal_float(12.5, { }), { });
+    AST::Stmt* int_assign = ast_builder.make_assignment_stmt(
+        ast_builder.make_identifier("عدد_صحيح", { }), ast_builder.make_literal_int(123, { }), { });
+    AST::Stmt* float_assign = ast_builder.make_assignment_stmt(
+        ast_builder.make_identifier("عدد_حقيقي", { }), ast_builder.make_literal_float(12.5, { }), { });
     test_stmts("arabic_numeric_literals.fa", { int_assign, float_assign });
 }
 
@@ -601,11 +703,15 @@ TEST_F(ParserTest, ParseAssertEnglishMessage)
     test_stmts("assert_english_message.fa", { expr(call(id("تاكد"), { binary(EK::OP_EQ, id("س"), integer(1)) })) });
 }
 
-TEST_F(ParserTest, ParseAssertStatement) { test_stmts("assert_statement.fa", { expr(call(id("تاكد"), { boolean(true) })) }); }
+TEST_F(ParserTest, ParseAssertStatement)
+{
+    test_stmts("assert_statement.fa", { expr(call(id("تاكد"), { boolean(true) })) });
+}
 
 TEST_F(ParserTest, ParseAssertMessage)
 {
-    test_stmts("assert_message.fa", { expr(call(id("تاكد"), { binary(EK::OP_GT, id("س"), integer(0)), text("قيمة موجبة مطلوبة") })) });
+    test_stmts("assert_message.fa",
+        { expr(call(id("تاكد"), { binary(EK::OP_GT, id("س"), integer(0)), text("قيمة موجبة مطلوبة") })) });
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignmentArabicPercent)
@@ -613,11 +719,20 @@ TEST_F(ParserTest, ParseAugmentedAssignmentArabicPercent)
     test_stmts("augmented_assign_arabic_percent.fa", { augmented(id("قيمة"), EK::OP_MOD, integer(3)) });
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentBitAnd) { test_stmts("augmented_assign_bitand.fa", { augmented(id("قيمة"), EK::OP_BITAND, id("قناع")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentBitAnd)
+{
+    test_stmts("augmented_assign_bitand.fa", { augmented(id("قيمة"), EK::OP_BITAND, id("قناع")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentBitOr) { test_stmts("augmented_assign_bitor.fa", { augmented(id("قيمة"), EK::OP_BITOR, id("قناع")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentBitOr)
+{
+    test_stmts("augmented_assign_bitor.fa", { augmented(id("قيمة"), EK::OP_BITOR, id("قناع")) });
+}
 
-TEST_F(ParserTest, ParseAugmentedAssignmentBitXor) { test_stmts("augmented_assign_bitxor.fa", { augmented(id("قيمة"), EK::OP_BITXOR, id("قناع")) }); }
+TEST_F(ParserTest, ParseAugmentedAssignmentBitXor)
+{
+    test_stmts("augmented_assign_bitxor.fa", { augmented(id("قيمة"), EK::OP_BITXOR, id("قناع")) });
+}
 
 TEST_F(ParserTest, ParseAugmentedAssignmentLeftShift)
 {
@@ -649,27 +764,34 @@ TEST_F(ParserTest, ParseFloatLiteral) { test_stmts("float_literal.fa", { assign(
 
 TEST_F(ParserTest, ParseNumericSeparators)
 {
-    test_stmts("numeric_separators.fa", { assign(id("عدد_صحيح"), integer(1234567)), assign(id("عدد_حقيقي"), real(1234.56)) });
+    test_stmts(
+        "numeric_separators.fa", { assign(id("عدد_صحيح"), integer(1234567)), assign(id("عدد_حقيقي"), real(1234.56)) });
 }
 
-TEST_F(ParserTest, ParseSingleQuotedString) { test_stmts("single_quoted_string.fa", { assign(id("نص"), text("مرحبا بالعالم")) }); }
+TEST_F(ParserTest, ParseSingleQuotedString)
+{
+    test_stmts("single_quoted_string.fa", { assign(id("نص"), text("مرحبا بالعالم")) });
+}
 
 TEST_F(ParserTest, ParseStringEscapes)
 {
-    test_stmts("string_escapes.fa", { assign(id("نص"), text("سطر\nثان\t\r\b\f/\\\"'م")), assign(id("اقتباس"), text("اقتباس: ' ونص: \"")) });
+    test_stmts("string_escapes.fa",
+        { assign(id("نص"), text("سطر\nثان\t\r\b\f/\\\"'م")), assign(id("اقتباس"), text("اقتباس: ' ونص: \"")) });
 }
 
 TEST_F(ParserTest, ParseBitwiseExpression)
 {
     test_stmts("bitwise_expression.fa",
-        { assign(id("تقاطع"), binary(EK::OP_BITAND, id("ا"), id("ب"))), assign(id("اتحاد"), binary(EK::OP_BITOR, id("ا"), id("ب"))),
+        { assign(id("تقاطع"), binary(EK::OP_BITAND, id("ا"), id("ب"))),
+            assign(id("اتحاد"), binary(EK::OP_BITOR, id("ا"), id("ب"))),
             assign(id("اختلاف"), binary(EK::OP_BITXOR, id("ا"), id("ب"))) });
 }
 
 TEST_F(ParserTest, ParseBitwiseNot)
 {
     test_stmts("bitwise_not.fa",
-        { assign(id("قيمة"), unary(EK::OP_BITNOT, id("عدد"))), assign(id("نتيجة"), unary(EK::OP_BITNOT, binary(EK::OP_BITOR, id("ا"), id("ب")))) });
+        { assign(id("قيمة"), unary(EK::OP_BITNOT, id("عدد"))),
+            assign(id("نتيجة"), unary(EK::OP_BITNOT, binary(EK::OP_BITOR, id("ا"), id("ب")))) });
 }
 
 TEST_F(ParserTest, ParseLogicalNot)
@@ -682,19 +804,22 @@ TEST_F(ParserTest, ParseLogicalNot)
 TEST_F(ParserTest, ParseUnaryPlus)
 {
     test_stmts("unary_plus.fa",
-        { assign(id("قيمة"), unary(EK::OP_PLUS, integer(5))), assign(id("نتيجة"), unary(EK::OP_PLUS, binary(EK::OP_ADD, id("ا"), id("ب")))) });
+        { assign(id("قيمة"), unary(EK::OP_PLUS, integer(5))),
+            assign(id("نتيجة"), unary(EK::OP_PLUS, binary(EK::OP_ADD, id("ا"), id("ب")))) });
 }
 
 TEST_F(ParserTest, ParseModuloExpression)
 {
     test_stmts("modulo_expression.fa",
-        { assign(id("باقي"), binary(EK::OP_MOD, integer(17), integer(5))), assign(id("باقي_عربي"), binary(EK::OP_MOD, integer(17), integer(5))) });
+        { assign(id("باقي"), binary(EK::OP_MOD, integer(17), integer(5))),
+            assign(id("باقي_عربي"), binary(EK::OP_MOD, integer(17), integer(5))) });
 }
 
 TEST_F(ParserTest, ParseShiftExpression)
 {
     test_stmts("shift_expression.fa",
-        { assign(id("يسار"), binary(EK::OP_LSHIFT, id("قيمة"), integer(2))), assign(id("يمين"), binary(EK::OP_RSHIFT, id("قيمة"), integer(1))) });
+        { assign(id("يسار"), binary(EK::OP_LSHIFT, id("قيمة"), integer(2))),
+            assign(id("يمين"), binary(EK::OP_RSHIFT, id("قيمة"), integer(1))) });
 }
 
 TEST_F(ParserTest, ParseComparisonGreaterEqual)
@@ -718,18 +843,23 @@ TEST_F(ParserTest, ParseOperatorPrecedence)
     auto arithmetic = binary(EK::OP_ADD, id("ا"), binary(EK::OP_MUL, id("ب"), id("ت")));
     auto shifted = binary(EK::OP_LSHIFT, arithmetic, integer(2));
     auto compared = binary(EK::OP_EQ, id("ح"), id("خ"));
-    auto bitwise = binary(EK::OP_BITOR, binary(EK::OP_BITXOR, binary(EK::OP_BITAND, shifted, id("ث")), id("ج")), compared);
+    auto bitwise
+        = binary(EK::OP_BITOR, binary(EK::OP_BITXOR, binary(EK::OP_BITAND, shifted, id("ث")), id("ج")), compared);
     test_stmts("operator_precedence.fa",
         { assign(id("نتيجة"), binary(EK::OP_OR, binary(EK::OP_AND, bitwise, id("د")), id("ذ"))),
             assign(id("فرق"), binary(EK::OP_SUB, binary(EK::OP_SUB, id("ا"), id("ب")), id("ت"))),
             assign(id("خارج"), binary(EK::OP_DIV, binary(EK::OP_DIV, id("ا"), id("ب")), id("ت"))) });
 }
 
-TEST_F(ParserTest, ParsePowerExpression) { test_stmts("power_expression.fa", { assign(id("قيمة"), binary(EK::OP_POW, integer(2), integer(10))) }); }
+TEST_F(ParserTest, ParsePowerExpression)
+{
+    test_stmts("power_expression.fa", { assign(id("قيمة"), binary(EK::OP_POW, integer(2), integer(10))) });
+}
 
 TEST_F(ParserTest, ParsePowerRightAssociative)
 {
-    test_stmts("power_right_associative.fa", { assign(id("قيمة"), binary(EK::OP_POW, integer(2), binary(EK::OP_POW, integer(3), integer(2)))) });
+    test_stmts("power_right_associative.fa",
+        { assign(id("قيمة"), binary(EK::OP_POW, integer(2), binary(EK::OP_POW, integer(3), integer(2)))) });
 }
 
 TEST_F(ParserTest, ParsePowerUnaryPrecedence)
@@ -740,30 +870,44 @@ TEST_F(ParserTest, ParsePowerUnaryPrecedence)
             assign(id("اساس_سالب"), binary(EK::OP_POW, unary(EK::OP_NEG, integer(2)), integer(2))) });
 }
 
-TEST_F(ParserTest, ParseCallMultiline) { test_stmts("call_multiline.fa", { assign(id("نتيجة"), call(id("اجمع"), { integer(1), integer(2) })) }); }
+TEST_F(ParserTest, ParseCallMultiline)
+{
+    test_stmts("call_multiline.fa", { assign(id("نتيجة"), call(id("اجمع"), { integer(1), integer(2) })) });
+}
 
 TEST_F(ParserTest, ParseCallTrailingComma)
 {
     test_stmts("call_trailing_comma.fa", { assign(id("نتيجة"), call(id("اجمع"), { integer(1), integer(2) })) });
 }
 
-TEST_F(ParserTest, ParseIndexRead) { test_stmts("index_read.fa", { assign(id("قيمة"), index(id("قيم"), integer(0))) }); }
+TEST_F(ParserTest, ParseIndexRead)
+{
+    test_stmts("index_read.fa", { assign(id("قيمة"), index(id("قيم"), integer(0))) });
+}
 
 TEST_F(ParserTest, ParseIndexExpression)
 {
-    test_stmts("index_expression.fa", { assign(id("قيمة"), index(id("قيم"), binary(EK::OP_ADD, id("فهرس"), integer(1)))) });
+    test_stmts(
+        "index_expression.fa", { assign(id("قيمة"), index(id("قيم"), binary(EK::OP_ADD, id("فهرس"), integer(1)))) });
 }
 
-TEST_F(ParserTest, ParseIndexAssignment) { test_stmts("index_assignment.fa", { assign(index(id("قيم"), integer(0)), integer(42)) }); }
+TEST_F(ParserTest, ParseIndexAssignment)
+{
+    test_stmts("index_assignment.fa", { assign(index(id("قيم"), integer(0)), integer(42)) });
+}
 
 TEST_F(ParserTest, ParseIndexNested)
 {
-    test_stmts("index_nested.fa", { assign(index(index(id("قيم"), integer(0)), integer(1)), index(index(id("قيم"), integer(1)), integer(0))) });
+    test_stmts("index_nested.fa",
+        { assign(index(index(id("قيم"), integer(0)), integer(1)), index(index(id("قيم"), integer(1)), integer(0))) });
 }
 
 TEST_F(ParserTest, ParseMemberRead) { test_stmts("member_read.fa", { assign(id("قيمة"), get(id("علبة"), "قيمة")) }); }
 
-TEST_F(ParserTest, ParseMemberAssignment) { test_stmts("member_assignment.fa", { assign(get(id("علبة"), "قيمة"), integer(42)) }); }
+TEST_F(ParserTest, ParseMemberAssignment)
+{
+    test_stmts("member_assignment.fa", { assign(get(id("علبة"), "قيمة"), integer(42)) });
+}
 
 TEST_F(ParserTest, ParseMethodCall)
 {
@@ -773,29 +917,39 @@ TEST_F(ParserTest, ParseMethodCall)
 TEST_F(ParserTest, ParsePostfixChain)
 {
     test_stmts("postfix_chain.fa",
-        { assign(id("عنصر"), index(call(get(get(index(call(id("مصنع")), id("فهرس")), "عنصر"), "اجمع"), { integer(1), integer(2) }), integer(0))),
+        { assign(id("عنصر"),
+              index(call(get(get(index(call(id("مصنع")), id("فهرس")), "عنصر"), "اجمع"), { integer(1), integer(2) }),
+                  integer(0))),
             assign(id("نتيجة"), call(call(id("مصنع")))) });
 }
 
-TEST_F(ParserTest, ParseListMultiline) { test_stmts("list_multiline.fa", { assign(id("قيم"), list({ integer(1), integer(2), integer(3) })) }); }
+TEST_F(ParserTest, ParseListMultiline)
+{
+    test_stmts("list_multiline.fa", { assign(id("قيم"), list({ integer(1), integer(2), integer(3) })) });
+}
 
 TEST_F(ParserTest, ParseParenthesizedSequence)
 {
     test_stmts("parenthesized_sequence.fa", { assign(id("قيم"), list({ integer(1), integer(2), integer(3) })) });
 }
 
-TEST_F(ParserTest, ParseParenthesizedSingleton) { test_stmts("parenthesized_singleton.fa", { assign(id("قيم"), list({ integer(1) })) }); }
+TEST_F(ParserTest, ParseParenthesizedSingleton)
+{
+    test_stmts("parenthesized_singleton.fa", { assign(id("قيم"), list({ integer(1) })) });
+}
 
 TEST_F(ParserTest, ParseDictionaryEmpty) { test_stmts("dictionary_empty.fa", { assign(id("قاموس"), dict({ })) }); }
 
 TEST_F(ParserTest, ParseDictionaryLiteral)
 {
-    test_stmts("dictionary_literal.fa", { assign(id("قاموس"), dict({ { text("اول"), integer(1) }, { text("ثان"), integer(2) } })) });
+    test_stmts("dictionary_literal.fa",
+        { assign(id("قاموس"), dict({ { text("اول"), integer(1) }, { text("ثان"), integer(2) } })) });
 }
 
 TEST_F(ParserTest, ParseDictionaryMultiline)
 {
-    test_stmts("dictionary_multiline.fa", { assign(id("قاموس"), dict({ { text("اول"), integer(1) }, { text("ثان"), integer(2) } })) });
+    test_stmts("dictionary_multiline.fa",
+        { assign(id("قاموس"), dict({ { text("اول"), integer(1) }, { text("ثان"), integer(2) } })) });
 }
 
 TEST_F(ParserTest, ParseDictionaryTrailingComma)
@@ -807,7 +961,8 @@ TEST_F(ParserTest, ParseDictionaryComputedKeys)
 {
     test_stmts("dictionary_computed_keys.fa",
         { assign(id("قاموس"),
-            dict({ { binary(EK::OP_ADD, integer(1), integer(2)), integer(3) }, { binary(EK::OP_ADD, id("اسم"), text("لاحقة")), integer(4) } })) });
+            dict({ { binary(EK::OP_ADD, integer(1), integer(2)), integer(3) },
+                { binary(EK::OP_ADD, id("اسم"), text("لاحقة")), integer(4) } })) });
 }
 
 TEST_F(ParserTest, ParseDictionaryNested)
@@ -818,7 +973,10 @@ TEST_F(ParserTest, ParseDictionaryNested)
                 { text("قائمة"), list({ integer(1), dict({ { text("قيمة"), integer(2) } }) }) } })) });
 }
 
-TEST_F(ParserTest, ParseFunctionNoParameters) { test_stmts("function_no_parameters.fa", { function("قيمة", { }, block({ returns(integer(42)) })) }); }
+TEST_F(ParserTest, ParseFunctionNoParameters)
+{
+    test_stmts("function_no_parameters.fa", { function("قيمة", { }, block({ returns(integer(42)) })) });
+}
 
 TEST_F(ParserTest, ParseFunctionMultipleParameters)
 {
@@ -837,26 +995,28 @@ TEST_F(ParserTest, ParseFunctionNested)
 
 TEST_F(ParserTest, ParseParametersMultiline)
 {
-    test_stmts(
-        "parameters_multiline.fa", { function("اجمع", { id("اول"), id("ثان") }, block({ returns(binary(EK::OP_ADD, id("اول"), id("ثان"))) })) });
+    test_stmts("parameters_multiline.fa",
+        { function("اجمع", { id("اول"), id("ثان") }, block({ returns(binary(EK::OP_ADD, id("اول"), id("ثان"))) })) });
 }
 
 TEST_F(ParserTest, ParseParametersTrailingComma)
 {
-    test_stmts(
-        "parameters_trailing_comma.fa", { function("اجمع", { id("اول"), id("ثان") }, block({ returns(binary(EK::OP_ADD, id("اول"), id("ثان"))) })) });
+    test_stmts("parameters_trailing_comma.fa",
+        { function("اجمع", { id("اول"), id("ثان") }, block({ returns(binary(EK::OP_ADD, id("اول"), id("ثان"))) })) });
 }
 
 TEST_F(ParserTest, ParseReturnBare) { test_stmts("return_bare.fa", { function("توقف", { }, block({ returns() })) }); }
 
 TEST_F(ParserTest, ParseReturnValue)
 {
-    test_stmts("return_value.fa", { function("قيمة", { id("س") }, block({ returns(binary(EK::OP_MUL, id("س"), integer(2))) })) });
+    test_stmts("return_value.fa",
+        { function("قيمة", { id("س") }, block({ returns(binary(EK::OP_MUL, id("س"), integer(2))) })) });
 }
 
 TEST_F(ParserTest, ParseClassDefinition)
 {
-    test_stmts("class_definition.fa", { klass("علبة", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) });
+    test_stmts(
+        "class_definition.fa", { klass("علبة", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) });
 }
 
 TEST_F(ParserTest, ParseClassConstructorThis)
@@ -879,7 +1039,8 @@ TEST_F(ParserTest, ParseClassFieldShorthandAugmented)
 {
     test_stmts("class_field_shorthand_augmented.fa",
         { klass("علبة", { id("قيمة") },
-            { function("بداية", { }, block({ assign(field("قيمة"), integer(1)), augmented(field("قيمة"), EK::OP_ADD, integer(2)) })) }) });
+            { function("بداية", { },
+                block({ assign(field("قيمة"), integer(1)), augmented(field("قيمة"), EK::OP_ADD, integer(2)) })) }) });
 }
 
 TEST_F(ParserTest, ParseClassInheritance)
@@ -893,7 +1054,8 @@ TEST_F(ParserTest, ParseClassMultipleMethods)
 {
     test_stmts("class_multiple_methods.fa",
         { klass("علبة", { },
-            { function("اول", { }, block({ returns(integer(1)) })), function("ثان", { }, block({ returns(integer(2)) })),
+            { function("اول", { }, block({ returns(integer(1)) })),
+                function("ثان", { }, block({ returns(integer(2)) })),
                 function("ثالث", { }, block({ returns(integer(3)) })) }) });
 }
 
@@ -901,33 +1063,40 @@ TEST_F(ParserTest, ParseClassOperatorMethods)
 {
     test_stmts("class_operator_methods.fa",
         { klass("علبة", { },
-            { function("عملية+", { id("اخر") }, block({ returns(integer(1)) })), function("عملية-", { id("اخر") }, block({ returns(integer(2)) })),
-                function("عملية*", { id("اخر") }, block({ returns(integer(3)) })), function("عملية/", { id("اخر") }, block({ returns(integer(4)) })),
+            { function("عملية+", { id("اخر") }, block({ returns(integer(1)) })),
+                function("عملية-", { id("اخر") }, block({ returns(integer(2)) })),
+                function("عملية*", { id("اخر") }, block({ returns(integer(3)) })),
+                function("عملية/", { id("اخر") }, block({ returns(integer(4)) })),
                 function("عملية%", { id("اخر") }, block({ returns(integer(5)) })) }) });
 }
 
 TEST_F(ParserTest, ParseClassOperatorArabicPercent)
 {
-    test_stmts("class_operator_arabic_percent.fa", { klass("علبة", { }, { function("عملية٪", { id("اخر") }, block({ returns(integer(1)) })) }) });
+    test_stmts("class_operator_arabic_percent.fa",
+        { klass("علبة", { }, { function("عملية٪", { id("اخر") }, block({ returns(integer(1)) })) }) });
 }
 
 TEST_F(ParserTest, ParseIfElse)
 {
-    test_stmts("if_else.fa", { branch(boolean(true), block({ assign(id("قيمة"), integer(1)) }), block({ assign(id("قيمة"), integer(2)) })) });
+    test_stmts("if_else.fa",
+        { branch(
+            boolean(true), block({ assign(id("قيمة"), integer(1)) }), block({ assign(id("قيمة"), integer(2)) })) });
 }
 
 TEST_F(ParserTest, ParseIfElseIf)
 {
     test_stmts("if_else_if.fa",
         { branch(boolean(false), block({ assign(id("قيمة"), integer(1)) }),
-            branch(boolean(true), block({ assign(id("قيمة"), integer(2)) }), block({ assign(id("قيمة"), integer(3)) }))) });
+            branch(boolean(true), block({ assign(id("قيمة"), integer(2)) }),
+                block({ assign(id("قيمة"), integer(3)) }))) });
 }
 
 TEST_F(ParserTest, ParseNestedIfElse)
 {
     test_stmts("nested_if_else.fa",
         { branch(boolean(true),
-            block({ branch(boolean(false), block({ assign(id("قيمة"), integer(1)) }), block({ assign(id("قيمة"), integer(2)) })) }),
+            block({ branch(boolean(false), block({ assign(id("قيمة"), integer(1)) }),
+                block({ assign(id("قيمة"), integer(2)) })) }),
             block({ assign(id("قيمة"), integer(3)) })) });
 }
 
@@ -941,8 +1110,8 @@ TEST_F(ParserTest, ParseInlineIf)
 TEST_F(ParserTest, ParseInlineElseBinding)
 {
     test_stmts("inline_else_binding.fa",
-        { branch(
-              boolean(true), block({ branch(boolean(false), block({ assign(id("قيمة"), integer(1)) })) }), block({ assign(id("قيمة"), integer(2)) })),
+        { branch(boolean(true), block({ branch(boolean(false), block({ assign(id("قيمة"), integer(1)) })) }),
+              block({ assign(id("قيمة"), integer(2)) })),
             assign(id("بعد"), integer(3)) });
 }
 
@@ -953,22 +1122,28 @@ TEST_F(ParserTest, ParseInlineWhile)
 
 TEST_F(ParserTest, ParseInlineFor)
 {
-    test_stmts("inline_for.fa", { for_loop("عنصر", list({ integer(1), integer(2) }), block({ continues() })), assign(id("بعد"), integer(1)) });
+    test_stmts("inline_for.fa",
+        { for_loop("عنصر", list({ integer(1), integer(2) }), block({ continues() })), assign(id("بعد"), integer(1)) });
 }
 
 TEST_F(ParserTest, ParseInlineFunction)
 {
-    test_stmts("inline_function.fa", { function("قيمة", { }, block({ returns(integer(1)) })), assign(id("بعد"), integer(2)) });
+    test_stmts(
+        "inline_function.fa", { function("قيمة", { }, block({ returns(integer(1)) })), assign(id("بعد"), integer(2)) });
 }
 
 TEST_F(ParserTest, ParseInlineClass)
 {
-    test_stmts("inline_class.fa", { klass("علبة", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }), assign(id("بعد"), integer(2)) });
+    test_stmts("inline_class.fa",
+        { klass("علبة", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }),
+            assign(id("بعد"), integer(2)) });
 }
 
 TEST_F(ParserTest, ParseComments)
 {
-    test_stmts("comments.fa", { assign(id("قيمة"), integer(1)), branch(boolean(true), block({ augmented(id("قيمة"), EK::OP_ADD, integer(1)) })) });
+    test_stmts("comments.fa",
+        { assign(id("قيمة"), integer(1)),
+            branch(boolean(true), block({ augmented(id("قيمة"), EK::OP_ADD, integer(1)) })) });
 }
 
 TEST_F(ParserTest, ParseContinuationIndentation)
@@ -976,22 +1151,36 @@ TEST_F(ParserTest, ParseContinuationIndentation)
     test_stmts("continuation_indentation.fa",
         { branch(boolean(true),
               block({ assign(id("قيم"), list({ integer(1), integer(2) })),
-                  assign(id("نتيجة"), call(id("اجمع"), { index(id("قيم"), integer(0)), index(id("قيم"), integer(1)) })) })),
+                  assign(id("نتيجة"),
+                      call(id("اجمع"), { index(id("قيم"), integer(0)), index(id("قيم"), integer(1)) })) })),
             assign(id("بعد"), integer(3)) });
 }
 
-TEST_F(ParserTest, ParseImportModule) { test_stmts("import_module.fa", { import_stmt("رياضيات", { }, { "رياضيات" }) }); }
+TEST_F(ParserTest, ParseImportModule)
+{
+    test_stmts("import_module.fa", { import_stmt("رياضيات", { }, { "رياضيات" }) });
+}
 
-TEST_F(ParserTest, ParseImportModuleAlias) { test_stmts("import_module_alias.fa", { import_stmt("رياضيات", { }, { "ر" }) }); }
+TEST_F(ParserTest, ParseImportModuleAlias)
+{
+    test_stmts("import_module_alias.fa", { import_stmt("رياضيات", { }, { "ر" }) });
+}
 
 TEST_F(ParserTest, ParseImportDottedModule)
 {
-    test_stmts("import_dotted_module.fa", { import_stmt("حزمة.فرع", { }, { "فرع" }), import_stmt("حزمة.فرع", { }, { "ف" }) });
+    test_stmts(
+        "import_dotted_module.fa", { import_stmt("حزمة.فرع", { }, { "فرع" }), import_stmt("حزمة.فرع", { }, { "ف" }) });
 }
 
-TEST_F(ParserTest, ParseImportFromMember) { test_stmts("import_from_member.fa", { import_stmt("رياضيات", { "عاملي" }, { "عاملي" }) }); }
+TEST_F(ParserTest, ParseImportFromMember)
+{
+    test_stmts("import_from_member.fa", { import_stmt("رياضيات", { "عاملي" }, { "عاملي" }) });
+}
 
-TEST_F(ParserTest, ParseImportFromAlias) { test_stmts("import_from_alias.fa", { import_stmt("رياضيات", { "عاملي" }, { "احسب" }) }); }
+TEST_F(ParserTest, ParseImportFromAlias)
+{
+    test_stmts("import_from_alias.fa", { import_stmt("رياضيات", { "عاملي" }, { "احسب" }) });
+}
 
 TEST_F(ParserTest, ParseImportFromMultiple)
 {
@@ -1017,7 +1206,8 @@ TEST_F(ParserTest, ParseLargeFile)
     Array<AST::StmtPtr> expected;
     for (int i = 0; i < 5000; ++i) {
         auto name = std::string("س") + std::to_string(i);
-        expected.push(expr(binary(EK::OP_EQ, id(StringRef(name.c_str())), binary(EK::OP_ADD, integer(i), integer(i + 1)))));
+        expected.push(
+            expr(binary(EK::OP_EQ, id(StringRef(name.c_str())), binary(EK::OP_ADD, integer(i), integer(i + 1)))));
     }
     test_stmts("large_file.fa", std::move(expected));
 }
@@ -1034,22 +1224,28 @@ TEST_F(ParserTest, RejectInvalidFixtureSyntax)
              Case { "invalid_binary_digit.fa", ErrorCode::INVALID_BINARY_DIGIT, true },
              Case { "invalid_class_missing_colon.fa", ErrorCode::EXPECTED_COLON_CLASS },
              Case { "invalid_dictionary_closing_brace.fa", ErrorCode::UNCLOSED_DELIMITER },
-             Case { "invalid_dictionary_colon.fa", ErrorCode::EXPECTED_COLON_DICT }, Case { "invalid_function_body.fa", ErrorCode::UNEXPECTED_TOKEN },
+             Case { "invalid_dictionary_colon.fa", ErrorCode::EXPECTED_COLON_DICT },
+             Case { "invalid_function_body.fa", ErrorCode::UNEXPECTED_TOKEN },
              Case { "invalid_function_missing_colon.fa", ErrorCode::EXPECTED_COLON_FN },
              Case { "invalid_function_name.fa", ErrorCode::EXPECTED_FN_NAME },
              Case { "invalid_hex_literal.fa", ErrorCode::INVALID_BASE_LITERAL, true },
-             Case { "invalid_import_alias.fa", ErrorCode::EXPECTED_ALIAS_NAME }, Case { "invalid_import_member.fa", ErrorCode::EXPECTED_IMPORT_NAME },
+             Case { "invalid_import_alias.fa", ErrorCode::EXPECTED_ALIAS_NAME },
+             Case { "invalid_import_member.fa", ErrorCode::EXPECTED_IMPORT_NAME },
              Case { "invalid_import_module.fa", ErrorCode::EXPECTED_MODULE_NAME },
              Case { "invalid_import_parenthesis.fa", ErrorCode::UNCLOSED_DELIMITER },
              Case { "invalid_index_expression.fa", ErrorCode::UNEXPECTED_TOKEN },
              Case { "invalid_inline_extra_statement.fa", ErrorCode::UNEXPECTED_TOKEN },
              Case { "invalid_member_name.fa", ErrorCode::EXPECTED_MEMBER_NAME },
              Case { "invalid_mismatched_delimiter.fa", ErrorCode::MISMATCHED_DELIMITER },
-             Case { "invalid_missing_block.fa", ErrorCode::EXPECTED_INDENT }, Case { "invalid_octal_digit.fa", ErrorCode::INVALID_OCTAL_DIGIT, true },
-             Case { "invalid_parameter_name.fa", ErrorCode::EXPECTED_PARAM_NAME }, Case { "invalid_parent_class.fa", ErrorCode::EXPECTED_CLASS_NAME },
+             Case { "invalid_missing_block.fa", ErrorCode::EXPECTED_INDENT },
+             Case { "invalid_octal_digit.fa", ErrorCode::INVALID_OCTAL_DIGIT, true },
+             Case { "invalid_parameter_name.fa", ErrorCode::EXPECTED_PARAM_NAME },
+             Case { "invalid_parent_class.fa", ErrorCode::EXPECTED_CLASS_NAME },
              Case { "invalid_string_escape.fa", ErrorCode::INVALID_ESCAPE_SEQUENCE, true },
-             Case { "invalid_unterminated_string.fa", ErrorCode::UNTERMINATED_STRING, true }, Case { "invalid_syntax.fa", ErrorCode::UNEXPECTED_EOF },
-             Case { "missing_operand.fa", ErrorCode::UNEXPECTED_EOF }, Case { "unexpected_eof.fa", ErrorCode::UNEXPECTED_EOF } }) {
+             Case { "invalid_unterminated_string.fa", ErrorCode::UNTERMINATED_STRING, true },
+             Case { "invalid_syntax.fa", ErrorCode::UNEXPECTED_EOF },
+             Case { "missing_operand.fa", ErrorCode::UNEXPECTED_EOF },
+             Case { "unexpected_eof.fa", ErrorCode::UNEXPECTED_EOF } }) {
         test_error(test.path, test.code, test.lexical_abort);
     }
 }
@@ -1091,6 +1287,6 @@ TEST_F(ParserTest, ObsoleteReturnSpellingReportsErrorsAndPreservesValidStatement
         { function("فاكتريال", { id("س") },
             block({ branch(binary(EK::OP_EQ, id("س"), integer(0)), block({ })), assign(id("م"), integer(1)),
                 while_loop(binary(EK::OP_GT, id("س"), integer(1)),
-                    block(
-                        { assign(id("م"), binary(EK::OP_MUL, id("م"), id("س"))), assign(id("س"), binary(EK::OP_SUB, id("س"), integer(1))) })) })) });
+                    block({ assign(id("م"), binary(EK::OP_MUL, id("م"), id("س"))),
+                        assign(id("س"), binary(EK::OP_SUB, id("س"), integer(1))) })) })) });
 }

@@ -95,9 +95,9 @@ public:
     ASTNode& operator=(ASTNode const&) = delete;
     ASTNode& operator=(ASTNode&&) = delete;
 
-    [[nodiscard]] virtual NodeType get_node_type() const { return node_type; }
-    [[nodiscard]] u32 get_line() const;
-    [[nodiscard]] u16 get_column() const;
+    FAIRUZ_NODISCARD virtual NodeType get_node_type() const { return node_type; }
+    FAIRUZ_NODISCARD u32 get_line() const;
+    FAIRUZ_NODISCARD u16 get_column() const;
     SourceLocation get_location() const { return m_loc; }
 
     virtual ~ASTNode() = default;
@@ -239,14 +239,17 @@ public:
         assert(rhs != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
         auto bin = static_cast<BinaryExpr*>(other);
         return lhs->equals(bin->lhs) && rhs->equals(bin->rhs);
     }
-    [[nodiscard]] BinaryExpr* clone() const override { return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location()); }
+    FAIRUZ_NODISCARD BinaryExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class BinaryExpr
 
@@ -261,14 +264,17 @@ public:
         assert(operand != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
         auto un = static_cast<UnaryExpr*>(other);
         return operand->equals(un->operand);
     }
-    [[nodiscard]] UnaryExpr* clone() const override { return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location()); }
+    FAIRUZ_NODISCARD UnaryExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class UnaryExpr
 
@@ -284,14 +290,14 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         auto* rhs = static_cast<IntLiteralExpr*>(other);
         return value == rhs->value && large_literal == rhs->large_literal && literal_base == rhs->literal_base;
     }
-    [[nodiscard]] IntLiteralExpr* clone() const override
+    FAIRUZ_NODISCARD IntLiteralExpr* clone() const override
     {
         auto* result = ALLOCATE_AST_NODE(IntLiteralExpr, value, get_location());
         result->large_literal = large_literal;
@@ -311,13 +317,16 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return value == static_cast<FloatLiteralExpr*>(other)->value;
     }
-    [[nodiscard]] FloatLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location()); }
+    FAIRUZ_NODISCARD FloatLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -331,13 +340,16 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return str == static_cast<StringLiteralExpr*>(other)->str;
     }
-    [[nodiscard]] StringLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location()); }
+    FAIRUZ_NODISCARD StringLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -351,13 +363,16 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return value == static_cast<BoolLiteralExpr*>(other)->value;
     }
-    [[nodiscard]] BoolLiteralExpr* clone() const override { return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location()); }
+    FAIRUZ_NODISCARD BoolLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -368,13 +383,13 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         return true;
     }
-    [[nodiscard]] NilExpr* clone() const override { return ALLOCATE_AST_NODE(NilExpr, get_location()); }
+    FAIRUZ_NODISCARD NilExpr* clone() const override { return ALLOCATE_AST_NODE(NilExpr, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -388,14 +403,17 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
         auto name = static_cast<IdentifierExpr*>(other);
         return spelling == name->spelling;
     }
-    [[nodiscard]] IdentifierExpr* clone() const override { return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location()); }
+    FAIRUZ_NODISCARD IdentifierExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IdentifierExpr
 
@@ -409,7 +427,7 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
@@ -423,11 +441,11 @@ public:
 
         return true;
     }
-    [[nodiscard]] ListExpr* clone() const override { return ALLOCATE_AST_NODE(ListExpr, elements, get_location()); }
+    FAIRUZ_NODISCARD ListExpr* clone() const override { return ALLOCATE_AST_NODE(ListExpr, elements, get_location()); }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool is_empty() const { return elements.empty(); }
-    [[nodiscard]] size_t size() const { return elements.size(); }
+    FAIRUZ_NODISCARD bool is_empty() const { return elements.empty(); }
+    FAIRUZ_NODISCARD size_t size() const { return elements.size(); }
 }; // class ListExpr
 
 class DictExpr final : public Expr {
@@ -475,7 +493,7 @@ public:
         assert(callee != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
@@ -486,7 +504,7 @@ public:
         }
         return callee->equals(call->callee);
     }
-    [[nodiscard]] CallExpr* clone() const override
+    FAIRUZ_NODISCARD CallExpr* clone() const override
     {
         Array<ExprPtr> args_clone;
         for (auto a : args) args_clone.push(a->clone());
@@ -494,7 +512,7 @@ public:
     }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool has_arguments() const { return !args.empty(); }
+    FAIRUZ_NODISCARD bool has_arguments() const { return !args.empty(); }
 }; // class CallExpr
 
 class AssignExpr final : public Expr {
@@ -513,14 +531,14 @@ public:
         assert(value != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other->get_kind() != m_kind) return false;
 
         auto bin = static_cast<AssignExpr*>(other);
         return augmented == bin->augmented && target->equals(bin->target) && value->equals(bin->value);
     }
-    [[nodiscard]] AssignExpr* clone() const override
+    FAIRUZ_NODISCARD AssignExpr* clone() const override
     {
         auto* result = ALLOCATE_AST_NODE(AssignExpr, target->clone(), value->clone(), get_location());
         result->augmented = augmented;
@@ -543,14 +561,17 @@ public:
         assert(index != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != Kind::INDEX_READ) return false;
 
         auto idx = static_cast<IndexExpr*>(other);
         return object->equals(idx->object) && index->equals(idx->index);
     }
-    [[nodiscard]] IndexExpr* clone() const override { return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location()); }
+    FAIRUZ_NODISCARD IndexExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IndexExpr
 
@@ -568,14 +589,17 @@ public:
         assert(member != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstExprPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstExprPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
 
         auto get_expr = static_cast<GetExpr*>(other);
         return object->equals(get_expr->object) && member->equals(get_expr->member);
     }
-    [[nodiscard]] GetExpr* clone() const override { return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location()); }
+    FAIRUZ_NODISCARD GetExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location());
+    }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
@@ -633,7 +657,7 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (other == nullptr || other->get_kind() != Kind::BLOCK) return false;
 
@@ -647,14 +671,14 @@ public:
 
         return true;
     }
-    [[nodiscard]] BlockStmt* clone() const override
+    FAIRUZ_NODISCARD BlockStmt* clone() const override
     {
         Array<StmtPtr> stmts_clone;
         for (auto s : stmts) stmts_clone.push(s->clone());
         return ALLOCATE_AST_NODE(BlockStmt, stmts_clone, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] bool is_empty() const { return stmts.empty(); }
+    FAIRUZ_NODISCARD bool is_empty() const { return stmts.empty(); }
 }; // class BlockStmt
 
 class ExprStmt final : public Stmt {
@@ -668,14 +692,17 @@ public:
         assert(expr != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<ExprStmt*>(other);
         return expr->equals(block->expr);
     }
-    [[nodiscard]] ExprStmt* clone() const override { return ALLOCATE_AST_NODE(ExprStmt, expr->clone(), get_location()); }
+    FAIRUZ_NODISCARD ExprStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(ExprStmt, expr->clone(), get_location());
+    }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ExprStmt
 
@@ -695,7 +722,7 @@ public:
         assert(then_stmt != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
@@ -706,10 +733,10 @@ public:
 
         return condition->equals(if_stmt->condition) && then_stmt->equals(if_stmt->then_stmt) && eq_else;
     }
-    [[nodiscard]] IfElseStmt* clone() const override
+    FAIRUZ_NODISCARD IfElseStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(
-            IfElseStmt, condition->clone(), then_stmt->clone(), get_location(), LIKELY(else_stmt == nullptr) ? nullptr : else_stmt->clone());
+        return ALLOCATE_AST_NODE(IfElseStmt, condition->clone(), then_stmt->clone(), get_location(),
+            LIKELY(else_stmt == nullptr) ? nullptr : else_stmt->clone());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class IfElseStmt
@@ -728,14 +755,17 @@ public:
         assert(body != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<WhileStmt*>(other);
         return condition->equals(block->condition) && body->equals(block->body);
     }
-    [[nodiscard]] WhileStmt* clone() const override { return ALLOCATE_AST_NODE(WhileStmt, condition->clone(), body->clone(), get_location()); }
+    FAIRUZ_NODISCARD WhileStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(WhileStmt, condition->clone(), body->clone(), get_location());
+    }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class WhileStmt
 
@@ -756,16 +786,17 @@ public:
         assert(body != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
         auto block = static_cast<ForStmt*>(other);
         return container->equals(block->container) && iter->equals(block->iter) && body->equals(block->body);
     }
-    [[nodiscard]] ForStmt* clone() const override
+    FAIRUZ_NODISCARD ForStmt* clone() const override
     {
-        return get_allocator().allocate_object<ForStmt>(container->clone(), iter->clone(), body->clone(), get_location());
+        return get_allocator().allocate_object<ForStmt>(
+            container->clone(), iter->clone(), body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ForStmt
@@ -789,13 +820,13 @@ public:
         assert(tokens.back()->is(tok::TokenType::ENDMARKER));
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (other == nullptr || other->get_kind() != m_kind) return false;
         auto* stub = static_cast<FunctionStub const*>(other);
         return body_view == stub->body_view && tokens.size() == stub->tokens.size();
     }
-    [[nodiscard]] FunctionStub* clone() const override
+    FAIRUZ_NODISCARD FunctionStub* clone() const override
     {
         auto* stub = ALLOCATE_AST_NODE(FunctionStub, tokens, source, body_view, get_location());
         if (parsed_body != nullptr) stub->parsed_body = parsed_body->clone();
@@ -820,7 +851,7 @@ public:
         assert(body != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
@@ -829,14 +860,14 @@ public:
         // can be resolved by the name of the function
         return name->equals(block->name);
     }
-    [[nodiscard]] FuncDefStmt* clone() const override
+    FAIRUZ_NODISCARD FuncDefStmt* clone() const override
     {
         Array<ExprPtr> params_clone;
         for (auto p : params) params_clone.push(p->clone());
         return ALLOCATE_AST_NODE(FuncDefStmt, name->clone(), params_clone, body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] bool has_parameters() const { return !params.empty(); }
+    FAIRUZ_NODISCARD bool has_parameters() const { return !params.empty(); }
 }; // class FuncDefStmt
 
 class ReturnStmt final : public Stmt {
@@ -849,7 +880,7 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
@@ -858,13 +889,13 @@ public:
 
         return value->equals(ret_stmt->value);
     }
-    [[nodiscard]] ReturnStmt* clone() const override
+    FAIRUZ_NODISCARD ReturnStmt* clone() const override
     {
         auto ret_value = value == nullptr ? nullptr : value->clone();
         return ALLOCATE_AST_NODE(ReturnStmt, ret_value, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] bool has_value() const { return value != nullptr; }
+    FAIRUZ_NODISCARD bool has_value() const { return value != nullptr; }
 }; // class ReturnStmt
 
 class ClassDefStmt final : public Stmt {
@@ -884,7 +915,7 @@ public:
         assert(name != nullptr);
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (m_kind != other->get_kind()) return false;
 
@@ -900,18 +931,19 @@ public:
             if (!class_def->methods[i]->equals(methods[i])) return false;
         }
 
-        bool const parents_equal
-            = (parent == nullptr || class_def->parent == nullptr) ? parent == class_def->parent : parent->equals(class_def->parent);
+        bool const parents_equal = (parent == nullptr || class_def->parent == nullptr)
+            ? parent == class_def->parent
+            : parent->equals(class_def->parent);
         return parents_equal && name->equals(class_def->name);
     }
-    [[nodiscard]] ClassDefStmt* clone() const override
+    FAIRUZ_NODISCARD ClassDefStmt* clone() const override
     {
         Array<ExprPtr> member_clones;
         Array<StmtPtr> method_clones;
         for (ExprPtr mem : members) member_clones.push(mem->clone());
         for (StmtPtr met : methods) method_clones.push(met->clone());
-        return ALLOCATE_AST_NODE(
-            ClassDefStmt, name->clone(), parent == nullptr ? nullptr : parent->clone(), member_clones, method_clones, get_location());
+        return ALLOCATE_AST_NODE(ClassDefStmt, name->clone(), parent == nullptr ? nullptr : parent->clone(),
+            member_clones, method_clones, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ClassDefStmt
@@ -931,18 +963,21 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
     {
         if (other == nullptr || other->get_kind() != Kind::IMPORT) return false;
         auto const* import = static_cast<ImportStmt*>(other);
         return m_module == import->m_module && m_names == import->m_names && m_aliases == import->m_aliases;
     }
-    [[nodiscard]] ImportStmt* clone() const override { return ALLOCATE_AST_NODE(ImportStmt, m_module, m_names, m_aliases, get_location()); }
+    FAIRUZ_NODISCARD ImportStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(ImportStmt, m_module, m_names, m_aliases, get_location());
+    }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] StringRef const& get_module() const { return m_module; }
-    [[nodiscard]] Array<StringRef> const& get_names() const { return m_names; }
-    [[nodiscard]] Array<StringRef> const& get_aliases() const { return m_aliases; }
-    [[nodiscard]] bool imports_member() const { return !m_names.empty(); }
+    FAIRUZ_NODISCARD StringRef const& get_module() const { return m_module; }
+    FAIRUZ_NODISCARD Array<StringRef> const& get_names() const { return m_names; }
+    FAIRUZ_NODISCARD Array<StringRef> const& get_aliases() const { return m_aliases; }
+    FAIRUZ_NODISCARD bool imports_member() const { return !m_names.empty(); }
 };
 
 class BreakStmt final : public Stmt {
@@ -952,8 +987,11 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override { return other != nullptr && other->get_kind() == Kind::BREAK; }
-    [[nodiscard]] BreakStmt* clone() const override { return ALLOCATE_AST_NODE(BreakStmt, get_location()); }
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
+    {
+        return other != nullptr && other->get_kind() == Kind::BREAK;
+    }
+    FAIRUZ_NODISCARD BreakStmt* clone() const override { return ALLOCATE_AST_NODE(BreakStmt, get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class BreakStmt
 
@@ -964,8 +1002,11 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(ConstStmtPtr other) const override { return other != nullptr && other->get_kind() == Kind::CONTINUE; }
-    [[nodiscard]] ContinueStmt* clone() const override { return ALLOCATE_AST_NODE(ContinueStmt, get_location()); }
+    FAIRUZ_NODISCARD bool equals(ConstStmtPtr other) const override
+    {
+        return other != nullptr && other->get_kind() == Kind::CONTINUE;
+    }
+    FAIRUZ_NODISCARD ContinueStmt* clone() const override { return ALLOCATE_AST_NODE(ContinueStmt, get_location()); }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt
 

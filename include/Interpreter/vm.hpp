@@ -51,8 +51,8 @@ struct CallFrame {
 
     CallFrame() = default;
 
-    explicit CallFrame(ObjFunction* cl, Chunk* ch, PCType ip, u16 b, u16 lc, u16 ret_slot, u16 saved_stack_top, GlobalEnvironment* env = nullptr,
-        ObjModule* module_obj = nullptr)
+    explicit CallFrame(ObjFunction* cl, Chunk* ch, PCType ip, u16 b, u16 lc, u16 ret_slot, u16 saved_stack_top,
+        GlobalEnvironment* env = nullptr, ObjModule* module_obj = nullptr)
         : func(cl)
         , chunk(ch)
         , ip(ip)
@@ -169,7 +169,8 @@ public:
     FAIRUZ_NODISCARD RuntimeResult regex_findall(int argc, Value* argv);
     FAIRUZ_NODISCARD RuntimeResult regex_split(int argc, Value* argv);
     FAIRUZ_NODISCARD RuntimeResult regex_replace(int argc, Value* argv);
-    FAIRUZ_NODISCARD RuntimeResult make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset);
+    FAIRUZ_NODISCARD RuntimeResult make_regex_result(
+        std::string const& input, std::smatch const& match, size_t base_offset);
     FAIRUZ_NODISCARD RuntimeResult Assert(int argc, Value* argv);
     FAIRUZ_NODISCARD RuntimeResult clock(int argc, Value* argv);
     FAIRUZ_NODISCARD RuntimeResult error(int argc, Value* argv);
@@ -220,9 +221,10 @@ private:
     FAIRUZ_NODISCARD RuntimeResult call_value_sync(Value callee, ObjList* arguments);
     FAIRUZ_NODISCARD RuntimeResult call_native(ObjNative* nat, int argc, int base);
     FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> call_value(Value callee, int argc, int base, bool tail);
-    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> invoke_method(Chunk* target_chunk, Value self_val, int result_slot, int call_base, int total_argc,
-        u32 return_ip, int caller_stack_top, GlobalEnvironment* globals = nullptr);
-    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> run_instance_op(Value const& lhs, Value const& rhs, int op, u32 instr, int cur_frame_base, u32 ip);
+    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> invoke_method(Chunk* target_chunk, Value self_val, int result_slot,
+        int call_base, int total_argc, u32 return_ip, int caller_stack_top, GlobalEnvironment* globals = nullptr);
+    FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> run_instance_op(
+        Value const& lhs, Value const& rhs, int op, u32 instr, int cur_frame_base, u32 ip);
 
     /// Generic helpers
     ObjString* intern(StringRef const& str);

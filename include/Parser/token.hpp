@@ -91,8 +91,8 @@ enum class TokenType : int {
     INVALID
 }; // enum TokenType
 
-[[nodiscard]] std::optional<TokenType> lookup_keyword(StringRef const& s);
-[[nodiscard]] std::optional<TokenType> lookup_operator(StringRef const& s);
+FAIRUZ_NODISCARD std::optional<TokenType> lookup_keyword(StringRef const& s);
+FAIRUZ_NODISCARD std::optional<TokenType> lookup_operator(StringRef const& s);
 
 enum {
     PREC_COMMA,
@@ -141,40 +141,34 @@ public:
     Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    [[nodiscard]] StringRef const& lexeme() const;
-
-    [[nodiscard]] TokenType const& type() const;
-
-    [[nodiscard]] u32 const& line() const;
-
-    [[nodiscard]] u16 const& column() const;
-
-    [[nodiscard]] SourceLocation const& location() const;
-
-    [[nodiscard]] std::string const& filepath() const;
-
-    [[nodiscard]] bool is(TokenType const tt) const;
+    FAIRUZ_NODISCARD StringRef const& lexeme() const;
+    FAIRUZ_NODISCARD TokenType const& type() const;
+    FAIRUZ_NODISCARD u32 const& line() const;
+    FAIRUZ_NODISCARD u16 const& column() const;
+    FAIRUZ_NODISCARD SourceLocation const& location() const;
+    FAIRUZ_NODISCARD std::string const& filepath() const;
+    FAIRUZ_NODISCARD bool is(TokenType const tt) const;
 
     // is at beginning of a newline
-    [[nodiscard]] bool atbol() const;
+    FAIRUZ_NODISCARD bool atbol() const;
+    FAIRUZ_NODISCARD bool is_operator() const;
+    FAIRUZ_NODISCARD bool is_unary_op() const;
+    FAIRUZ_NODISCARD bool is_binary_op() const;
+    FAIRUZ_NODISCARD bool is_comparison_op() const;
+    FAIRUZ_NODISCARD bool is_whitespace() const;
+    FAIRUZ_NODISCARD bool is_numeric() const;
 
-    [[nodiscard]] bool is_operator() const;
-    [[nodiscard]] bool is_unary_op() const;
-    [[nodiscard]] bool is_binary_op() const;
-    [[nodiscard]] bool is_comparison_op() const;
-    [[nodiscard]] bool is_whitespace() const;
-    [[nodiscard]] bool is_numeric() const;
+    FAIRUZ_NODISCARD f64 to_double() const;
+    FAIRUZ_NODISCARD i64 to_int() const;
 
-    [[nodiscard]] f64 to_double() const;
-    [[nodiscard]] i64 to_int() const;
-
-    [[nodiscard]] int get_precedence(bool is_unary = false) const;
+    FAIRUZ_NODISCARD int get_precedence(bool is_unary = false) const;
 
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, Token const& tok)
     {
-        os << "Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type) << ", line=" << tok.m_location.line
-           << ", col=" << tok.m_location.column << ", file_pos=" << tok.m_location.offset << ")";
+        os << "Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type)
+           << ", line=" << tok.m_location.line << ", col=" << tok.m_location.column
+           << ", file_pos=" << tok.m_location.offset << ")";
         return os;
     }
 

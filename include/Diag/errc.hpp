@@ -17,7 +17,18 @@ namespace fairuz {
 
 // Diagnostic domains, not recoverability or VM-health policy. The same code
 // can describe an ordinary failure or an invariant violation at different sites.
-enum class ErrorCategory : u8 { FILE, LEXICAL, SYNTAX, SEMANTIC, COMPILE, RUNTIME, BUILTIN, CONTAINER, INTERNAL, UNKNOWN };
+enum class ErrorCategory : u8 {
+    FILE,
+    LEXICAL,
+    SYNTAX,
+    SEMANTIC,
+    COMPILE,
+    RUNTIME,
+    BUILTIN,
+    CONTAINER,
+    INTERNAL,
+    UNKNOWN
+};
 
 enum class ErrorCode : u16 {
 #define FAIRUZ_ERROR(name, number, category, message) name = number,

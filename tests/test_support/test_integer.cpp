@@ -23,7 +23,10 @@ using namespace fairuz::runtime;
 
 namespace {
 
-Value decimal(char const* text, GarbageCollector& gc) { return integer::finish(integer::parse(StringRef(text), 10), gc); }
+Value decimal(char const* text, GarbageCollector& gc)
+{
+    return integer::finish(integer::parse(StringRef(text), 10), gc);
+}
 
 }
 
@@ -59,8 +62,10 @@ TEST(IntegerContract, PayloadBoundariesAndNativeMinimum)
         EXPECT_EQ(integer::to_string(value).c_str(), n);
     }
     EXPECT_EQ(integer::to_string(integer::neg(Value::from_int(INT64_MIN, gc), gc)), "9223372036854775808");
-    EXPECT_EQ(integer::to_string(integer::add(Value::from_int(INT64_MAX, gc), Value::from_int(1), gc)), "9223372036854775808");
-    EXPECT_EQ(integer::to_string(integer::sub(Value::from_int(INT64_MIN, gc), Value::from_int(1), gc)), "-9223372036854775809");
+    EXPECT_EQ(integer::to_string(integer::add(Value::from_int(INT64_MAX, gc), Value::from_int(1), gc)),
+        "9223372036854775808");
+    EXPECT_EQ(integer::to_string(integer::sub(Value::from_int(INT64_MIN, gc), Value::from_int(1), gc)),
+        "-9223372036854775809");
     Value native_minimum = decimal("-9223372036854775808", gc);
     EXPECT_EQ(integer::to_string(native_minimum), "-9223372036854775808");
     EXPECT_EQ(native_minimum.as_int(), INT64_MIN);
@@ -131,7 +136,8 @@ TEST(IntegerContract, DivisionRemainderAndPower)
     EXPECT_EQ(integer::div(minimum, Value::from_int(-1), gc, true).as_int(), 0);
 
     // Keep the native overflow case covered even when the payload is only 48 bits.
-    EXPECT_EQ(integer::to_string(integer::div(Value::from_int(INT64_MIN, gc), Value::from_int(-1), gc)), "9223372036854775808");
+    EXPECT_EQ(integer::to_string(integer::div(Value::from_int(INT64_MIN, gc), Value::from_int(-1), gc)),
+        "9223372036854775808");
     EXPECT_EQ(integer::div(Value::from_int(INT64_MIN, gc), Value::from_int(-1), gc, true).as_int(), 0);
 
     i64 boundary_exponent = FA_USE_NANBOX ? 47 : 63;
@@ -140,7 +146,8 @@ TEST(IntegerContract, DivisionRemainderAndPower)
         EXPECT_EQ(power.is_big_int(), exponent == boundary_exponent);
         EXPECT_EQ(integer::to_string(power), std::to_string(uint64_t { 1 } << exponent));
     }
-    EXPECT_EQ(integer::to_string(integer::pow(Value::from_int(2), Value::from_int(128), gc)), "340282366920938463463374607431768211456");
+    EXPECT_EQ(integer::to_string(integer::pow(Value::from_int(2), Value::from_int(128), gc)),
+        "340282366920938463463374607431768211456");
 }
 
 TEST(IntegerContract, ShiftWidthsAndSignedBitwise)
@@ -166,7 +173,8 @@ TEST(IntegerContract, ShiftWidthsAndSignedBitwise)
 TEST(IntegerContract, ExactComparisonHashAndConversions)
 {
     GarbageCollector gc;
-    Value a = decimal("9007199254740993", gc), b = decimal("9007199254740992", gc), f = Value::from_real(9007199254740992.0);
+    Value a = decimal("9007199254740993", gc), b = decimal("9007199254740992", gc),
+          f = Value::from_real(9007199254740992.0);
     EXPECT_FALSE(ValueEqual { }(a, b));
     EXPECT_FALSE(ValueEqual { }(a, f));
     EXPECT_FALSE(ValueEqual { }(f, a));
@@ -187,7 +195,8 @@ TEST(IntegerContract, ExactComparisonHashAndConversions)
     EXPECT_EQ(integer::compare_numbers(a, Value::from_real(std::numeric_limits<double>::infinity())), -1);
     EXPECT_EQ(integer::to_string(integer::from_double(0x1p100, gc)), "1267650600228229401496703205376");
     EXPECT_EQ(integer::from_double(-3.75, gc).as_int(), -3);
-    EXPECT_EQ(integer::to_string(integer::finish(integer::parse("١٨٤٤٦٧٤٤٠٧٣٧٠٩٥٥١٦١٦", 10), gc)), "18446744073709551616");
+    EXPECT_EQ(
+        integer::to_string(integer::finish(integer::parse("١٨٤٤٦٧٤٤٠٧٣٧٠٩٥٥١٦١٦", 10), gc)), "18446744073709551616");
 }
 
 TEST(IntegerContract, BigIntegersPreserveNumericHashAndConversions)
@@ -233,7 +242,8 @@ TEST(IntegerContract, NativeTextConversionPreservesLargeIntegers)
     Value text = vm.gc().make_string("18446744073709551616000000000000000000");
     EXPECT_EQ(integer::to_string(run_success(vm.number_from_text(1, &text))), "18446744073709551616000000000000000000");
     text = vm.gc().make_string("-18446744073709551616000000000000000000");
-    EXPECT_EQ(integer::to_string(run_success(vm.number_from_text(1, &text))), "-18446744073709551616000000000000000000");
+    EXPECT_EQ(
+        integer::to_string(run_success(vm.number_from_text(1, &text))), "-18446744073709551616000000000000000000");
     text = vm.gc().make_string("18446744073709551616000000000000000000x");
     EXPECT_EQ(run_failed(vm.number_from_text(1, &text)).errc, ErrorCode::RUNTIME_ERROR);
 }

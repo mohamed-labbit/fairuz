@@ -143,8 +143,8 @@ bool write_file_atomic(std::string const& path, char const* data, size_t len, st
 bool write_file_atomic(std::string const& filename, char const* data, size_t len, std::string& error)
 {
     auto target = path(filename);
-    WinHandle original(CreateFileW(target.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-        FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
+    WinHandle original(CreateFileW(target.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
     BY_HANDLE_FILE_INFORMATION before { };
     if (!original || !GetFileInformationByHandle(original.get(), &before)) {
         error = windows_error("Failed to inspect input file").what();
@@ -182,13 +182,14 @@ bool write_file_atomic(std::string const& filename, char const* data, size_t len
     while (written < len) {
         DWORD count = 0;
         DWORD chunk = static_cast<DWORD>(std::min<size_t>(len - written, 0x7fffffff));
-        if (!WriteFile(output.get(), data + written, chunk, &count, nullptr) || count == 0) return fail("Failed to write formatted output");
+        if (!WriteFile(output.get(), data + written, chunk, &count, nullptr) || count == 0)
+            return fail("Failed to write formatted output");
         written += count;
     }
     if (!FlushFileBuffers(output.get())) return fail("Failed to flush formatted output");
     output.close();
-    WinHandle current(CreateFileW(target.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-        FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
+    WinHandle current(CreateFileW(target.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
     BY_HANDLE_FILE_INFORMATION after { };
     if (!current || !GetFileInformationByHandle(current.get(), &after)) return fail("Failed to re-inspect input file");
     if ((after.dwFileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY))
@@ -198,7 +199,8 @@ bool write_file_atomic(std::string const& filename, char const* data, size_t len
         return fail("Input file changed while formatting");
     }
     // ReplaceFile preserves the original file's ACLs and other metadata.
-    if (!ReplaceFileW(target.c_str(), temporary.c_str(), nullptr, 0, nullptr, nullptr)) return fail("Failed to replace the original file");
+    if (!ReplaceFileW(target.c_str(), temporary.c_str(), nullptr, 0, nullptr, nullptr))
+        return fail("Failed to replace the original file");
     return true;
 }
 #endif

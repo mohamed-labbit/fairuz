@@ -33,7 +33,10 @@ protected:
     }
 
     Chunk* compile(std::string const& text) { return test_source::compile(text); }
-    Chunk* compile(std::initializer_list<std::string> text) { return compile(test_source::join(Array<std::string>(text))); }
+    Chunk* compile(std::initializer_list<std::string> text)
+    {
+        return compile(test_source::join(Array<std::string>(text)));
+    }
 };
 
 TEST_F(LazyCompilation, UnusedBodiesStayEmptyWhileDefinitionsAreBound)

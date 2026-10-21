@@ -85,7 +85,8 @@ public:
         if (!result.failed()) return;
 
         std::ostringstream msg;
-        msg << (result.file_name() ? result.file_name() : "unknown file") << ":" << result.line_number() << "\n" << result.summary();
+        msg << (result.file_name() ? result.file_name() : "unknown file") << ":" << result.line_number() << "\n"
+            << result.summary();
         failures_.push_back(msg.str());
     }
 
@@ -123,9 +124,10 @@ public:
         std::string failed_string = unit_test.failed_test_case_count() != 0
             ? " failed from " + std::to_string(unit_test.failed_test_suite_count()) + " test suite"
             : " failed";
-        std::cout << "==== " << unit_test.successful_test_count() << "/" << unit_test.total_test_count() << " tests passed from "
-                  << unit_test.successful_test_suite_count() << " test suite (" << unit_test.failed_test_count() << failed_string << ", "
-                  << unit_test.skipped_test_count() << " skipped)" << " ====";
+        std::cout << "==== " << unit_test.successful_test_count() << "/" << unit_test.total_test_count()
+                  << " tests passed from " << unit_test.successful_test_suite_count() << " test suite ("
+                  << unit_test.failed_test_count() << failed_string << ", " << unit_test.skipped_test_count()
+                  << " skipped)" << " ====";
         if (is_tty_) std::cout << kReset;
         std::cout << "\n" << std::flush;
     }

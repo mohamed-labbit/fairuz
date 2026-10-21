@@ -95,7 +95,8 @@ Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
         PCType exit_jump = m_bytecode_emitter.jump_if_false(cond, loc);
         FA_COMPILE_DISCARD_TRY(compile_stmt(s->body));
         PCType continue_target = current_offset();
-        m_bytecode_emitter.emit_AsBx(OpCode::LOOP, 0, static_cast<i64>(loop_start.value) - current_offset().value - 1, loc);
+        m_bytecode_emitter.emit_AsBx(
+            OpCode::LOOP, 0, static_cast<i64>(loop_start.value) - current_offset().value - 1, loc);
         m_bytecode_emitter.patch_jump(exit_jump);
         pop_loop(current_offset(), continue_target, loc.line);
     }
@@ -160,7 +161,8 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return raise_compile_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
 
-    if (current_chunk()->functions.size() > MAX_CONSTANTS) return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
+    if (current_chunk()->functions.size() > MAX_CONSTANTS)
+        return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
 
     Chunk* fn_chunk = make_chunk();
     fn_chunk->source = current_chunk()->source;
@@ -185,7 +187,8 @@ Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
     return { };
 }
 
-Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class)
+Compiler::CompileStmtResult Compiler::compile_function_body(
+    AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class)
 {
     SourceLocation loc = node->get_location();
     CompilerStateGuard state_guard(m_current, &state);
@@ -208,21 +211,24 @@ Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt con
     }
     FA_COMPILE_DISCARD_TRY(compile_stmt(body));
     if (!state.is_dead) {
-        if (state.is_class_method) m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver.value, 1, 0, node->get_location());
+        if (state.is_class_method)
+            m_bytecode_emitter.emit_ABC(OpCode::RETURN, receiver.value, 1, 0, node->get_location());
         else m_bytecode_emitter.return_nil(node->get_location());
     }
     state.chunk->local_count = state.registers.max_reg();
     return { };
 }
 
-void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class)
+void Compiler::defer_function_body(
+    Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class)
 {
     // AST nodes and their spellings live in the same arena as chunks. Capture
     // compiler tables by value so neither stack state nor the original Compiler
     // needs to survive (in particular, for imported modules).
     state.chunk = nullptr;
     state.enclosing = nullptr;
-    chunk->deferred_body = [node, state, receiver_class, globals = m_globals, modules = m_module_names, classes = m_class_registry](Chunk* target) {
+    chunk->deferred_body = [node, state, receiver_class, globals = m_globals, modules = m_module_names,
+                               classes = m_class_registry](Chunk* target) {
         Compiler compiler(target->source);
         compiler.m_globals = globals;
         compiler.m_module_names = modules;
@@ -332,7 +338,8 @@ Compiler::CompileStmtResult Compiler::compile_block(AST::BlockStmt* s)
 Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 {
     SourceLocation loc = s->get_location();
-    if (!m_current->is_top_level || m_current->scope_depth != 0) return raise_compile_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
+    if (!m_current->is_top_level || m_current->scope_depth != 0)
+        return raise_compile_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
 
     StringRef class_name = AST::as_identifier(s->name)->spelling;
     StringRef parent_name;
@@ -374,10 +381,12 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
         }
     }
 
-    auto compile_method_closure = [&](AST::FuncDefStmt const* method) -> ErrorOr<std::tuple<RegType, Chunk*>, RuntimeError> {
+    auto compile_method_closure
+        = [&](AST::FuncDefStmt const* method) -> ErrorOr<std::tuple<RegType, Chunk*>, RuntimeError> {
         SourceLocation method_loc = method->get_location();
 
-        if (current_chunk()->functions.size() > MAX_CONSTANTS) return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
+        if (current_chunk()->functions.size() > MAX_CONSTANTS)
+            return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
 
         Chunk* ch = make_chunk();
         ch->source = current_chunk()->source;
@@ -432,7 +441,8 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
     Array<int> method_slots;     // parallel to `methods`: final vtable slot per method
 
     for (AST::StmtPtr m : s->methods) {
-        if (m->get_kind() != AST::Stmt::Kind::FUNC) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
+        if (m->get_kind() != AST::Stmt::Kind::FUNC)
+            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = as_function_def(m);
         StringRef method_name = method->name->spelling;
@@ -539,7 +549,8 @@ Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 
 Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
 {
-    if (!m_current->is_top_level || m_current->scope_depth != 0) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
+    if (!m_current->is_top_level || m_current->scope_depth != 0)
+        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
     SourceLocation loc = s->get_location();
     StringRef const& module = s->get_module();
@@ -551,7 +562,8 @@ Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
         return compile_import_single(module, { }, aliases[0], loc, false);
     }
     if (names.size() != aliases.size()) return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
-    for (size_t i = 0; i < names.size(); ++i) TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
+    for (size_t i = 0; i < names.size(); ++i)
+        TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
 
     return { };
 }

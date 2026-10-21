@@ -28,7 +28,8 @@ TEST(RuntimeResultHelpers, UnexpectedErrorReportsFatalFailureWithoutUnwrapping)
     testing::TestPartResultArray failures;
     unsigned caller_line = 0;
     {
-        testing::ScopedFakeTestPartResultReporter reporter(testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        testing::ScopedFakeTestPartResultReporter reporter(
+            testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
         caller_line = __LINE__ + 1;
         EXPECT_THROW(run_success(VM::RuntimeResult(error)), testing::AssertionException);
     }
@@ -43,7 +44,8 @@ TEST(RuntimeResultHelpers, UnexpectedSuccessReportsFatalFailureWithoutFabricatin
     testing::TestPartResultArray failures;
     unsigned caller_line = 0;
     {
-        testing::ScopedFakeTestPartResultReporter reporter(testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
+        testing::ScopedFakeTestPartResultReporter reporter(
+            testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &failures);
         caller_line = __LINE__ + 1;
         EXPECT_THROW(run_failed(VM::RuntimeResult(Value::nil())), testing::AssertionException);
     }

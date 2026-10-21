@@ -112,7 +112,9 @@ constexpr RunResult failed(RunFailure failure = RunFailure::PROGRAM) { return { 
 RunResult diagnostic_failure()
 {
     auto* error = diagnostic::engine.first_error();
-    return failed(error != nullptr && error_category_for(error->err_code) == ErrorCategory::INTERNAL ? RunFailure::INTERNAL : RunFailure::PROGRAM);
+    return failed(error != nullptr && error_category_for(error->err_code) == ErrorCategory::INTERNAL
+            ? RunFailure::INTERNAL
+            : RunFailure::PROGRAM);
 }
 
 RunResult report_host_error(ErrorCode code, std::string const& detail = "")
@@ -139,7 +141,8 @@ RunResult report_execution_error(RuntimeError const& error)
 
 RunResult run_file(char const* filepath, RunContext& context)
 {
-    if (filepath == nullptr || *filepath == '\0') return report_host_error(ErrorCode::FILE_NOT_OPEN, "input path is empty");
+    if (filepath == nullptr || *filepath == '\0')
+        return report_host_error(ErrorCode::FILE_NOT_OPEN, "input path is empty");
 
     FileManager file(filepath);
     diagnostic::SourceScope source_scope(&file);
@@ -210,22 +213,25 @@ RunResult run_with_error_translation(char const* filepath, RunContext& context)
     } catch (diagnostic::DiagnosticAbort const&) {
         // Lexing and explicit panic paths normally rendered their diagnostic
         // before throwing. dump() prints only what has not been printed yet.
-        if (!diagnostic::has_errors()) return report_host_error(ErrorCode::INTERNAL_ERROR, "diagnostic abort without an error");
+        if (!diagnostic::has_errors())
+            return report_host_error(ErrorCode::INTERNAL_ERROR, "diagnostic abort without an error");
         diagnostic::dump();
         return diagnostic_failure();
     } catch (RuntimeRaised const& raised) {
-        if (raised.error == nullptr) return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime raised an empty error");
+        if (raised.error == nullptr)
+            return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime raised an empty error");
         return report_execution_error(*raised.error);
     } catch (RuntimeHalt const&) {
         // Legacy payload-free transport must never turn into successful
         // execution. Do not fabricate a source or silently lose the failure.
-        if (!diagnostic::has_errors()) return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime halted without a diagnostic");
+        if (!diagnostic::has_errors())
+            return report_host_error(ErrorCode::INTERNAL_ERROR, "runtime halted without a diagnostic");
         diagnostic::dump();
         return diagnostic_failure();
     } catch (FileError const& error) {
         ErrorCode code = error.kind() == FileError::Kind::NOT_FOUND ? ErrorCode::FILE_NOT_FOUND
-            : error.kind() == FileError::Kind::READ                ? ErrorCode::READ_ERROR
-                                                                   : ErrorCode::FILE_NOT_OPEN;
+            : error.kind() == FileError::Kind::READ                 ? ErrorCode::READ_ERROR
+                                                                    : ErrorCode::FILE_NOT_OPEN;
         return report_host_error(code, error.path());
     } catch (std::bad_alloc const&) {
         return report_host_error(ErrorCode::ALLOC_FAILED);

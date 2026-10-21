@@ -45,7 +45,8 @@ std::filesystem::path temporary_directory()
     auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
     for (int attempt = 0; attempt < 100; ++attempt) {
         auto path = std::filesystem::temp_directory_path()
-            / ("fairuz-test-" + std::to_string(process_id()) + "-" + std::to_string(seed) + "-" + std::to_string(++counter));
+            / ("fairuz-test-" + std::to_string(process_id()) + "-" + std::to_string(seed) + "-"
+                + std::to_string(++counter));
         std::error_code error;
         if (std::filesystem::create_directory(path, error)) return path;
         if (error && error != std::errc::file_exists) throw std::system_error(error, "create temporary directory");
@@ -97,7 +98,8 @@ struct EnvironmentOrder {
 
 }
 
-Result run(std::filesystem::path const& binary, std::vector<std::string> const& args, std::filesystem::path const& cwd, std::chrono::seconds timeout)
+Result run(std::filesystem::path const& binary, std::vector<std::string> const& args, std::filesystem::path const& cwd,
+    std::chrono::seconds timeout)
 {
     TemporaryDirectory capture;
     auto output = capture.path / "stdout";
@@ -107,9 +109,12 @@ Result run(std::filesystem::path const& binary, std::vector<std::string> const& 
     using fairuz::platform::windows_error;
     using fairuz::platform::WinHandle;
     SECURITY_ATTRIBUTES security { sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
-    WinHandle out(CreateFileW(output.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
-    WinHandle err(CreateFileW(errors.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
-    WinHandle input(CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &security, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+    WinHandle out(CreateFileW(
+        output.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
+    WinHandle err(CreateFileW(
+        errors.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &security, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
+    WinHandle input(CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &security, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, nullptr));
     if (!out || !err || !input) throw windows_error("create child descriptors");
     std::wstring command = quote(binary.native());
     for (auto const& arg : args) command += L" " + quote(fairuz::platform::path(arg).native());
@@ -139,8 +144,8 @@ Result run(std::filesystem::path const& binary, std::vector<std::string> const& 
     startup.hStdOutput = out.get();
     startup.hStdError = err.get();
     PROCESS_INFORMATION process { };
-    if (!CreateProcessW(binary.c_str(), command.data(), nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT, environment.data(),
-            cwd.empty() ? nullptr : cwd.c_str(), &startup, &process))
+    if (!CreateProcessW(binary.c_str(), command.data(), nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT,
+            environment.data(), cwd.empty() ? nullptr : cwd.c_str(), &startup, &process))
         throw windows_error("start interpreter");
     WinHandle child(process.hProcess), thread(process.hThread);
     auto wait = WaitForSingleObject(child.get(), static_cast<DWORD>(timeout.count() * 1000));

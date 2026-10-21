@@ -32,7 +32,8 @@ public:
     StringRef m_context;
     Array<StringRef> m_suggestions;
 
-    ParseError(StringRef const& message, u32 line, u32 column, StringRef context = "", Array<StringRef> suggestions = { });
+    ParseError(
+        StringRef const& message, u32 line, u32 column, StringRef context = "", Array<StringRef> suggestions = { });
     StringRef format() const;
 };
 
@@ -160,7 +161,7 @@ private:
     void synchronize(size_t statement_indent);
     void skip_newlines();
     TokenPtr advance();
-    [[nodiscard]] bool consume(tok::TokenType);
+    FAIRUZ_NODISCARD bool consume(tok::TokenType);
     ErrorOr<TokenPtr> expect(tok::TokenType, ErrorCode);
     ErrorOr<bool> expect_statement_end();
     bool at_statement_end() const;
@@ -169,7 +170,8 @@ private:
 
     // The opening delimiter has already been consumed. This helper owns the
     // matching closer and permits an empty list and one trailing comma.
-    template<class T, class ReadItem> ErrorOr<Array<T>> parse_delimited(tok::TokenType close, ErrorCode, ReadItem&&, bool* had_comma = nullptr);
+    template<class T, class ReadItem>
+    ErrorOr<Array<T>> parse_delimited(tok::TokenType close, ErrorCode, ReadItem&&, bool* had_comma = nullptr);
 
     ErrorOr<AST::ExprPtr> parse_assignment_tail(AST::ExprPtr, bool allow_augmented);
     AST::AssignExpr* make_augmented(AST::ExprPtr, AST::ExprPtr, AST::ExprKind);

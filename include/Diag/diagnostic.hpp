@@ -100,7 +100,8 @@ public:
     // return value as before; this is a source-compatible change from the
     // previous void-returning signature.
     // DiagnosticId report(Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code = "");
-    DiagnosticId report_deferred(Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "");
+    DiagnosticId report_deferred(
+        Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "");
 
     // Existing behavior, unchanged: attaches to whichever diagnostic was
     // reported most recently. Convenient for the common case (report,
@@ -212,7 +213,8 @@ static inline void emit(ErrorCode code, std::string const& detail, Severity cons
     engine.panic("");
 }
 
-static inline DiagnosticEngine::DiagnosticId report(Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
+static inline DiagnosticEngine::DiagnosticId report(
+    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
 }

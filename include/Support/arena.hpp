@@ -50,14 +50,17 @@ public:
 
     ArenaBlock& operator=(ArenaBlock&& other) noexcept;
 
-    [[nodiscard]] unsigned char* begin() const { return m_begin; }
-    [[nodiscard]] unsigned char* end() const { return m_end; }
-    [[nodiscard]] unsigned char* next() const { return m_next; }
-    [[nodiscard]] size_t size() const { return m_size; }
+    FAIRUZ_NODISCARD unsigned char* begin() const { return m_begin; }
+    FAIRUZ_NODISCARD unsigned char* end() const { return m_end; }
+    FAIRUZ_NODISCARD unsigned char* next() const { return m_next; }
+    FAIRUZ_NODISCARD size_t size() const { return m_size; }
 
-    [[nodiscard]] size_t used() const { return (m_begin == nullptr || m_next < m_begin) ? 0 : static_cast<size_t>(m_next - m_begin); }
+    FAIRUZ_NODISCARD size_t used() const
+    {
+        return (m_begin == nullptr || m_next < m_begin) ? 0 : static_cast<size_t>(m_next - m_begin);
+    }
 
-    [[nodiscard]] size_t remaining() const { return (m_begin == nullptr) ? 0 : static_cast<size_t>(m_end - m_next); }
+    FAIRUZ_NODISCARD size_t remaining() const { return (m_begin == nullptr) ? 0 : static_cast<size_t>(m_end - m_next); }
 
     bool pop(size_t bytes)
     {
@@ -67,7 +70,7 @@ public:
         return true;
     }
 
-    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
+    FAIRUZ_NODISCARD unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
 
     unsigned char* reserve(size_t const bytes)
     {
@@ -139,17 +142,24 @@ public:
         allocate_block(m_next_block_size, alignof(std::max_align_t));
     }
 
-    unsigned char* allocate_block(size_t requested, size_t alignment = alignof(std::max_align_t), bool retry_on_oom = true);
+    unsigned char* allocate_block(
+        size_t requested, size_t alignment = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
+    FAIRUZ_NODISCARD void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
     void deallocate(void* ptr, size_t const size);
 
-    template<typename T> [[nodiscard]] T* allocate_array(size_t const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
+    template<typename T> FAIRUZ_NODISCARD T* allocate_array(size_t const count)
+    {
+        return static_cast<T*>(allocate(count * sizeof(T)));
+    }
 
-    template<typename T> void deallocate_array(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
+    template<typename T> void deallocate_array(T* ptr, size_t const count)
+    {
+        deallocate(static_cast<void*>(ptr), count * sizeof(T));
+    }
 
-    template<typename T, typename... Args> [[nodiscard]] T* allocate_object(Args&&... args)
+    template<typename T, typename... Args> FAIRUZ_NODISCARD T* allocate_object(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
         T* object = ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
@@ -194,9 +204,10 @@ private:
 
     void* allocate_slow(size_t size, size_t alignment);
 
-    [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
+    FAIRUZ_NODISCARD unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
-    [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
+    FAIRUZ_NODISCARD static constexpr size_t get_aligned(
+        size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }

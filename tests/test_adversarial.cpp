@@ -82,8 +82,8 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
     if (test_config::dump_bytecode) {
         // Keep debug output out of the process whose stdout is checked below.
         // Compile-only inspection also avoids repeating program side effects.
-        auto inspection = test_process::run(
-            test_process::executable(), { fairuz::platform::utf8(input), "--check", "--dump-bytecode" }, { }, std::chrono::seconds(5));
+        auto inspection = test_process::run(test_process::executable(),
+            { fairuz::platform::utf8(input), "--check", "--dump-bytecode" }, { }, std::chrono::seconds(5));
         std::cout << inspection.out;
         std::cerr << inspection.err;
         ASSERT_FALSE(inspection.timed_out) << "Bytecode inspection timed out";
@@ -104,7 +104,8 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
         EXPECT_EQ(out, test.output);
         break;
     case Expectation::AssignmentError:
-        EXPECT_NE(err.find("Assignment is a statement and cannot be used inside an expression"), std::string::npos) << err;
+        EXPECT_NE(err.find("Assignment is a statement and cannot be used inside an expression"), std::string::npos)
+            << err;
         EXPECT_EQ(out, test.output) << "Unexpected execution before assignment error: " << out;
         [[fallthrough]];
     case Expectation::Error:
@@ -123,11 +124,13 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
 void expect_statement_only_assignments(std::vector<AdversarialCase>& cases)
 {
     for (auto& test : cases) {
-        if (test.name == "IndexedAssignmentResultLifetime" || test.name == "LeftOperandSnapshot" || test.name == "IndexReadCapturesContainer"
-            || test.name == "IndexWriteCapturesIndex" || test.name == "IndexWriteCapturesContainer" || test.name == "MemberWriteCapturesReceiver"
-            || test.name == "IndexedAssignmentResultSurvivesCall" || test.name == "FunctionArgumentsCaptureEarlierValues"
-            || test.name == "CallCapturesCalleeBeforeArguments" || test.name == "ListCapturesEarlierElements"
-            || test.name == "DictionaryCapturesKeyBeforeValue" || test.name == "MethodReceiverCapturedBeforeArgumentRebinding"
+        if (test.name == "IndexedAssignmentResultLifetime" || test.name == "LeftOperandSnapshot"
+            || test.name == "IndexReadCapturesContainer" || test.name == "IndexWriteCapturesIndex"
+            || test.name == "IndexWriteCapturesContainer" || test.name == "MemberWriteCapturesReceiver"
+            || test.name == "IndexedAssignmentResultSurvivesCall"
+            || test.name == "FunctionArgumentsCaptureEarlierValues" || test.name == "CallCapturesCalleeBeforeArguments"
+            || test.name == "ListCapturesEarlierElements" || test.name == "DictionaryCapturesKeyBeforeValue"
+            || test.name == "MethodReceiverCapturedBeforeArgumentRebinding"
             || test.name.starts_with("OperandSnapshot")) {
             test.expectation = Expectation::AssignmentError;
             test.output.clear();
@@ -790,8 +793,8 @@ std::vector<AdversarialCase> assignment_syntax_cases()
             // effects remain visible. --check still executes nothing.
             bool deferred = std::string(test.name) == "Return" && !check_only;
             result.push_back({ std::string(test.name) + (check_only ? "Check" : "Run"),
-                std::string(deferred ? "اكتب(\"before body\")\n" : "اكتب(\"must not run\")\n") + test.source, deferred ? "before body\n" : "",
-                Expectation::AssignmentError, check_only });
+                std::string(deferred ? "اكتب(\"before body\")\n" : "اكتب(\"must not run\")\n") + test.source,
+                deferred ? "before body\n" : "", Expectation::AssignmentError, check_only });
         }
     }
     result.push_back({ "StandaloneAndChained",
@@ -832,15 +835,17 @@ std::vector<AdversarialCase> arithmetic_cases()
         }
         expected += "\n";
         for (bool literal : { true, false }) {
-            auto source = literal ? "اكتب((" + std::to_string(a) + ") " + operators[op] + " (" + std::to_string(b) + "))\n"
-                                  : "ا := " + std::to_string(a)
+            auto source = literal
+                ? "اكتب((" + std::to_string(a) + ") " + operators[op] + " (" + std::to_string(b) + "))\n"
+                : "ا := " + std::to_string(a)
                     + "\n"
                       "ب := "
                     + std::to_string(b)
                     + "\n"
                       "اكتب(ا "
                     + operators[op] + " ب)\n";
-            result.push_back({ "Case" + std::to_string(i) + (literal ? "Literal" : "Runtime"), source, expected, Expectation::Output });
+            result.push_back({ "Case" + std::to_string(i) + (literal ? "Literal" : "Runtime"), source, expected,
+                Expectation::Output });
         }
     }
     return result;
@@ -902,7 +907,8 @@ std::vector<AdversarialCase> repair_regression_cases()
             "281474976710656\n" },
         { "IntegerConversionPreservesPrecision", "اكتب(طبيعي(9223372036854775807))\n", "9223372036854775807\n" },
         { "IntegerConversionRejectsUpperBound", "اكتب(طبيعي(9223372036854775808.0))\n", "9223372036854775808\n" },
-        { "IntegerConversionRejectsLowerOverflow", "اكتب(طبيعي(-18446744073709551616.0))\n", "-18446744073709551616\n" },
+        { "IntegerConversionRejectsLowerOverflow", "اكتب(طبيعي(-18446744073709551616.0))\n",
+            "-18446744073709551616\n" },
         { "IntegerConversionAcceptsLowerBound", "اكتب(طبيعي(-9223372036854775808.0))\n", "-9223372036854775808\n" },
         { "MinimumIntegerModuloMinusOne",
             "س := -9223372036854775807 - 1\n"
@@ -1022,11 +1028,13 @@ std::vector<AdversarialCase> parser_cases()
 {
     std::vector<AdversarialCase> result;
     for (int count : { 64, 256, 1024 }) {
-        result.push_back({ "NestedParentheses" + std::to_string(count), "اكتب(" + std::string(count, '(') + "1" + std::string(count, ')') + ")\n", "",
-            Expectation::NoCrash, true });
+        result.push_back({ "NestedParentheses" + std::to_string(count),
+            "اكتب(" + std::string(count, '(') + "1" + std::string(count, ')') + ")\n", "", Expectation::NoCrash,
+            true });
         std::string arguments = "اكتب(1";
         for (int i = 1; i < count; ++i) arguments += "، 1";
-        result.push_back({ "ArgumentLimit" + std::to_string(count), arguments + ")\n", "", Expectation::NoCrash, true });
+        result.push_back(
+            { "ArgumentLimit" + std::to_string(count), arguments + ")\n", "", Expectation::NoCrash, true });
     }
     std::string seeds[] = { "اكتب(1 + 2)\n",
         "ا := [1، 2، 3]\n"
@@ -1036,8 +1044,8 @@ std::vector<AdversarialCase> parser_cases()
         "دالة ا(ب):\n"
         "    ارجع ب + 1\n"
         "اكتب(ا(2))\n" };
-    std::vector<std::string> mutations
-        = { "(", ")", "[", "]", "{", "}", ":", "،", "\n", "\t", "\"", "'", "0", "9", "+", "*", "=", "ا", std::string(1, '\0'), "\xff" };
+    std::vector<std::string> mutations = { "(", ")", "[", "]", "{", "}", ":", "،", "\n", "\t", "\"", "'", "0", "9", "+",
+        "*", "=", "ا", std::string(1, '\0'), "\xff" };
     std::mt19937 random(20260921);
     for (int i = 0; i < 60; ++i) {
         auto source = seeds[random() % 4];
@@ -1063,8 +1071,11 @@ INSTANTIATE_TEST_SUITE_P(Semantics, AdversarialInterpreter, testing::ValuesIn(se
 INSTANTIATE_TEST_SUITE_P(Arithmetic, AdversarialInterpreter, testing::ValuesIn(arithmetic_cases()), case_name);
 INSTANTIATE_TEST_SUITE_P(Parser, AdversarialInterpreter, testing::ValuesIn(parser_cases()), case_name);
 INSTANTIATE_TEST_SUITE_P(Interactions, AdversarialInterpreter, testing::ValuesIn(interaction_cases()), case_name);
-INSTANTIATE_TEST_SUITE_P(AssignmentSyntax, AdversarialInterpreter, testing::ValuesIn(assignment_syntax_cases()), case_name);
-INSTANTIATE_TEST_SUITE_P(RepairRegression, AdversarialInterpreter, testing::ValuesIn(repair_regression_cases()), case_name);
-INSTANTIATE_TEST_SUITE_P(DiscoveredFailures, AdversarialInterpreter, testing::ValuesIn(discovered_failure_cases()), case_name);
+INSTANTIATE_TEST_SUITE_P(
+    AssignmentSyntax, AdversarialInterpreter, testing::ValuesIn(assignment_syntax_cases()), case_name);
+INSTANTIATE_TEST_SUITE_P(
+    RepairRegression, AdversarialInterpreter, testing::ValuesIn(repair_regression_cases()), case_name);
+INSTANTIATE_TEST_SUITE_P(
+    DiscoveredFailures, AdversarialInterpreter, testing::ValuesIn(discovered_failure_cases()), case_name);
 
 } // namespace

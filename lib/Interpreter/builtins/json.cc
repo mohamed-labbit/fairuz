@@ -49,7 +49,8 @@ VM::RuntimeResult VM::json_escape(int argc, Value* argv)
 VM::RuntimeResult VM::json_read_string(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_int())
-        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "JSON string parsing expects a string and integer position");
+        return raise_runtime_error(
+            ErrorCode::NATIVE_TYPE_ERROR, "JSON string parsing expects a string and integer position");
 
     StringRef input = argv[0].as_string()->str;
     i64 requested = argv[1].as_int();
@@ -63,7 +64,8 @@ VM::RuntimeResult VM::json_read_string(int argc, Value* argv)
         byte_pos += step;
         cp_pos++;
     }
-    if (cp_pos != requested || byte_pos >= input.len() || input[byte_pos] != '"') return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (cp_pos != requested || byte_pos >= input.len() || input[byte_pos] != '"')
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     byte_pos++;
     cp_pos++;
@@ -124,7 +126,8 @@ VM::RuntimeResult VM::json_read_string(int argc, Value* argv)
                 if (byte_pos + 12 > input.len() || input[byte_pos + 6] != '\\' || input[byte_pos + 7] != 'u')
                     return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
                 u32 low = 0;
-                if (!read_hex4(byte_pos + 8, &low) || low < 0xDC00 || low > 0xDFFF) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+                if (!read_hex4(byte_pos + 8, &low) || low < 0xDC00 || low > 0xDFFF)
+                    return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
                 codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
                 consumed = 12;
             } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {

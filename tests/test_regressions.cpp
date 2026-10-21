@@ -31,7 +31,8 @@ RunResult run_installed(std::filesystem::path const& binary, std::filesystem::pa
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / ("fairuz_regression_program_" + std::to_string(test_process::process_id()) + ".fa");
+    auto path = std::filesystem::temp_directory_path()
+        / ("fairuz_regression_program_" + std::to_string(test_process::process_id()) + ".fa");
     std::ofstream out(path);
     out << source;
     return path;
@@ -203,7 +204,8 @@ TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
     RunResult min_result = run_installed(binary_path(), min_bad);
     EXPECT_EQ(min_result.exit_code, 65);
 
-    auto output = std::filesystem::temp_directory_path() / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
+    auto output = std::filesystem::temp_directory_path()
+        / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
     std::string file_source = "م := افتح(\"" + fairuz::platform::utf8(output)
         + "\", \"اكتب\")\n"
           "اغلق(م)\n"

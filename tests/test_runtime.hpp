@@ -32,13 +32,15 @@ template<typename T, typename E> inline T run_success(fairuz::ErrorOr<T, E> resu
 {
     if (result.has_error())
         test_runtime_detail::fail(
-            (std::string("Expected success, but received an error : ") + result.error().str()).c_str(), FAIRUZ_TEST_CALL_SITE_ARGS);
+            (std::string("Expected success, but received an error : ") + result.error().str()).c_str(),
+            FAIRUZ_TEST_CALL_SITE_ARGS);
     return std::move(result).value();
 }
 
 template<typename T, typename E> inline E run_failed(fairuz::ErrorOr<T, E> result, FAIRUZ_TEST_CALL_SITE)
 {
-    if (result.has_value()) test_runtime_detail::fail("Expected an error, but execution succeeded", FAIRUZ_TEST_CALL_SITE_ARGS);
+    if (result.has_value())
+        test_runtime_detail::fail("Expected an error, but execution succeeded", FAIRUZ_TEST_CALL_SITE_ARGS);
     return std::move(result).error();
 }
 

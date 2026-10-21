@@ -11,6 +11,8 @@
 #ifndef FAIRUZ_VM_RUNNER_HPP
 #define FAIRUZ_VM_RUNNER_HPP
 
+#include "Macros.hpp"
+
 namespace fairuz::runtime {
 
 // This API reports completion, not the script's final Value. Use an explicit
@@ -57,7 +59,7 @@ struct RunResult {
 //
 // The allocator and diagnostic engine are currently process-global. Callers
 // must serialize this operation with other users of those globals.
-[[nodiscard]] ExitStatus run_protected(char const* filepath) noexcept;
+FAIRUZ_NODISCARD ExitStatus run_protected(char const* filepath) noexcept;
 
 // The shared program entry for CLI and integration tests. Options preserve
 // the same isolation/lifetime guarantees as the convenience overload above.
@@ -65,7 +67,7 @@ struct RunResult {
 // bodies eagerly; normal execution keeps unused bodies lazy. JSON mode emits
 // one complete diagnostic array before restoring the caller's engine. Only
 // status/classification escape; callers map failures to their own exit codes.
-[[nodiscard]] RunResult run_protected(char const* filepath, RunOptions const& options) noexcept;
+FAIRUZ_NODISCARD RunResult run_protected(char const* filepath, RunOptions const& options) noexcept;
 
 } // namespace fairuz::runtime
 

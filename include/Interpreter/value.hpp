@@ -97,8 +97,14 @@ public:
     static Value from_func(ObjFunction const* f) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(f) & PAYLOAD_MASK); }
     static Value from_native(ObjNative const* n) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK); }
     static Value from_class(ObjClass const* c) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK); }
-    static Value from_instance(ObjInstance const* i) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK); }
-    static Value from_file_handle(ObjFileHandle const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
+    static Value from_instance(ObjInstance const* i)
+    {
+        return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK);
+    }
+    static Value from_file_handle(ObjFileHandle const* p)
+    {
+        return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK);
+    }
     static Value from_module(ObjModule const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
 
     Value() = default;
@@ -191,13 +197,19 @@ enum class TypeTag : u16 {
     MODULE = 1 << 13,
 }; // enum TypeTag
 
-[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept { return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0; }
+FAIRUZ_NODISCARD inline bool has_tag(TypeTag mask, TypeTag t) noexcept
+{
+    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
+}
 
-[[nodiscard]] inline TypeTag operator|(TypeTag a, TypeTag b) noexcept { return static_cast<TypeTag>(static_cast<u16>(a) | static_cast<u16>(b)); }
+FAIRUZ_NODISCARD inline TypeTag operator|(TypeTag a, TypeTag b) noexcept
+{
+    return static_cast<TypeTag>(static_cast<u16>(a) | static_cast<u16>(b));
+}
 
 inline TypeTag& operator|=(TypeTag& a, TypeTag b) noexcept { return a = a | b; }
 
-[[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept
+FAIRUZ_NODISCARD inline TypeTag value_type_tag(Value v) noexcept
 {
     if (v.is_nil()) return TypeTag::NIL;
     if (v.is_bool()) return TypeTag::BOOL;
@@ -377,9 +389,12 @@ public:
     bool is_module() const { return is_obj() && m_type == TypeTag::MODULE; }
 };
 
-[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept { return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0; }
+FAIRUZ_NODISCARD inline bool has_tag(TypeTag mask, TypeTag t) noexcept
+{
+    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
+}
 
-[[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept { return v.is_int() ? TypeTag::INT : v.type_tag(); }
+FAIRUZ_NODISCARD inline TypeTag value_type_tag(Value v) noexcept { return v.is_int() ? TypeTag::INT : v.type_tag(); }
 
 struct ValueHash {
     size_t operator()(Value const& v) const;

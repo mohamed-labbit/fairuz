@@ -106,7 +106,8 @@ struct RegMark {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
         u16 floor = mark;
-        for (size_t i = locals_mark; i < state->locals.size(); ++i) floor = std::max<u16>(floor, static_cast<u16>(state->locals[i].reg.value) + 1);
+        for (size_t i = locals_mark; i < state->locals.size(); ++i)
+            floor = std::max<u16>(floor, static_cast<u16>(state->locals[i].reg.value) + 1);
         state->registers.rewind(floor);
     }
 };
@@ -247,15 +248,17 @@ private:
     CompileStmtResult compile_if(AST::IfElseStmt* s);
     CompileStmtResult compile_while(AST::WhileStmt* s);
     CompileStmtResult compile_function_def(AST::FuncDefStmt* f);
-    void defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class = { });
-    CompileStmtResult compile_function_body(AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class);
+    void defer_function_body(
+        Chunk* chunk, AST::FuncDefStmt const* node, CompilerState state, StringRef receiver_class = { });
+    CompileStmtResult compile_function_body(
+        AST::FuncDefStmt const* node, CompilerState& state, StringRef receiver_class);
     CompileStmtResult compile_return(AST::ReturnStmt* s);
     CompileStmtResult compile_for(AST::ForStmt* s);
     CompileStmtResult compile_break(AST::BreakStmt* s);
     CompileStmtResult compile_continue(AST::ContinueStmt* s);
     CompileStmtResult compile_class_def(AST::ClassDefStmt* s);
-    CompileStmtResult compile_import_single(
-        StringRef const& module, StringRef const& name, StringRef const& alias, SourceLocation loc, bool imports_member);
+    CompileStmtResult compile_import_single(StringRef const& module, StringRef const& name, StringRef const& alias,
+        SourceLocation loc, bool imports_member);
     CompileStmtResult compile_import(AST::ImportStmt* s);
     CompileStmtResult compile_class_method(AST::Stmt* s);
 
@@ -323,9 +326,15 @@ private:
         return e->get_kind() == AST::ExprKind::IDENTIFIER && AST::as_identifier(e)->spelling == kClassInstanceName;
     }
 
-    RuntimeError raise_compile_error(Error const& err) { return raise_compile_error(err.get_code(), err.get_location()); }
+    RuntimeError raise_compile_error(Error const& err)
+    {
+        return raise_compile_error(err.get_code(), err.get_location());
+    }
 
-    RuntimeError raise_compile_error(ErrorCode errc, SourceLocation loc) { return RuntimeError { errc, m_source, loc }; }
+    RuntimeError raise_compile_error(ErrorCode errc, SourceLocation loc)
+    {
+        return RuntimeError { errc, m_source, loc };
+    }
 }; // class Compiler
 
 } // namespace fairuz::runtime

@@ -57,7 +57,9 @@ static inline bool try_parse_indoarab_float_literal(StringRef const& literal, f6
         case u'٨': ascii_copy += "8"; break;
         case u'٩': ascii_copy += "9"; break;
         default:
-            if (cp >= '0' && cp <= '9') diagnostic::fatal_error(ErrorCode::INVALID_CHARACTER, "Mixing indo-arabic and ascii digits is not allowed");
+            if (cp >= '0' && cp <= '9')
+                diagnostic::fatal_error(
+                    ErrorCode::INVALID_CHARACTER, "Mixing indo-arabic and ascii digits is not allowed");
             diagnostic::fatal_error(ErrorCode::INVALID_CHARACTER, "Unexpected character");
         }
     }
@@ -76,7 +78,8 @@ static inline bool try_parse_float_literal(StringRef const& literal, f64& result
     u64 cp_bytes = 0;
     u32 len = literal.len();
 
-    if (bytes < len && is_arab_digit(decode_utf8_at(literal, i, &cp_bytes))) return try_parse_indoarab_float_literal(literal, result);
+    if (bytes < len && is_arab_digit(decode_utf8_at(literal, i, &cp_bytes)))
+        return try_parse_indoarab_float_literal(literal, result);
 
     bool saw_digit = false;
 
@@ -194,7 +197,8 @@ static inline bool try_parse_integer_literal(StringRef const& literal, int base,
 
     auto prefix = literal.slice(i, 2);
 
-    if (prefix == "0x" || prefix == "0X" || prefix == "0b" || prefix == "0B" || prefix == "0o" || prefix == "0O") i += 2;
+    if (prefix == "0x" || prefix == "0X" || prefix == "0b" || prefix == "0B" || prefix == "0o" || prefix == "0O")
+        i += 2;
     else if (literal.at(i) == '0' && literal.len() > i + 1) i++;
 
     u64 value = 0;
@@ -215,7 +219,8 @@ static inline bool try_parse_integer_literal(StringRef const& literal, int base,
         else if (cp >= 'A' && cp <= 'F') digit = cp - 'A' + 10;
         if (digit < 0) diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL, "invalid digit in integer literal");
 
-        if (digit >= base) diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL, "digit is not valid for the literal base");
+        if (digit >= base)
+            diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL, "digit is not valid for the literal base");
 
         if (value > (limit - digit) / base) return false;
 

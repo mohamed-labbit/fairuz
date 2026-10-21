@@ -13,7 +13,8 @@
 
 namespace fairuz::runtime {
 
-ErrorOr<bool, RuntimeError> VM::run_instance_op(Value const& lhs, Value const& rhs, int op, u32 instr, int cur_frame_base, u32 ip)
+ErrorOr<bool, RuntimeError> VM::run_instance_op(
+    Value const& lhs, Value const& rhs, int op, u32 instr, int cur_frame_base, u32 ip)
 {
     ObjClass* self_klass = nullptr;
     Value self_val, arg_val = Value::nil();
@@ -36,22 +37,25 @@ ErrorOr<bool, RuntimeError> VM::run_instance_op(Value const& lhs, Value const& r
     }
 
     if (UNLIKELY(slot < 0)) return raise_runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-    if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size())) return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
+    if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))
+        return raise_runtime_error(ErrorCode::UNDEFINED_METHOD);
 
     Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];
     int caller_stack_top = m_stack_top;
     int call_base = caller_stack_top;
     if (UNLIKELY(call_base + 2 >= STACK_SIZE)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
     m_stack[call_base + 1] = arg_val;
-    return invoke_method(target_chunk, self_val, cur_frame_base + instr_A(instr), call_base, 2, ip, caller_stack_top, target_chunk->globals);
+    return invoke_method(target_chunk, self_val, cur_frame_base + instr_A(instr), call_base, 2, ip, caller_stack_top,
+        target_chunk->globals);
 }
 
 // Calls target_chunk with self_val in callee register 0. total_argc includes
 // that implicit self slot; explicit arguments must already follow call_base.
-ErrorOr<bool, RuntimeError> VM::invoke_method(
-    Chunk* target_chunk, Value self_val, int result_slot, int call_base, int total_argc, u32 ip, int caller_stack_top, GlobalEnvironment* globals)
+ErrorOr<bool, RuntimeError> VM::invoke_method(Chunk* target_chunk, Value self_val, int result_slot, int call_base,
+    int total_argc, u32 ip, int caller_stack_top, GlobalEnvironment* globals)
 {
-    if (UNLIKELY(target_chunk == nullptr)) return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
+    if (UNLIKELY(target_chunk == nullptr))
+        return raise_runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
     if (UNLIKELY(total_argc != target_chunk->arity)) return raise_runtime_error(ErrorCode::WRONG_ARG_COUNT);
     if (UNLIKELY(m_frames_top >= MAX_FRAMES)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
 
@@ -77,8 +81,9 @@ ErrorOr<bool, RuntimeError> VM::invoke_method(
     for (int i = total_argc; i < local_count; i++) m_stack[call_base + i] = Value::nil();
 
     frame().ip = PCType { ip };
-    m_frames[m_frames_top] = CallFrame(nullptr, target_chunk, PCType { 0 }, static_cast<u16>(call_base), static_cast<u16>(local_count),
-        static_cast<u16>(result_slot), static_cast<u16>(caller_stack_top), globals == nullptr ? current_globals() : globals);
+    m_frames[m_frames_top] = CallFrame(nullptr, target_chunk, PCType { 0 }, static_cast<u16>(call_base),
+        static_cast<u16>(local_count), static_cast<u16>(result_slot), static_cast<u16>(caller_stack_top),
+        globals == nullptr ? current_globals() : globals);
     m_frames_top++;
 
     return true;
@@ -93,8 +98,8 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
 
         if (argc != arity)
             return raise_runtime_error(ErrorCode::WRONG_ARG_COUNT,
-                std::string(fchk->name.data(), fchk->name.len()) + "() expected " + std::to_string(arity) + " arguments but got "
-                    + std::to_string(argc));
+                std::string(fchk->name.data(), fchk->name.len()) + "() expected " + std::to_string(arity)
+                    + " arguments but got " + std::to_string(argc));
 
         auto compiled = ensure_compiled(fchk);
         if (compiled.has_error()) return compiled.error();
@@ -111,8 +116,8 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             for (int i = 0; i < argc; i++) m_stack[cur_base + i] = m_stack[call_base + i];
             for (int i = argc; i < local_count; i++) m_stack[cur_base + i] = Value::nil();
 
-            m_frames[m_frames_top - 1] = CallFrame(fn, fchk, PCType { 0 }, static_cast<u16>(cur_base), static_cast<u16>(local_count),
-                old_frame.return_slot, old_frame.caller_stack_top, fn->globals);
+            m_frames[m_frames_top - 1] = CallFrame(fn, fchk, PCType { 0 }, static_cast<u16>(cur_base),
+                static_cast<u16>(local_count), old_frame.return_slot, old_frame.caller_stack_top, fn->globals);
             m_stack_top = new_top;
         } else {
             if (UNLIKELY(m_frames_top >= MAX_FRAMES)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
@@ -128,8 +133,9 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
 
             for (int i = argc; i < local_count; i++) m_stack[call_base + i] = Value::nil();
 
-            m_frames[m_frames_top] = CallFrame(fn, fchk, PCType { 0 }, static_cast<u16>(call_base), static_cast<u16>(local_count),
-                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), fn->globals);
+            m_frames[m_frames_top]
+                = CallFrame(fn, fchk, PCType { 0 }, static_cast<u16>(call_base), static_cast<u16>(local_count),
+                    static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), fn->globals);
             m_frames_top++;
         }
         return true;
@@ -140,7 +146,8 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
         if (nat->arity >= 0 && argc != nat->arity) {
             std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
             return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
-                std::string("native '") + name + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
+                std::string("native '") + name + "' expected " + std::to_string(nat->arity) + " args, got "
+                    + std::to_string(argc));
         }
 
         auto call_result = call_native(nat, argc, call_base);
@@ -203,13 +210,14 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
         for (int i = argc + 1; i < local_count; i++) m_stack[dest_base + i] = Value::nil();
 
         if (tail && m_frames_top > 0) {
-            m_frames[m_frames_top - 1] = CallFrame(nullptr, ctor_chunk, PCType { 0 }, static_cast<u16>(dest_base), static_cast<u16>(local_count),
-                old_frame.return_slot, old_frame.caller_stack_top, ctor_chunk->globals);
+            m_frames[m_frames_top - 1] = CallFrame(nullptr, ctor_chunk, PCType { 0 }, static_cast<u16>(dest_base),
+                static_cast<u16>(local_count), old_frame.return_slot, old_frame.caller_stack_top, ctor_chunk->globals);
             m_stack_top = new_top;
         } else {
             if (UNLIKELY(m_frames_top >= MAX_FRAMES)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
-            m_frames[m_frames_top] = CallFrame(nullptr, ctor_chunk, PCType { 0 }, static_cast<u16>(dest_base), static_cast<u16>(local_count),
-                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), ctor_chunk->globals);
+            m_frames[m_frames_top] = CallFrame(nullptr, ctor_chunk, PCType { 0 }, static_cast<u16>(dest_base),
+                static_cast<u16>(local_count), static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top),
+                ctor_chunk->globals);
             m_frames_top++;
         }
         return true;
@@ -218,7 +226,8 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
     if (callee.is_instance()) {
         ObjInstance* inst = callee.as_instance();
         int slot = inst->klass->method_slot(sp_method_name(ObjClass::CALL));
-        if (UNLIKELY(slot < 0 || static_cast<u32>(slot) >= inst->klass->vtable.size() || inst->klass->vtable[static_cast<u32>(slot)] == nullptr))
+        if (UNLIKELY(slot < 0 || static_cast<u32>(slot) >= inst->klass->vtable.size()
+                || inst->klass->vtable[static_cast<u32>(slot)] == nullptr))
             return raise_runtime_error(ErrorCode::NOT_CALLABLE);
 
         Chunk* target = inst->klass->vtable[static_cast<u32>(slot)];
@@ -233,9 +242,11 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
             if (UNLIKELY(new_top > STACK_SIZE)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
             for (int i = 0; i < argc; ++i) m_stack[dest_base + i + 1] = m_stack[call_base + i];
             m_stack[dest_base] = callee;
-            for (int i = argc + 1; i < static_cast<int>(target->local_count); ++i) m_stack[dest_base + i] = Value::nil();
-            m_frames[m_frames_top - 1] = CallFrame(nullptr, target, PCType { 0 }, static_cast<u16>(dest_base), static_cast<u16>(target->local_count),
-                old_frame.return_slot, old_frame.caller_stack_top, target->globals);
+            for (int i = argc + 1; i < static_cast<int>(target->local_count); ++i)
+                m_stack[dest_base + i] = Value::nil();
+            m_frames[m_frames_top - 1] = CallFrame(nullptr, target, PCType { 0 }, static_cast<u16>(dest_base),
+                static_cast<u16>(target->local_count), old_frame.return_slot, old_frame.caller_stack_top,
+                target->globals);
             m_stack_top = new_top;
             return true;
         }
@@ -243,15 +254,17 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
         int caller_stack_top = m_stack_top;
         int method_base = caller_stack_top;
         int new_top = method_base + static_cast<int>(target->local_count) + 1;
-        if (UNLIKELY(m_frames_top >= MAX_FRAMES || new_top > STACK_SIZE)) return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
+        if (UNLIKELY(m_frames_top >= MAX_FRAMES || new_top > STACK_SIZE))
+            return raise_runtime_error(ErrorCode::STACK_OVERFLOW);
         m_stack[method_base] = callee;
 
         for (int i = 0; i < argc; ++i) m_stack[method_base + i + 1] = m_stack[call_base + i];
         for (int i = argc + 1; i < static_cast<int>(target->local_count); ++i) m_stack[method_base + i] = Value::nil();
 
         m_stack_top = new_top;
-        m_frames[m_frames_top++] = CallFrame(nullptr, target, PCType { 0 }, static_cast<u16>(method_base), static_cast<u16>(target->local_count),
-            static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), target->globals);
+        m_frames[m_frames_top++] = CallFrame(nullptr, target, PCType { 0 }, static_cast<u16>(method_base),
+            static_cast<u16>(target->local_count), static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top),
+            target->globals);
         return true;
     }
 
@@ -261,11 +274,15 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
     return raise_runtime_error(ErrorCode::NOT_CALLABLE, std::string(fn_name.data(), fn_name.len()));
 }
 
-VM::RuntimeResult VM::call_native(ObjNative* nat, int argc, int call_base) { return (this->*nat->fn)(argc, &m_stack[call_base]); }
+VM::RuntimeResult VM::call_native(ObjNative* nat, int argc, int call_base)
+{
+    return (this->*nat->fn)(argc, &m_stack[call_base]);
+}
 
 VM::RuntimeResult VM::call_value_sync(Value callee, ObjList* arguments)
 {
-    if (arguments == nullptr) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dynamic call expects an argument list");
+    if (arguments == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dynamic call expects an argument list");
     int argc = static_cast<int>(arguments->elements.size());
     int stop_depth = m_frames_top;
     int saved_top = m_stack_top;
@@ -305,7 +322,8 @@ VM::RuntimeResult VM::call_special_sync(Value receiver, int special_slot)
     int result_slot = caller_top;
     int call_base = caller_top + 1;
 
-    auto invoke_result = invoke_method(target, receiver, result_slot, call_base, 1, frame().ip.value, caller_top, target->globals);
+    auto invoke_result
+        = invoke_method(target, receiver, result_slot, call_base, 1, frame().ip.value, caller_top, target->globals);
     if (invoke_result.has_error()) return invoke_result.error();
 
     return execute(stop_depth);

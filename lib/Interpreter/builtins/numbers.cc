@@ -20,7 +20,8 @@ namespace fairuz::runtime {
 
 VM::RuntimeResult VM::floor(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_number()) return raise_runtime_error(ErrorCode::FLOOR_TYPE_ERROR);
     if (argv[0].is_int()) return argv[0];
 
@@ -29,7 +30,8 @@ VM::RuntimeResult VM::floor(int argc, Value* argv)
 
 VM::RuntimeResult VM::ceil(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::CEIL_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::CEIL_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_number()) return raise_runtime_error(ErrorCode::CEIL_TYPE_ERROR);
     if (argv[0].is_int()) return argv[0];
 
@@ -38,7 +40,8 @@ VM::RuntimeResult VM::ceil(int argc, Value* argv)
 
 VM::RuntimeResult VM::round(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::ROUND_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::ROUND_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_number()) return raise_runtime_error(ErrorCode::ROUND_TYPE_ERROR);
     if (argv[0].is_int()) return argv[0];
 
@@ -47,7 +50,8 @@ VM::RuntimeResult VM::round(int argc, Value* argv)
 
 VM::RuntimeResult VM::abs(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::ABS_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::ABS_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_number()) return raise_runtime_error(ErrorCode::ABS_TYPE_ERROR);
     if (argv[0].is_int()) {
         return integer::compare(argv[0], Value::from_int(0, m_gc)) < 0 ? integer::neg(argv[0], m_gc) : argv[0];
@@ -80,7 +84,8 @@ VM::RuntimeResult VM::min(int argc, Value* argv)
         return ret;
     }
 
-    if (!all_numbers) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "min expects either all numbers or all strings");
+    if (!all_numbers)
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "min expects either all numbers or all strings");
 
     if (all_ints) {
         Value ret = argv[0];
@@ -96,7 +101,8 @@ VM::RuntimeResult VM::min(int argc, Value* argv)
 
 VM::RuntimeResult VM::max(int argc, Value* argv)
 {
-    if (argc < 1 || argv == nullptr) return raise_runtime_error(ErrorCode::MAX_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc < 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::MAX_ARG_COUNT, "got " + std::to_string(argc));
 
     // Determine mode from argv[0]
     bool all_numbers = argv[0].is_number();
@@ -118,7 +124,8 @@ VM::RuntimeResult VM::max(int argc, Value* argv)
         return ret;
     }
 
-    if (!all_numbers) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "max expects either all numbers or all strings");
+    if (!all_numbers)
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "max expects either all numbers or all strings");
 
     if (all_ints) {
         Value ret = argv[0];
@@ -134,7 +141,8 @@ VM::RuntimeResult VM::max(int argc, Value* argv)
 
 VM::RuntimeResult VM::pow(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::POW_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::POW_ARG_COUNT, "got " + std::to_string(argc));
 
     Value base = argv[0];
     Value exponent = argv[1];
@@ -146,7 +154,8 @@ VM::RuntimeResult VM::pow(int argc, Value* argv)
 
 VM::RuntimeResult VM::sqrt(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) return raise_runtime_error(ErrorCode::SQRT_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::SQRT_ARG_COUNT, "got " + std::to_string(argc));
 
     Value n = argv[0];
 
@@ -160,7 +169,8 @@ VM::RuntimeResult VM::sqrt(int argc, Value* argv)
 
 VM::RuntimeResult VM::math_unary(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_number()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string_view operation = string_bytes(argv[0]);
     f64 value = argv[1].as_double_any();
@@ -174,8 +184,10 @@ VM::RuntimeResult VM::math_unary(int argc, Value* argv)
 
 VM::RuntimeResult VM::math_binary(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
-    if (!argv[0].is_string() || !argv[1].is_number() || !argv[2].is_number()) return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_number() || !argv[2].is_number())
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     std::string_view operation = string_bytes(argv[0]);
     f64 first = argv[1].as_double_any();
@@ -212,7 +224,8 @@ VM::RuntimeResult VM::number_from_text(int argc, Value* argv)
     char* end = nullptr;
     errno = 0;
     double value = std::strtod(owned.c_str(), &end);
-    if (errno == ERANGE || end != owned.c_str() + owned.size() || !std::isfinite(value)) return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
+    if (errno == ERANGE || end != owned.c_str() + owned.size() || !std::isfinite(value))
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return Value::from_real(value);
 }
 

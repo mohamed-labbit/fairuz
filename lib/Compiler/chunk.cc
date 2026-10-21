@@ -142,7 +142,8 @@ void Chunk::disassemble() const
         case InstrFormat::ABx:
             ::printf("A=%-3u  Bx=%-5u", instr_A(ins), instr_Bx(ins));
             // Annotate with constant value
-            if (op == OpCode::LOAD_CONST || op == OpCode::LOAD_GLOBAL || op == OpCode::STORE_GLOBAL || op == OpCode::IMPORT_MODULE) {
+            if (op == OpCode::LOAD_CONST || op == OpCode::LOAD_GLOBAL || op == OpCode::STORE_GLOBAL
+                || op == OpCode::IMPORT_MODULE) {
                 u16 idx = instr_Bx(ins);
                 if (idx < constants.size()) {
                     ::printf("  ; ");
@@ -156,7 +157,9 @@ void Chunk::disassemble() const
             }
             break;
 
-        case InstrFormat::AsBx: ::printf("A=%-3u  sBx=%-5d  -> %d", instr_A(ins), instr_sBx(ins), static_cast<int>(i) + 1 + instr_sBx(ins)); break;
+        case InstrFormat::AsBx:
+            ::printf("A=%-3u  sBx=%-5d  -> %d", instr_A(ins), instr_sBx(ins), static_cast<int>(i) + 1 + instr_sBx(ins));
+            break;
 
         case InstrFormat::NONE: break;
 

@@ -116,7 +116,8 @@ consteval auto make_builtin_registry()
     };
     std::sort(entries.begin(), entries.end(), [](auto const& lhs, auto const& rhs) { return lhs.name < rhs.name; });
     for (size_t i = 0; i < entries.size(); ++i) {
-        if (entries[i].name.empty() || entries[i].fn == nullptr || entries[i].arity < -1) throw "invalid builtin definition";
+        if (entries[i].name.empty() || entries[i].fn == nullptr || entries[i].arity < -1)
+            throw "invalid builtin definition";
         if (i > 0 && entries[i - 1].name == entries[i].name) throw "duplicate builtin name";
     }
     return entries;

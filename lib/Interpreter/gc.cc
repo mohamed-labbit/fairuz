@@ -37,7 +37,9 @@ static void fa_delete_object(ObjHeader* obj)
     case ObjType::FILE_HANDLE: delete reinterpret_cast<ObjFileHandle*>(obj); break;
     case ObjType::MODULE: delete reinterpret_cast<ObjModule*>(obj); break;
     case ObjType::INT: delete reinterpret_cast<ObjBigInt*>(obj); break;
-    case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
+    case ObjType::_COUNT:
+        diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type");
+        break; /// unreachable break
     }
 }
 
@@ -53,7 +55,8 @@ static size_t fa_object_size(ObjHeader const* obj)
     case ObjType::INSTANCE: return sizeof(ObjInstance);
     case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
     case ObjType::MODULE: return sizeof(ObjModule);
-    case ObjType::INT: return sizeof(ObjBigInt) + reinterpret_cast<ObjBigInt const*>(obj)->limbs.capacity() * sizeof(u32);
+    case ObjType::INT:
+        return sizeof(ObjBigInt) + reinterpret_cast<ObjBigInt const*>(obj)->limbs.capacity() * sizeof(u32);
     case ObjType::_COUNT: return 0;
     }
     return 0;
@@ -282,7 +285,8 @@ ObjNative* GarbageCollector::make_obj_native(NativeFn fn, ObjString* name, int a
     return ret;
 }
 
-ObjClass* GarbageCollector::make_obj_class(StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
+ObjClass* GarbageCollector::make_obj_class(
+    StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
 {
     auto ret = make<ObjClass>(fields, methods, vtable);
     ret->name = name;
