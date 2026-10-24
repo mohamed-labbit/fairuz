@@ -71,6 +71,9 @@ enum class BodyParsing { LAZY, EAGER };
 //    and allocator are shared. Parser diagnostics use this stream's source.
 class Parser {
 public:
+    using ParseExprResult = ErrorOr<AST::ExprPtr>;
+    using ParseStmtResult = ErrorOr<AST::StmtPtr>;
+
     // An empty parser is a valid, already-complete bounded stream.
     Parser();
     explicit Parser(lex::FileManager*, BodyParsing = BodyParsing::LAZY);
@@ -82,45 +85,45 @@ public:
     Parser& operator=(Parser&&) = delete;
 
     Array<AST::StmtPtr> parse_program();
-    ErrorOr<AST::StmtPtr> parse_statement();
-    ErrorOr<AST::StmtPtr> parse_expression_stmt();
-    ErrorOr<AST::StmtPtr> parse_if_stmt(u16 clause_column = 0);
-    ErrorOr<AST::StmtPtr> parse_while_stmt();
-    ErrorOr<AST::StmtPtr> parse_for_stmt();
-    ErrorOr<AST::StmtPtr> parse_return_stmt();
-    ErrorOr<AST::StmtPtr> parse_break_stmt();
-    ErrorOr<AST::StmtPtr> parse_continue_stmt();
-    ErrorOr<AST::StmtPtr> parse_function_def();
-    ErrorOr<AST::StmtPtr> parse_function_body();
-    ErrorOr<AST::StmtPtr> parse_block(Array<AST::ExprPtr>* members = nullptr);
-    ErrorOr<AST::StmtPtr> parse_indented_block(Array<AST::ExprPtr>* members = nullptr);
-    ErrorOr<AST::StmtPtr> parse_class_def();
-    ErrorOr<AST::StmtPtr> parse_import_stmt();
-    ErrorOr<AST::StmtPtr> parse_assert_stmt();
-    ErrorOr<AST::StmtPtr> parse_class_method(Array<AST::ExprPtr>& members);
-    ErrorOr<AST::StmtPtr> parse_class_method_statement(Array<AST::ExprPtr>& members);
+    ParseStmtResult parse_statement();
+    ParseStmtResult parse_expression_stmt();
+    ParseStmtResult parse_if_stmt(u16 clause_column = 0);
+    ParseStmtResult parse_while_stmt();
+    ParseStmtResult parse_for_stmt();
+    ParseStmtResult parse_return_stmt();
+    ParseStmtResult parse_break_stmt();
+    ParseStmtResult parse_continue_stmt();
+    ParseStmtResult parse_function_def();
+    ParseStmtResult parse_function_body();
+    ParseStmtResult parse_block(Array<AST::ExprPtr>* members = nullptr);
+    ParseStmtResult parse_indented_block(Array<AST::ExprPtr>* members = nullptr);
+    ParseStmtResult parse_class_def();
+    ParseStmtResult parse_import_stmt();
+    ParseStmtResult parse_assert_stmt();
+    ParseStmtResult parse_class_method(Array<AST::ExprPtr>& members);
+    ParseStmtResult parse_class_method_statement(Array<AST::ExprPtr>& members);
 
-    ErrorOr<AST::ExprPtr> parse_expression();
-    ErrorOr<AST::ExprPtr> parse_assignment_expr(bool allow_augmented = true);
-    ErrorOr<AST::ExprPtr> parse_binary_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::ExprPtr> parse_unary_expr();
-    ErrorOr<AST::ExprPtr> parse_power_expr();
-    ErrorOr<AST::ExprPtr> parse_postfix_expr();
-    ErrorOr<AST::ExprPtr> parse_primary_expr();
+    ParseExprResult parse_expression();
+    ParseExprResult parse_assignment_expr(bool allow_augmented = true);
+    ParseExprResult parse_binary_expr_precedence(u32 min_precedence);
+    ParseExprResult parse_unary_expr();
+    ParseExprResult parse_power_expr();
+    ParseExprResult parse_postfix_expr();
+    ParseExprResult parse_primary_expr();
     ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
 
     // Compatibility entry points. parse() permits statement-level assignment;
     // the expression aliases do not. The literal entry points below begin
     // AFTER '['/'{'; primary parsing additionally supplies the opener's location.
-    ErrorOr<AST::ExprPtr> parse();
-    ErrorOr<AST::ExprPtr> parse_list_literal();
-    ErrorOr<AST::ExprPtr> parse_dict_literal();
-    ErrorOr<AST::ExprPtr> parse_conditional_expr();
-    ErrorOr<AST::ExprPtr> parse_logical_expr();
-    ErrorOr<AST::ExprPtr> parse_logical_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::ExprPtr> parse_comparison_expr();
-    ErrorOr<AST::ExprPtr> parse_binary_expr();
-    ErrorOr<AST::ExprPtr> parse_member_access();
+    ParseExprResult parse();
+    ParseExprResult parse_list_literal();
+    ParseExprResult parse_dict_literal();
+    ParseExprResult parse_conditional_expr();
+    ParseExprResult parse_logical_expr();
+    ParseExprResult parse_logical_expr_precedence(u32 min_precedence);
+    ParseExprResult parse_comparison_expr();
+    ParseExprResult parse_binary_expr();
+    ParseExprResult parse_member_access();
 
     bool we_done() const;
     bool check(tok::TokenType) const;
