@@ -167,7 +167,7 @@ static void print_runtime_value_impl(Value value, std::unordered_set<ObjHeader*>
         }
 
         case ObjType::NATIVE: {
-            auto nat = reinterpret_cast<ObjNative*>(obj);
+            auto nat = reinterpret_cast<ObjBuiltin*>(obj);
             std::cout << "<native ";
             if (nat->name) std::cout << nat->name->str;
             else std::cout << "?";

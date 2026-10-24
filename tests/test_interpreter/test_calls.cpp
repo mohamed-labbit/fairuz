@@ -58,7 +58,7 @@ TEST(VMCalls, CallNonFunctionThrows)
     EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
-TEST(VMCalls, ICCallNativeLen)
+TEST(VMCalls, ICCallBuiltinLen)
 {
     VMRunner r;
     CB b;

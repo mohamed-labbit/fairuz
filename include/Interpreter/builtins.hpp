@@ -21,7 +21,7 @@ namespace fairuz::runtime {
 
 struct BuiltinDefinition {
     std::string_view name;
-    NativeFn fn;
+    BuiltinFn fn;
     int arity;
 };
 

@@ -199,7 +199,7 @@
 )fa",
     "10\n" },
 
-{ "ExternalCallableFieldNative", R"fa(دالة ضاعف(س):
+{ "ExternalCallableFieldBuiltin", R"fa(دالة ضاعف(س):
     ارجع س * 2
 نوع علبة:
     دالة بداية(الدالة):

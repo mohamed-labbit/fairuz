@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeMax, OneArg_ReturnsArg)
+TEST(BuiltinMax, OneArg_ReturnsArg)
 {
     VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
@@ -18,7 +18,7 @@ TEST(NativeMax, OneArg_ReturnsArg)
     EXPECT_EQ(v.as_int(), n.as_int());
 }
 
-TEST(NativeMax, TwoPositiveIntegers)
+TEST(BuiltinMax, TwoPositiveIntegers)
 {
     VM vm;
     Value args[] = { Value::from_int(3), Value::from_int(7) };
@@ -27,7 +27,7 @@ TEST(NativeMax, TwoPositiveIntegers)
     EXPECT_EQ(v.as_int(), 7);
 }
 
-TEST(NativeMax, NegativeValues)
+TEST(BuiltinMax, NegativeValues)
 {
     VM vm;
     Value args[] = { Value::from_int(-3), Value::from_int(-1) };
@@ -36,7 +36,7 @@ TEST(NativeMax, NegativeValues)
     EXPECT_EQ(v.as_int(), -1);
 }
 
-TEST(NativeMax, AllIntegersReturnsInteger)
+TEST(BuiltinMax, AllIntegersReturnsInteger)
 {
     VM vm;
     Value args[] = { Value::from_int(1), Value::from_int(9), Value::from_int(4) };
@@ -46,7 +46,7 @@ TEST(NativeMax, AllIntegersReturnsInteger)
     EXPECT_EQ(v.as_int(), 9);
 }
 
-TEST(NativeMax, MixedFloatAndInteger)
+TEST(BuiltinMax, MixedFloatAndInteger)
 {
     VM vm;
     Value args[] = { Value::from_int(3), Value::from_real(3.5) };
@@ -56,7 +56,7 @@ TEST(NativeMax, MixedFloatAndInteger)
     EXPECT_DOUBLE_EQ(v.as_double(), 3.5);
 }
 
-TEST(NativeMax, StringFirstArg_ReturnsArg)
+TEST(BuiltinMax, StringFirstArg_ReturnsArg)
 {
     VM vm;
     Value args[] = { str("a"), str("b") };

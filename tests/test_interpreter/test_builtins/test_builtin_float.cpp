@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeFloat, IntegerToFloat)
+TEST(BuiltinFloat, IntegerToFloat)
 {
     VM vm;
     Value arg = Value::from_int(3);
@@ -18,7 +18,7 @@ TEST(NativeFloat, IntegerToFloat)
     EXPECT_DOUBLE_EQ(v.as_double(), 3.0);
 }
 
-TEST(NativeFloat, FloatPassthrough)
+TEST(BuiltinFloat, FloatPassthrough)
 {
     VM vm;
     Value arg = Value::from_real(2.5);
@@ -28,7 +28,7 @@ TEST(NativeFloat, FloatPassthrough)
     EXPECT_DOUBLE_EQ(v.as_double(), 2.5);
 }
 
-TEST(NativeFloat, NegativeInteger)
+TEST(BuiltinFloat, NegativeInteger)
 {
     VM vm;
     Value arg = Value::from_int(-10);

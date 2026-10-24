@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeMin, OneArg_ReturnsArg)
+TEST(BuiltinMin, OneArg_ReturnsArg)
 {
     VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
@@ -18,7 +18,7 @@ TEST(NativeMin, OneArg_ReturnsArg)
     EXPECT_EQ(v.as_int(), n.as_int());
 }
 
-TEST(NativeMin, TwoPositiveIntegers)
+TEST(BuiltinMin, TwoPositiveIntegers)
 {
     VM vm;
     Value args[] = { Value::from_int(3), Value::from_int(7) };
@@ -27,7 +27,7 @@ TEST(NativeMin, TwoPositiveIntegers)
     EXPECT_EQ(v.as_int(), 3);
 }
 
-TEST(NativeMin, AllIntegersReturnsInteger)
+TEST(BuiltinMin, AllIntegersReturnsInteger)
 {
     VM vm;
     Value args[] = { Value::from_int(5), Value::from_int(2), Value::from_int(8) };
@@ -37,7 +37,7 @@ TEST(NativeMin, AllIntegersReturnsInteger)
     EXPECT_EQ(v.as_int(), 2);
 }
 
-TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
+TEST(BuiltinMin, MixedFloatAndInteger_ReturnsFloat)
 {
     VM vm;
     Value args[] = { Value::from_int(3), Value::from_real(1.5) };
@@ -47,7 +47,7 @@ TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
     EXPECT_DOUBLE_EQ(v.as_double(), 1.5);
 }
 
-TEST(NativeMin, NegativeValues)
+TEST(BuiltinMin, NegativeValues)
 {
     VM vm;
     Value args[] = { Value::from_int(-1), Value::from_int(-5), Value::from_int(-2) };

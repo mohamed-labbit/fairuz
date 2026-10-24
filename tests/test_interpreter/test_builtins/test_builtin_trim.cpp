@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeTrim, LeadingAndTrailingSpaces)
+TEST(BuiltinTrim, LeadingAndTrailingSpaces)
 {
     VM vm;
     Value arg = str("  hello  ");
@@ -18,7 +18,7 @@ TEST(NativeTrim, LeadingAndTrailingSpaces)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "hello");
 }
 
-TEST(NativeTrim, NoSpaces)
+TEST(BuiltinTrim, NoSpaces)
 {
     VM vm;
     Value arg = str("hello");
@@ -28,7 +28,7 @@ TEST(NativeTrim, NoSpaces)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "hello");
 }
 
-TEST(NativeTrim, OnlySpaces)
+TEST(BuiltinTrim, OnlySpaces)
 {
     VM vm;
     Value arg = str("   ");

@@ -30,7 +30,7 @@ Value decimal(char const* text, GarbageCollector& gc)
 
 }
 
-TEST(IntegerContract, PayloadBoundariesAndNativeMinimum)
+TEST(IntegerContract, PayloadBoundariesAndBuiltinMinimum)
 {
     GarbageCollector gc;
     // Values inside the active payload range stay small in either representation.
@@ -223,10 +223,10 @@ TEST(IntegerContract, BigIntegersPreserveNumericHashAndConversions)
     EXPECT_EQ(found->as_int(), 2);
 }
 
-TEST(IntegerContract, NativeIntegerConversionChecksBigIntegerRange)
+TEST(IntegerContract, BuiltinIntegerConversionChecksBigIntegerRange)
 {
     GarbageCollector gc;
-    // Native callers must see the value, even for deliberately boxed small integers.
+    // Builtin callers must see the value, even for deliberately boxed small integers.
     for (i64 n : { INT64_MIN, i64 { -1 }, i64 { 0 }, i64 { 1 }, INT64_MAX }) {
         Value boxed = Value::from_obj(&gc.make_obj_int(integer::from_i64(n))->obj);
         EXPECT_EQ(boxed.as_int(), n);
@@ -236,7 +236,7 @@ TEST(IntegerContract, NativeIntegerConversionChecksBigIntegerRange)
     EXPECT_THROW(decimal("-9223372036854775809", gc).as_int(), diagnostic::DiagnosticAbort);
 }
 
-TEST(IntegerContract, NativeTextConversionPreservesLargeIntegers)
+TEST(IntegerContract, BuiltinTextConversionPreservesLargeIntegers)
 {
     VM vm;
     Value text = vm.gc().make_string("18446744073709551616000000000000000000");

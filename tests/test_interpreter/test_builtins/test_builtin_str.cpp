@@ -8,14 +8,14 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeStr, NoArgs_ReturnsEmpty)
+TEST(BuiltinStr, NoArgs_ReturnsEmpty)
 {
     VM vm;
     auto result = run_success(vm.str(0, nullptr));
     EXPECT_TRUE(result.is_string());
 }
 
-TEST(NativeStr, Integer)
+TEST(BuiltinStr, Integer)
 {
     VM vm;
     Value arg = Value::from_int(42);
@@ -25,7 +25,7 @@ TEST(NativeStr, Integer)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "42");
 }
 
-TEST(NativeStr, NegativeInteger)
+TEST(BuiltinStr, NegativeInteger)
 {
     VM vm;
     Value arg = Value::from_int(-7);
@@ -35,7 +35,7 @@ TEST(NativeStr, NegativeInteger)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "-7");
 }
 
-TEST(NativeStr, Zero)
+TEST(BuiltinStr, Zero)
 {
     VM vm;
     Value arg = Value::from_int(0);
@@ -45,7 +45,7 @@ TEST(NativeStr, Zero)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "0");
 }
 
-TEST(NativeStr, BoolTrue)
+TEST(BuiltinStr, BoolTrue)
 {
     VM vm;
     Value arg = Value::from_bool(true);
@@ -55,7 +55,7 @@ TEST(NativeStr, BoolTrue)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "صحيح");
 }
 
-TEST(NativeStr, BoolFalse)
+TEST(BuiltinStr, BoolFalse)
 {
     VM vm;
     Value arg = Value::from_bool(false);
@@ -65,7 +65,7 @@ TEST(NativeStr, BoolFalse)
     EXPECT_EQ(std::string(v.as_string()->str.data()), "خطا");
 }
 
-TEST(NativeStr, Float)
+TEST(BuiltinStr, Float)
 {
     VM vm;
     Value arg = Value::from_real(1.5);
@@ -80,7 +80,7 @@ TEST(NativeStr, Float)
     EXPECT_DOUBLE_EQ(parsed, 1.5);
 }
 
-TEST(NativeStr, StringPassthrough)
+TEST(BuiltinStr, StringPassthrough)
 {
     VM vm;
     Value s = str("hello");

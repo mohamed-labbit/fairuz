@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeRound, HalfRoundsUp)
+TEST(BuiltinRound, HalfRoundsUp)
 {
     VM vm;
     Value arg = Value::from_real(2.5);
@@ -18,7 +18,7 @@ TEST(NativeRound, HalfRoundsUp)
     EXPECT_EQ(v.as_int(), 3);
 }
 
-TEST(NativeRound, HalfNegativeRoundsDown)
+TEST(BuiltinRound, HalfNegativeRoundsDown)
 {
     VM vm;
     Value arg = Value::from_real(-2.5);
@@ -28,7 +28,7 @@ TEST(NativeRound, HalfNegativeRoundsDown)
     EXPECT_EQ(v.as_int(), -3);
 }
 
-TEST(NativeRound, IntegerPassthrough)
+TEST(BuiltinRound, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(4);

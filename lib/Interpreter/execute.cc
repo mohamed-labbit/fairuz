@@ -899,7 +899,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
         int base = cur_frame_base + fn_reg + 1;
 
         if (callee.is_native()) {
-            ObjNative* nat = callee.as_native();
+            ObjBuiltin* nat = callee.as_native();
             if (UNLIKELY(nat->arity >= 0 && argc != nat->arity)) {
                 std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
                 return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
@@ -907,7 +907,7 @@ VM::RuntimeResult VM::execute(int stop_frame_depth)
                         + std::to_string(argc));
             }
 
-            // Natives run synchronously with no pushed frame, so a tail call to
+            // Builtins run synchronously with no pushed frame, so a tail call to
             // one must perform *this* frame's own return afterward — the
             // compiler omits a trailing RETURN for CALL_TAIL sites, trusting
             // the callee to terminate the frame itself.

@@ -219,7 +219,7 @@ private:
     /// Call helpers
     FAIRUZ_NODISCARD RuntimeResult call_special_sync(Value receiver, int special_slot);
     FAIRUZ_NODISCARD RuntimeResult call_value_sync(Value callee, ObjList* arguments);
-    FAIRUZ_NODISCARD RuntimeResult call_native(ObjNative* nat, int argc, int base);
+    FAIRUZ_NODISCARD RuntimeResult call_native(ObjBuiltin* nat, int argc, int base);
     FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> call_value(Value callee, int argc, int base, bool tail);
     FAIRUZ_NODISCARD ErrorOr<bool, RuntimeError> invoke_method(Chunk* target_chunk, Value self_val, int result_slot,
         int call_base, int total_argc, u32 return_ip, int caller_stack_top, GlobalEnvironment* globals = nullptr);

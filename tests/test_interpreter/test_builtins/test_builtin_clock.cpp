@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
+TEST(BuiltinClock, ReturnsFiniteMonotonicSeconds)
 {
     VM vm;
     Value first = run_success(vm.clock(0, nullptr));

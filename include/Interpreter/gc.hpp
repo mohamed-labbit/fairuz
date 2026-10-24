@@ -62,7 +62,7 @@ public:
     ObjList* make_obj_list();
     ObjDict* make_obj_dict(DictType data = { });
     ObjFunction* make_obj_function(Chunk* chunk, GlobalEnvironment* globals = nullptr);
-    ObjNative* make_obj_native(NativeFn fn, ObjString* name, int arity);
+    ObjBuiltin* make_obj_native(BuiltinFn fn, ObjString* name, int arity);
     ObjClass* make_obj_class(
         StringRef name, StringArr& fields, StringArr& methods, Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
     ObjInstance* make_obj_instance(ObjClass* klass);
@@ -102,7 +102,7 @@ public:
     {
         return Value::from_func(make_obj_function(chunk, globals));
     }
-    Value make_native(NativeFn fn, ObjString* name, int arity)
+    Value make_native(BuiltinFn fn, ObjString* name, int arity)
     {
         return Value::from_native(make_obj_native(fn, name, arity));
     }

@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeUrl, EncodesAndDecodesUtf8Bytes)
+TEST(BuiltinUrl, EncodesAndDecodesUtf8Bytes)
 {
     VM vm;
     Value input = str("لغة فيروز/1");
@@ -21,7 +21,7 @@ TEST(NativeUrl, EncodesAndDecodesUtf8Bytes)
     EXPECT_EQ(run_failed(vm.url_decode(1, &malformed)).errc, ErrorCode::RUNTIME_ERROR);
 }
 
-TEST(NativeUrl, ParsesAndRebuildsStructuredUrl)
+TEST(BuiltinUrl, ParsesAndRebuildsStructuredUrl)
 {
     VM vm;
     Value input = str("https://example.test:443/api?q=1#part");
@@ -35,7 +35,7 @@ TEST(NativeUrl, ParsesAndRebuildsStructuredUrl)
     EXPECT_EQ(rebuilt.as_string()->str, input.as_string()->str);
 }
 
-TEST(NativeUrl, RejectsInvalidBoundaryArguments)
+TEST(BuiltinUrl, RejectsInvalidBoundaryArguments)
 {
     VM vm;
     Value number = Value::from_int(42);

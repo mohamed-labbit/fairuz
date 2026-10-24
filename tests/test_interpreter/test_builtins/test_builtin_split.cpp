@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeSplit, BasicSplit)
+TEST(BuiltinSplit, BasicSplit)
 {
     VM vm;
     Value args[] = { str("a,b,c"), str(",") };
@@ -26,7 +26,7 @@ TEST(NativeSplit, BasicSplit)
     EXPECT_EQ(std::string(v.as_list()->elements[2].as_string()->str.data()), "c");
 }
 
-TEST(NativeSplit, NoDelimiterFound)
+TEST(BuiltinSplit, NoDelimiterFound)
 {
     VM vm;
     Value args[] = { str("hello"), str(",") };

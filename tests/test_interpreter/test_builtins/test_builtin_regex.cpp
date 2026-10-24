@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
+TEST(BuiltinRegex, CompilesSearchesMatchesAndCaptures)
 {
     VM vm;
     Value compile_args[] = { str("([a-z])([0-9]+)"), Value::from_int(0) };
@@ -29,7 +29,7 @@ TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
     EXPECT_TRUE(run_success(vm.regex_fullmatch(2, full_args)).is_dict());
 }
 
-TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
+TEST(BuiltinRegex, FindsAllSplitsAndReplacesWithLimits)
 {
     VM vm;
     Value handle = str("[0-9]+");
@@ -49,7 +49,7 @@ TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
     EXPECT_EQ(replaced.as_string()->str, StringRef("a#b22c"));
 }
 
-TEST(NativeRegex, RejectsInvalidPatternsAndArguments)
+TEST(BuiltinRegex, RejectsInvalidPatternsAndArguments)
 {
     VM vm;
     Value invalid[] = { str("["), Value::from_int(0) };

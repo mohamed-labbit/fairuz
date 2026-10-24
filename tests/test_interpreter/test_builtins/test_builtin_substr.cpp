@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeSubstr, BasicSubstr)
+TEST(BuiltinSubstr, BasicSubstr)
 {
     VM vm; // substr is exclusive
     Value args[] = { str("hello"), Value::from_int(1), Value::from_int(4) };
@@ -20,7 +20,7 @@ TEST(NativeSubstr, BasicSubstr)
     }
 }
 
-TEST(NativeSubstr, FromStart)
+TEST(BuiltinSubstr, FromStart)
 {
     VM vm; // substr is exclusive
     Value args[] = { str("hello"), Value::from_int(0), Value::from_int(3) };

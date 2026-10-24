@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeJoin, BasicJoin)
+TEST(BuiltinJoin, BasicJoin)
 {
     VM vm;
     Value list = run_success(vm.list(0, nullptr));

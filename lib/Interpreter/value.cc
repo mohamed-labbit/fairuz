@@ -59,7 +59,7 @@ ObjString* Value::as_string() const { return reinterpret_cast<ObjString*>(as_obj
 ObjList* Value::as_list() const { return reinterpret_cast<ObjList*>(as_obj()); }
 ObjDict* Value::as_dict() const { return reinterpret_cast<ObjDict*>(as_obj()); }
 ObjFunction* Value::as_func() const { return reinterpret_cast<ObjFunction*>(as_obj()); }
-ObjNative* Value::as_native() const { return reinterpret_cast<ObjNative*>(as_obj()); }
+ObjBuiltin* Value::as_native() const { return reinterpret_cast<ObjBuiltin*>(as_obj()); }
 ObjClass* Value::as_class() const { return reinterpret_cast<ObjClass*>(as_obj()); }
 ObjInstance* Value::as_instance() const { return reinterpret_cast<ObjInstance*>(as_obj()); }
 ObjFileHandle* Value::as_file_handle() const { return reinterpret_cast<ObjFileHandle*>(as_obj()); }

@@ -142,7 +142,7 @@ TEST(ModuleLexer, RecognizesImportKeywords)
     EXPECT_EQ(tokens[5]->type(), tok::TokenType::KW_AS);
 }
 
-TEST(ModuleParser, PythonStyleAssertLowersToNativeCall)
+TEST(ModuleParser, PythonStyleAssertLowersToBuiltinCall)
 {
     diagnostic::reset();
     FileManager source;

@@ -44,7 +44,7 @@ struct GlobalEnvironment {
 };
 
 using DictType = HashTable<Value, Value, ValueHash, ValueEqual>;
-using NativeFn = ErrorOr<Value, RuntimeError> (VM::*)(int, Value*);
+using BuiltinFn = ErrorOr<Value, RuntimeError> (VM::*)(int, Value*);
 using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
 /// INVARIANT: ObjHeader is always the first member of every heap object below.
@@ -136,9 +136,9 @@ struct ObjFunction {
     u32 arity() const;
 };
 
-struct ObjNative {
+struct ObjBuiltin {
     ObjHeader obj { ObjType::NATIVE };
-    NativeFn fn { nullptr };
+    BuiltinFn fn { nullptr };
     ObjString* name { nullptr };
     int arity { 0 };
 };
@@ -235,7 +235,7 @@ static_assert(offsetof(ObjList, obj) == 0, "ObjHeader must be the first member o
 static_assert(offsetof(ObjDict, obj) == 0, "ObjHeader must be the first member of ObjDict");
 static_assert(offsetof(ObjFunction, obj) == 0, "ObjHeader must be the first member of ObjFunction");
 static_assert(offsetof(ObjModule, obj) == 0, "ObjHeader must be the first member of ObjModule");
-static_assert(offsetof(ObjNative, obj) == 0, "ObjHeader must be the first member of ObjNative");
+static_assert(offsetof(ObjBuiltin, obj) == 0, "ObjHeader must be the first member of ObjBuiltin");
 static_assert(offsetof(ObjClass, obj) == 0, "ObjHeader must be the first member of ObjClass");
 static_assert(offsetof(ObjInstance, obj) == 0, "ObjHeader must be the first member of ObjInstance");
 static_assert(offsetof(ObjFileHandle, obj) == 0, "ObjHeader must be the first member of ObjFileHandle");

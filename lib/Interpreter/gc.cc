@@ -31,7 +31,7 @@ static void fa_delete_object(ObjHeader* obj)
     case ObjType::LIST: delete reinterpret_cast<ObjList*>(obj); break;
     case ObjType::DICT: delete reinterpret_cast<ObjDict*>(obj); break;
     case ObjType::FUNCTION: delete reinterpret_cast<ObjFunction*>(obj); break;
-    case ObjType::NATIVE: delete reinterpret_cast<ObjNative*>(obj); break;
+    case ObjType::NATIVE: delete reinterpret_cast<ObjBuiltin*>(obj); break;
     case ObjType::CLASS: delete reinterpret_cast<ObjClass*>(obj); break;
     case ObjType::INSTANCE: delete reinterpret_cast<ObjInstance*>(obj); break;
     case ObjType::FILE_HANDLE: delete reinterpret_cast<ObjFileHandle*>(obj); break;
@@ -50,7 +50,7 @@ static size_t fa_object_size(ObjHeader const* obj)
     case ObjType::LIST: return sizeof(ObjList);
     case ObjType::DICT: return sizeof(ObjDict);
     case ObjType::FUNCTION: return sizeof(ObjFunction);
-    case ObjType::NATIVE: return sizeof(ObjNative);
+    case ObjType::NATIVE: return sizeof(ObjBuiltin);
     case ObjType::CLASS: return sizeof(ObjClass);
     case ObjType::INSTANCE: return sizeof(ObjInstance);
     case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
@@ -128,7 +128,7 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
         break;
     }
     case ObjType::NATIVE: {
-        ObjNative* native = reinterpret_cast<ObjNative*>(obj);
+        ObjBuiltin* native = reinterpret_cast<ObjBuiltin*>(obj);
         if (native->name != nullptr) mark_object(&native->name->obj);
         break;
     }
@@ -269,7 +269,7 @@ ObjModule* GarbageCollector::make_obj_module(StringRef name, StringRef path, Glo
     return ret;
 }
 
-ObjNative* GarbageCollector::make_obj_native(NativeFn fn, ObjString* name, int arity)
+ObjBuiltin* GarbageCollector::make_obj_native(BuiltinFn fn, ObjString* name, int arity)
 {
     if (name == nullptr || fn == nullptr) {
         /// NOTE: this should never happen in production
@@ -278,7 +278,7 @@ ObjNative* GarbageCollector::make_obj_native(NativeFn fn, ObjString* name, int a
         return nullptr;
     }
 
-    auto ret = make<ObjNative>();
+    auto ret = make<ObjBuiltin>();
     ret->arity = arity;
     ret->name = name;
     ret->fn = fn;

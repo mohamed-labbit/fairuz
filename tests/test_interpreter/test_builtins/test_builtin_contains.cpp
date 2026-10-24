@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeContains, StringContains_True)
+TEST(BuiltinContains, StringContains_True)
 {
     VM vm;
     Value args[] = { str("hello world"), str("world") };
@@ -18,7 +18,7 @@ TEST(NativeContains, StringContains_True)
     EXPECT_TRUE(v.as_bool());
 }
 
-TEST(NativeContains, StringContains_False)
+TEST(BuiltinContains, StringContains_False)
 {
     VM vm;
     Value args[] = { str("hello"), str("xyz") };

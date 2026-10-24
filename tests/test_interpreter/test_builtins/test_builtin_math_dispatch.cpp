@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
+TEST(BuiltinMathDispatch, SupportsDocumentedUnaryOperations)
 {
     VM vm;
     Value sine_args[] = { str("sin"), Value::from_real(0.0) };
@@ -17,7 +17,7 @@ TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
     EXPECT_DOUBLE_EQ(run_success(vm.math_unary(2, exp_args)).as_double(), 1.0);
 }
 
-TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
+TEST(BuiltinMathDispatch, SupportsDocumentedBinaryOperations)
 {
     VM vm;
     Value hypot_args[] = { str("hypot"), Value::from_int(3), Value::from_int(4) };
@@ -26,7 +26,7 @@ TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
     EXPECT_DOUBLE_EQ(run_success(vm.math_binary(3, atan_args)).as_double(), 0.0);
 }
 
-TEST(NativeMathDispatch, RejectsBadTypesAndUnknownOperations)
+TEST(BuiltinMathDispatch, RejectsBadTypesAndUnknownOperations)
 {
     VM vm;
     Value bad_type[] = { str("sin"), str("not-ا-number") };

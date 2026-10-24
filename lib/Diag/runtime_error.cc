@@ -40,7 +40,7 @@ RuntimeError::RuntimeError(ErrorCode errc, SourcePtr source, SourceLocation loc,
     , loc(loc)
     , detail(detail)
 {
-    // Native host calls and setup failures need not have a source location.
+    // Builtin host calls and setup failures need not have a source location.
 }
 
 void RuntimeError::add_trace(CallFrame const& frame) { traceback.push(frame); }

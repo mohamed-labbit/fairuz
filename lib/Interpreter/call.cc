@@ -142,7 +142,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
     }
 
     if (callee.is_native()) {
-        ObjNative* nat = callee.as_native();
+        ObjBuiltin* nat = callee.as_native();
         if (nat->arity >= 0 && argc != nat->arity) {
             std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
             return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
@@ -274,7 +274,7 @@ ErrorOr<bool, RuntimeError> VM::call_value(Value callee, int argc, int call_base
     return raise_runtime_error(ErrorCode::NOT_CALLABLE, std::string(fn_name.data(), fn_name.len()));
 }
 
-VM::RuntimeResult VM::call_native(ObjNative* nat, int argc, int call_base)
+VM::RuntimeResult VM::call_native(ObjBuiltin* nat, int argc, int call_base)
 {
     return (this->*nat->fn)(argc, &m_stack[call_base]);
 }

@@ -115,7 +115,7 @@ TEST_F(LazyCompilation, AliasesKeepDistinctBodiesWithTheSameName)
     for (Chunk* body : main->functions) EXPECT_FALSE(body->deferred_body);
 }
 
-TEST_F(LazyCompilation, NativeCallbackCompilesOnFirstInvocation)
+TEST_F(LazyCompilation, BuiltinCallbackCompilesOnFirstInvocation)
 {
     Chunk* main = compile({
         "دالة استجابة(س):\n"

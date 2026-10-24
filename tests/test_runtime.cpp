@@ -55,7 +55,7 @@ TEST(RuntimeResultHelpers, UnexpectedSuccessReportsFatalFailureWithoutFabricatin
     EXPECT_EQ(failures.GetTestPartResult(0).line_number(), caller_line);
 }
 
-TEST(RuntimeRecovery, NativeHostFailureHasNoInventedSourceAndDoesNotReport)
+TEST(RuntimeRecovery, BuiltinHostFailureHasNoInventedSourceAndDoesNotReport)
 {
     VM vm;
     auto error = run_failed(vm.len(0, nullptr));
@@ -94,7 +94,7 @@ TEST(RuntimeRecovery, CallbackFailureStopsSideEffectsAndVmCanRunAgain)
     EXPECT_EQ(error.source->line(4).find("عطل"), 4u);
 }
 
-TEST(RuntimeRecovery, NativeCallbackReturnsBeforeCallerContinues)
+TEST(RuntimeRecovery, BuiltinCallbackReturnsBeforeCallerContinues)
 {
     EXPECT_EQ(test_source::run("قيم := [1، 2]\n"
                                "طول_القيم := __استدعاء__(طول، [قيم])\n"

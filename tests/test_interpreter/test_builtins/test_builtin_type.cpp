@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeType, ReturnsTypeNames)
+TEST(BuiltinType, ReturnsTypeNames)
 {
     VM vm;
     Value i = Value::from_int(0);

@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeSqrt, PerfectSquare)
+TEST(BuiltinSqrt, PerfectSquare)
 {
     VM vm;
     Value arg = Value::from_real(9.0);
@@ -18,7 +18,7 @@ TEST(NativeSqrt, PerfectSquare)
     EXPECT_DOUBLE_EQ(v.as_double(), 3.0);
 }
 
-TEST(NativeSqrt, Zero)
+TEST(BuiltinSqrt, Zero)
 {
     VM vm;
     Value arg = Value::from_real(0.0);
@@ -28,7 +28,7 @@ TEST(NativeSqrt, Zero)
     EXPECT_DOUBLE_EQ(v.as_double(), 0.0);
 }
 
-TEST(NativeSqrt, NegativeInput_SpecBehavior)
+TEST(BuiltinSqrt, NegativeInput_SpecBehavior)
 {
     VM vm;
     Value arg = Value::from_real(-1.0);

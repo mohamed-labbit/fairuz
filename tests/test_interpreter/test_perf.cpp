@@ -209,11 +209,11 @@ TEST_F(VMPerfTest, List_AppendAndSum_10k)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9. Native function call throughput — len on a string, hot loop
+// 9. Builtin function call throughput — len on a string, hot loop
 //    IC_CALL path: first call warms the inline cache, subsequent calls hit it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
+TEST_F(VMPerfTest, BuiltinCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
@@ -239,7 +239,7 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 
     do_not_optimize(result);
     EXPECT_EQ(result.as_int(), 11);
-    std::printf("  NativeCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n", N / 1000, us, us * 1000.0 / N);
+    std::printf("  BuiltinCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n", N / 1000, us, us * 1000.0 / N);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,7 +335,7 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
     std::printf("  STRESS IntAdd loop %dM iters:       %.1f µs  (%.2f ns/op)\n", N / 1'000'000, us, us * 1000.0 / N);
 }
 
-TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
+TEST_F(VMPerfTest, BuiltinCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
 

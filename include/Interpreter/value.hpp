@@ -31,7 +31,7 @@ struct ObjString;
 struct ObjList;
 struct ObjDict;
 struct ObjFunction;
-struct ObjNative;
+struct ObjBuiltin;
 struct ObjClass;
 struct ObjInstance;
 struct ObjFileHandle;
@@ -73,7 +73,7 @@ public:
     static Value from_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
     static Value from_int(i64 const v, GarbageCollector& gc);
     // Unchecked packing: callers must prove signed 48-bit representability.
-    // Native inputs and expression results use the GC overload instead.
+    // Builtin inputs and expression results use the GC overload instead.
     static Value from_int(i64 const v)
     {
         assert(fits_in_int48(v));
@@ -95,7 +95,7 @@ public:
     static Value from_list(ObjList const* l) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(l) & PAYLOAD_MASK); }
     static Value from_dict(ObjDict const* d) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(d) & PAYLOAD_MASK); }
     static Value from_func(ObjFunction const* f) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(f) & PAYLOAD_MASK); }
-    static Value from_native(ObjNative const* n) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK); }
+    static Value from_native(ObjBuiltin const* n) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK); }
     static Value from_class(ObjClass const* c) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK); }
     static Value from_instance(ObjInstance const* i)
     {
@@ -158,7 +158,7 @@ public:
     ObjList* as_list() const;
     ObjDict* as_dict() const;
     ObjFunction* as_func() const;
-    ObjNative* as_native() const;
+    ObjBuiltin* as_native() const;
     ObjClass* as_class() const;
     ObjInstance* as_instance() const;
     ObjFileHandle* as_file_handle() const;
@@ -346,7 +346,7 @@ public:
     ObjList* as_list() const;
     ObjDict* as_dict() const;
     ObjFunction* as_func() const;
-    ObjNative* as_native() const;
+    ObjBuiltin* as_native() const;
     ObjClass* as_class() const;
     ObjInstance* as_instance() const;
     ObjFileHandle* as_file_handle() const;
@@ -372,7 +372,7 @@ public:
     static Value from_list(ObjList* l) { return from_obj(reinterpret_cast<ObjHeader*>(l)); }
     static Value from_dict(ObjDict* d) { return from_obj(reinterpret_cast<ObjHeader*>(d)); }
     static Value from_func(ObjFunction* f) { return from_obj(reinterpret_cast<ObjHeader*>(f)); }
-    static Value from_native(ObjNative* n) { return from_obj(reinterpret_cast<ObjHeader*>(n)); }
+    static Value from_native(ObjBuiltin* n) { return from_obj(reinterpret_cast<ObjHeader*>(n)); }
     static Value from_class(ObjClass* c) { return from_obj(reinterpret_cast<ObjHeader*>(c)); }
     static Value from_instance(ObjInstance* i) { return from_obj(reinterpret_cast<ObjHeader*>(i)); }
     static Value from_file_handle(ObjFileHandle* f) { return from_obj(reinterpret_cast<ObjHeader*>(f)); }

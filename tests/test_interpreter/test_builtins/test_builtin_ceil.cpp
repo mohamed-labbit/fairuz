@@ -8,7 +8,7 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(NativeCeil, IntegerPassthrough)
+TEST(BuiltinCeil, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(5);
@@ -18,7 +18,7 @@ TEST(NativeCeil, IntegerPassthrough)
     EXPECT_EQ(v.as_int(), 5);
 }
 
-TEST(NativeCeil, PositiveFloat)
+TEST(BuiltinCeil, PositiveFloat)
 {
     VM vm;
     Value arg = Value::from_real(3.2);
@@ -28,7 +28,7 @@ TEST(NativeCeil, PositiveFloat)
     EXPECT_EQ(v.as_int(), 4);
 }
 
-TEST(NativeCeil, NegativeFloat)
+TEST(BuiltinCeil, NegativeFloat)
 {
     VM vm;
     Value arg = Value::from_real(-2.7);
@@ -38,7 +38,7 @@ TEST(NativeCeil, NegativeFloat)
     EXPECT_EQ(v.as_int(), -2);
 }
 
-TEST(NativeCeil, ExactFloat)
+TEST(BuiltinCeil, ExactFloat)
 {
     VM vm;
     Value arg = Value::from_real(4.0);

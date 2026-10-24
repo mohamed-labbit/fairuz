@@ -367,7 +367,7 @@ std::vector<AdversarialCase> semantic_cases()
             "ا[1] := 2\n",
             "", Expectation::Error },
         { "EmptyPop", "احذف([])\n", "", Expectation::Error },
-        { "InvalidNativeArgument", "اضف(1، 2)\n", "", Expectation::Error },
+        { "InvalidBuiltinArgument", "اضف(1، 2)\n", "", Expectation::Error },
         { "CallNonCallable",
             "ا := 7\n"
             "ا()\n",

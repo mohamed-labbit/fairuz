@@ -126,7 +126,7 @@ TEST(RegressionInlineBlocks, InlineClassesAndMethodsKeepFieldAndScopeSemantics)
     EXPECT_EQ(result.out, "12\n");
 }
 
-TEST(RegressionNatives, StringListDemoOutput)
+TEST(RegressionBuiltins, StringListDemoOutput)
 {
     auto program = write_program("اكتب(اجمع([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\n"
                                  "اكتب(يحتوي(\"alphabet\", \"alpha\"))\n");
@@ -136,7 +136,7 @@ TEST(RegressionNatives, StringListDemoOutput)
     EXPECT_NE(r.out.find("صحيح"), std::string::npos);
 }
 
-TEST(RegressionNatives, NumericDemoOutput)
+TEST(RegressionBuiltins, NumericDemoOutput)
 {
     auto program = write_program("اكتب(ادنى(1024.9))\n"
                                  "اكتب(اعلى(189.1))\n");
@@ -186,7 +186,7 @@ TEST(HardeningRegression, StrengthReductionDoesNotChangeMeaning)
     EXPECT_EQ(bad.exit_code, 65);
 }
 
-TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
+TEST(HardeningRegression, BuiltinBoundaryRejectsBadArgumentsWithoutCrash)
 {
     auto open_bad = write_program("اكتب(افتح(\"missing\"))\n");
     RunResult open_result = run_installed(binary_path(), open_bad);
