@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "test_process.hpp"
+#include "test_source_program.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -330,4 +331,15 @@ TEST(CliE2E, FormatPreservesProgramBehaviorAndIsIdempotent)
     EXPECT_EQ(run_cli({ "format", fairuz::platform::utf8(program) }).exit_code, 0);
     EXPECT_EQ(read_file(program), once);
     std::filesystem::remove(program);
+}
+
+TEST(CliE2E, EmbeddedNulIsRejectedRatherThanTruncatingSource)
+{
+    std::string source = "اكتب(1)\n";
+    source.push_back('\0');
+    source += "اكتب(2)\n";
+    test_source::SourceFile program(source);
+    test_process::Result r = run_cli({ fairuz::platform::utf8(program.path) });
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_NE(r.err.find("Invalid character"), std::string::npos);
 }
