@@ -11,7 +11,7 @@
 #include "Interpreter/value.hpp"
 #include "Interpreter/gc.hpp"
 #include "Interpreter/object.hpp"
-#include "Support/integer.hpp"
+#include "Interpreter/integer.hpp"
 
 namespace fairuz::runtime {
 

@@ -11,7 +11,7 @@
 
 #include "Diag/errc.hpp"
 #include "Interpreter/vm.hpp"
-#include "Support/integer.hpp"
+#include "Interpreter/integer.hpp"
 #include "util.hpp"
 
 #include <cmath>

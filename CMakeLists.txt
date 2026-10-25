@@ -231,7 +231,7 @@ if(BUILD_TESTS)
     # An independent JSON parser catches serialization defects, including bad UTF-8.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_executable(fairuz_diagnostic_probe tests/support/diagnostic_probe.cc
-        lib/Diag/diagnotic.cc lib/SourceManager.cc lib/File.cc lib/Platform.cc)
+        lib/Diag/diagnostic.cc lib/SourceManager.cc lib/File.cc lib/Platform.cc)
     target_include_directories(fairuz_diagnostic_probe PRIVATE "${CMAKE_SOURCE_DIR}/include")
     add_dependencies(fairuz_tests fairuz_diagnostic_probe)
     # Migrate the old default in existing build directories, preserving overrides.

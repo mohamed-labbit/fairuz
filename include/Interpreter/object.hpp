@@ -17,7 +17,7 @@
 #include "Macros.hpp"
 #include "Support/array.hpp"
 #include "Support/error.hpp"
-#include "Support/integer.hpp"
+#include "Interpreter/integer.hpp"
 #include "Support/string.hpp"
 #include "Support/table.hpp"
 

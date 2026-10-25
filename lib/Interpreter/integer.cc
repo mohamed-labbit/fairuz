@@ -8,7 +8,7 @@
 // Provides arbitrary-precision integer arithmetic.
 //===----------------------------------------------------------------------===//
 
-#include "Support/integer.hpp"
+#include "Interpreter/integer.hpp"
 #include "Interpreter/gc.hpp"
 #include "Interpreter/object.hpp"
 #include "Util/numeric_literals.hpp"
