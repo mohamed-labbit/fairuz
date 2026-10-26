@@ -10,8 +10,8 @@
 
 #include "Interpreter/value.hpp"
 #include "Interpreter/gc.hpp"
-#include "Interpreter/object.hpp"
 #include "Interpreter/integer.hpp"
+#include "Interpreter/object.hpp"
 
 namespace fairuz::runtime {
 
