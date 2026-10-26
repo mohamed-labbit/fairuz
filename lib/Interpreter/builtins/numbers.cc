@@ -10,8 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diag/errc.hpp"
-#include "Interpreter/vm.hpp"
 #include "Interpreter/integer.hpp"
+#include "Interpreter/vm.hpp"
 #include "util.hpp"
 
 #include <cmath>
