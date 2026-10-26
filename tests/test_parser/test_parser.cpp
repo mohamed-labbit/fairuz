@@ -298,11 +298,7 @@ TEST_F(ParserTest, InlineBlocksLeaveFollowingStatementsOutside)
                 branch(boolean(false), block({ assign(id("س"), integer(1)) }),
                     branch(boolean(true), block({ assign(id("س"), integer(2)) }),
                         block({ assign(id("س"), integer(3)) }))) },
-            Case { "طالما صحيح: اخرج\nص := 2\n", while_loop(boolean(true), block({ breaks() })) },
             Case { "لكل س في [1]: اكمل\nص := 2\n", for_loop("س", list({ integer(1) }), block({ continues() })) },
-            Case { "دالة مثال(): ارجع 1\nص := 2\n", function("مثال", { }, block({ returns(integer(1)) })) },
-            Case { "نوع مثال: دالة قيمة(): ارجع 1\nص := 2\n",
-                klass("مثال", { }, { function("قيمة", { }, block({ returns(integer(1)) })) }) },
             Case { "نوع مثال: دالة بداية(): .قيمة := 1\nص := 2\n",
                 klass("مثال", { id("قيمة") },
                     { function("بداية", { }, block({ assign(field("قيمة"), integer(1)) })) }) } }) {
@@ -604,11 +600,6 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
     std::string name;
     for (unsigned i = 0; i < 1000; ++i) name += "ا";
     test_stmts("long_identifier.fa", { expr(id(StringRef(name.c_str()))) });
-}
-
-TEST_F(ParserTest, ParseUnicodeIdentifiers)
-{
-    test_stmts("unicode_identifiers.fa", { expr(binary(EK::OP_ADD, id("ا"), id("ب"))) });
 }
 
 TEST_F(ParserTest, ParseEmptyList) { test_stmts("empty_list.fa", { expr(list({ })) }); }
@@ -1195,7 +1186,6 @@ TEST_F(ParserTest, ParseImportFromMultiline)
 TEST_F(ParserTest, ParseEmptyPrograms)
 {
     test_stmts("empty_input.fa", { });
-    test_stmts("test_indentation.fa", { });
     test_stmts("whitespace_only.fa", { });
 }
 

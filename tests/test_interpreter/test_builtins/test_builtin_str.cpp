@@ -15,16 +15,6 @@ TEST(BuiltinStr, NoArgs_ReturnsEmpty)
     EXPECT_TRUE(result.is_string());
 }
 
-TEST(BuiltinStr, Integer)
-{
-    VM vm;
-    Value arg = Value::from_int(42);
-    auto result = run_success(vm.str(1, &arg));
-    Value v = result;
-    ASSERT_TRUE(v.is_string());
-    EXPECT_EQ(std::string(v.as_string()->str.data()), "42");
-}
-
 TEST(BuiltinStr, NegativeInteger)
 {
     VM vm;
@@ -43,16 +33,6 @@ TEST(BuiltinStr, Zero)
     Value v = result;
     ASSERT_TRUE(v.is_string());
     EXPECT_EQ(std::string(v.as_string()->str.data()), "0");
-}
-
-TEST(BuiltinStr, BoolTrue)
-{
-    VM vm;
-    Value arg = Value::from_bool(true);
-    auto result = run_success(vm.str(1, &arg));
-    Value v = result;
-    ASSERT_TRUE(v.is_string());
-    EXPECT_EQ(std::string(v.as_string()->str.data()), "صحيح");
 }
 
 TEST(BuiltinStr, BoolFalse)

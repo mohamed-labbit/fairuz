@@ -160,10 +160,11 @@ These files were already present and were not edited. Their current eager-parsin
 | [ ] | [large_file.fa](large_file.fa) | 0 | 5000 | Expect 5,000 expression statements containing equality comparisons. The file uses =, not :=. |
 | [ ] | [missing_operand.fa](missing_operand.fa) | 1 | 0 | Missing right operand: expect UNEXPECTED_EOF. |
 | [ ] | [test_file.fa](test_file.fa) | 2 | 1 | Contains obsolete النتيجة spelling: eager parsing currently reports two UNEXPECTED_TOKEN diagnostics. Modernize separately or make its error expectation explicit. |
-| [ ] | [test_indentation.fa](test_indentation.fa) | 0 | 0 | Currently empty: no statements and no errors. This does not exercise indentation. |
 | [ ] | [unary_minus.fa](unary_minus.fa) | 0 | 1 | Expect a unary-negation AST around integer 5. |
 | [ ] | [unexpected_eof.fa](unexpected_eof.fa) | 1 | 0 | Incomplete binary expression: expect UNEXPECTED_EOF. |
 | [ ] | [whitespace_only.fa](whitespace_only.fa) | 0 | 0 | Whitespace-only program: no statements and no errors. |
+
+`test_indentation.fa` was retired as an empty duplicate of `empty_input.fa`.
 
 ## Validation boundary
 

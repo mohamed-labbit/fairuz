@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <vector>
 
 using fairuz::runtime::Value;
 
@@ -21,21 +22,26 @@ TEST(ValueReal, NaNSignsAndPayloadsRemainNumbers)
 {
     // Construct the bits directly so coverage does not depend on the host
     // math library's choice of NaN sign or payload (e.g. pow(-1, 0.5)).
+    constexpr uint64_t quiet_bit = UINT64_C(0x0008000000000000);
+    std::vector<uint64_t> payloads { UINT64_C(0x000fffffffffffff) };
+    for (unsigned bit = 0; bit < 52; ++bit) {
+        uint64_t payload = UINT64_C(1) << bit;
+        payloads.push_back(payload);
+        if (payload != quiet_bit) payloads.push_back(payload | quiet_bit);
+    }
+
     for (uint64_t sign : { UINT64_C(0), UINT64_C(0x8000000000000000) }) {
-        for (unsigned bit = 0; bit < 52; ++bit) {
-            for (uint64_t payload : { UINT64_C(1) << bit, (UINT64_C(1) << bit) | UINT64_C(0x0008000000000000),
-                     UINT64_C(0x000fffffffffffff) }) {
-                uint64_t bits = sign | UINT64_C(0x7ff0000000000000) | payload;
-                SCOPED_TRACE(bits);
-                Value value = Value::from_real(std::bit_cast<double>(bits));
-                ASSERT_FALSE(value.is_obj());
-                ASSERT_TRUE(value.is_double());
-                EXPECT_TRUE(value.is_number());
-                EXPECT_FALSE(value.is_int());
-                EXPECT_FALSE(value.is_nil());
-                EXPECT_FALSE(value.is_bool());
-                EXPECT_TRUE(std::isnan(value.as_double()));
-            }
+        for (uint64_t payload : payloads) {
+            uint64_t bits = sign | UINT64_C(0x7ff0000000000000) | payload;
+            SCOPED_TRACE(bits);
+            Value value = Value::from_real(std::bit_cast<double>(bits));
+            ASSERT_FALSE(value.is_obj());
+            ASSERT_TRUE(value.is_double());
+            EXPECT_TRUE(value.is_number());
+            EXPECT_FALSE(value.is_int());
+            EXPECT_FALSE(value.is_nil());
+            EXPECT_FALSE(value.is_bool());
+            EXPECT_TRUE(std::isnan(value.as_double()));
         }
     }
 }

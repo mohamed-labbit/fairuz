@@ -12,6 +12,7 @@
 #include "Support/array.hpp"
 
 #include <gtest/gtest.h>
+#include <type_traits>
 
 using namespace fairuz;
 
@@ -200,41 +201,28 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
     EXPECT_EQ(arr[count - 1], (count - 1) * 1.5);
 }
 
-TEST(ArenaAllocatorTest, AllocateChar)
+template<typename T> static void expect_scalar_allocation(T expected)
 {
     TestAllocator arena;
-    char* ptr = arena.allocate<char>(1);
+    T* ptr = arena.allocate<T>(1);
     ASSERT_NE(ptr, nullptr);
-    *ptr = 'A';
-    EXPECT_EQ(*ptr, 'A');
+    *ptr = expected;
+    if constexpr (std::is_same_v<T, f64>) {
+        EXPECT_DOUBLE_EQ(*ptr, expected);
+    } else if constexpr (std::is_same_v<T, float>) {
+        EXPECT_FLOAT_EQ(*ptr, expected);
+    } else {
+        EXPECT_EQ(*ptr, expected);
+    }
 }
 
-TEST(ArenaAllocatorTest, AllocateDouble)
-{
-    TestAllocator arena;
-    f64* ptr = arena.allocate<f64>(1);
-    ASSERT_NE(ptr, nullptr);
-    *ptr = 3.14159;
-    EXPECT_DOUBLE_EQ(*ptr, 3.14159);
-}
+TEST(ArenaAllocatorTest, AllocateChar) { expect_scalar_allocation<char>('A'); }
 
-TEST(ArenaAllocatorTest, AllocateFloat)
-{
-    TestAllocator arena;
-    float* ptr = arena.allocate<float>(1);
-    ASSERT_NE(ptr, nullptr);
-    *ptr = 2.71828f;
-    EXPECT_FLOAT_EQ(*ptr, 2.71828f);
-}
+TEST(ArenaAllocatorTest, AllocateDouble) { expect_scalar_allocation<f64>(3.14159); }
 
-TEST(ArenaAllocatorTest, AllocateLongLong)
-{
-    TestAllocator arena;
-    i64* ptr = arena.allocate<i64>(1);
-    ASSERT_NE(ptr, nullptr);
-    *ptr = 9223372036854775807LL;
-    EXPECT_EQ(*ptr, 9223372036854775807LL);
-}
+TEST(ArenaAllocatorTest, AllocateFloat) { expect_scalar_allocation<float>(2.71828f); }
+
+TEST(ArenaAllocatorTest, AllocateLongLong) { expect_scalar_allocation<i64>(9223372036854775807LL); }
 
 struct Point {
     f64 x, y, z;

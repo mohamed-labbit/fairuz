@@ -20,6 +20,62 @@ template<typename T> static void do_not_optimize(T const& v)
     (void)sink;
 }
 
+static f64 measure_list_append_and_sum(int count)
+{
+    std::string source = "دالة اختبار():\n"
+                         "    قائمة_قيم := []\n"
+                         "    فهرس := 0\n"
+                         "    حد := "
+        + std::to_string(count)
+        + "\n"
+          "    طالما (فهرس < حد):\n"
+          "        اضف(قائمة_قيم, فهرس)\n"
+          "        فهرس := (فهرس + 1)\n"
+          "    فهرس := 0\n"
+          "    مجموع := 0\n"
+          "    طالما (فهرس < حد):\n"
+          "        مجموع := (مجموع + قائمة_قيم[فهرس])\n"
+          "        فهرس := (فهرس + 1)\n"
+          "    ارجع مجموع\n";
+
+    VMRunner runner;
+    runner.compile({ source, "اختبار()\n" });
+    auto start = std::chrono::high_resolution_clock::now();
+    Value result = run_success(runner.run());
+    f64 us = microseconds_since(start);
+    do_not_optimize(result);
+
+    i64 const expected = static_cast<i64>(count) * (count - 1) / 2;
+    EXPECT_EQ(result.as_int(), expected);
+    return us;
+}
+
+static f64 measure_builtin_len(int count)
+{
+    std::string source = "دالة اختبار():\n"
+                         "    نص := \"hello world\"\n"
+                         "    فهرس := 0\n"
+                         "    حد := "
+        + std::to_string(count)
+        + "\n"
+          "    اخير := 0\n"
+          "    طالما (فهرس < حد):\n"
+          "        اخير := طول(نص)\n"
+          "        فهرس := (فهرس + 1)\n"
+          "    ارجع اخير\n";
+
+    VMRunner runner;
+    runner.compile({ source, "اختبار()\n" });
+    run_success(runner.run()); // Warm the inline cache before measuring.
+
+    auto start = std::chrono::high_resolution_clock::now();
+    Value result = run_success(runner.run());
+    f64 us = microseconds_since(start);
+    do_not_optimize(result);
+    EXPECT_EQ(result.as_int(), 11);
+    return us;
+}
+
 // Measures raw opcode dispatch speed. The loop body is:
 //   r2 = r0 + r1  (OP_ADD, integer fast path)
 //   r0 = r2       (MOVE)
@@ -182,29 +238,7 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 TEST_F(VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
-    std::string test = (std::string("دالة اختبار():\n")
-        + test_source::indent((std::string("قائمة_قيم := []\n"
-                                           "فهرس := 0\n")
-            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
-            + "طالما (فهرس < حد):\n"
-              "    اضف(قائمة_قيم, فهرس)\n"
-              "    فهرس := (فهرس + 1)\n"
-              "فهرس := 0\n"
-              "مجموع := 0\n"
-              "طالما (فهرس < حد):\n"
-              "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
-              "    فهرس := (فهرس + 1)\n"
-              "ارجع مجموع\n")));
-
-    VMRunner r;
-    r.compile({ test, "اختبار()\n" });
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = run_success(r.run());
-    f64 us = microseconds_since(t0);
-    do_not_optimize(result);
-
-    constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
-    EXPECT_EQ(result.as_int(), expected);
+    f64 us = measure_list_append_and_sum(N);
     std::printf("  List append+sum N=%d:               %.1f µs\n", N, us);
 }
 
@@ -216,29 +250,7 @@ TEST_F(VMPerfTest, List_AppendAndSum_10k)
 TEST_F(VMPerfTest, BuiltinCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
-
-    std::string test = (std::string("دالة اختبار():\n")
-        + test_source::indent((std::string("نص := \"hello world\"\n"
-                                           "فهرس := 0\n")
-            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
-            + "اخير := 0\n"
-              "طالما (فهرس < حد):\n"
-              "    اخير := طول(نص)\n"
-              "    فهرس := (فهرس + 1)\n"
-              "ارجع اخير\n")));
-
-    VMRunner r;
-    r.compile({ test, "اختبار()\n" });
-
-    // Cold run to prime the IC.
-    run_success(r.run());
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = run_success(r.run());
-    f64 us = microseconds_since(t0);
-
-    do_not_optimize(result);
-    EXPECT_EQ(result.as_int(), 11);
+    f64 us = measure_builtin_len(N);
     std::printf("  BuiltinCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n", N / 1000, us, us * 1000.0 / N);
 }
 
@@ -338,58 +350,14 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 TEST_F(VMPerfTest, BuiltinCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
-
-    std::string test = (std::string("دالة اختبار():\n")
-        + test_source::indent((std::string("نص := \"hello world\"\n"
-                                           "فهرس := 0\n")
-            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
-            + "اخير := 0\n"
-              "طالما (فهرس < حد):\n"
-              "    اخير := طول(نص)\n"
-              "    فهرس := (فهرس + 1)\n"
-              "ارجع اخير\n")));
-
-    VMRunner r;
-    r.compile({ test, "اختبار()\n" });
-    run_success(r.run()); // warm IC_CALL -> CALL rewrite
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = run_success(r.run());
-    f64 us = microseconds_since(t0);
-
-    do_not_optimize(result);
-    EXPECT_EQ(result.as_int(), 11);
+    f64 us = measure_builtin_len(N);
     std::printf("  STRESS native len() %dM calls:      %.1f µs  (%.2f ns/call)\n", N / 1'000'000, us, us * 1000.0 / N);
 }
 
 TEST_F(VMPerfTest, List_AppendAndSum_100k)
 {
     constexpr int N = 100'000;
-
-    std::string test = (std::string("دالة اختبار():\n")
-        + test_source::indent((std::string("قائمة_قيم := []\n"
-                                           "فهرس := 0\n")
-            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n")
-            + "طالما (فهرس < حد):\n"
-              "    اضف(قائمة_قيم, فهرس)\n"
-              "    فهرس := (فهرس + 1)\n"
-              "فهرس := 0\n"
-              "مجموع := 0\n"
-              "طالما (فهرس < حد):\n"
-              "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
-              "    فهرس := (فهرس + 1)\n"
-              "ارجع مجموع\n")));
-
-    VMRunner r;
-    r.compile({ test, "اختبار()\n" });
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = run_success(r.run());
-    f64 us = microseconds_since(t0);
-
-    constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
-    do_not_optimize(result);
-    EXPECT_EQ(result.as_int(), expected);
+    f64 us = measure_list_append_and_sum(N);
     std::printf("  STRESS list append+sum N=%d:        %.1f µs\n", N, us);
 }
 

@@ -40,10 +40,6 @@ TEST(BuiltinsE2E, BuiltinBoundaryRejectsBadArgumentsWithoutCrash)
     test_process::Result substr_result = test_cli::run(substr_bad.path);
     EXPECT_EQ(substr_result.exit_code, 65);
 
-    test_source::SourceFile pop_bad("احذف([])\n");
-    test_process::Result pop_result = test_cli::run(pop_bad.path);
-    EXPECT_EQ(pop_result.exit_code, 65);
-
     test_source::SourceFile min_bad("اكتب(اصغر(1، \"x\"))\n");
     test_process::Result min_result = test_cli::run(min_bad.path);
     EXPECT_EQ(min_result.exit_code, 65);

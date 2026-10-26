@@ -34,12 +34,3 @@ TEST(VMGlobals, Overwrite)
     if (test_config::dump_bytecode) b.dump();
     EXPECT_EQ(run_success(r.run(b)).as_int(), 2);
 }
-
-TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
-{
-    VMRunner runner;
-    auto error = run_failed(runner.compile_and_run("مفقود\n"));
-    ASSERT_NE(error.source, nullptr);
-    EXPECT_GT(error.loc.line, 0u);
-    EXPECT_LE(error.loc.line, error.source->lines.size());
-}

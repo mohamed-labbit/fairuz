@@ -8,66 +8,79 @@
 
 #include "../test_interpreter_common.h"
 
-TEST(BuiltinPrint, NoArgs_PrintsNewline)
+#include <iostream>
+#include <sstream>
+
+class BuiltinPrint : public ::testing::Test {
+protected:
+    // Redirect the C++ stream independently of the runner's stdout capture.
+    void SetUp() override { original_ = std::cout.rdbuf(output_.rdbuf()); }
+    void TearDown() override { std::cout.rdbuf(original_); }
+
+    void expect_print(VM& vm, int argc, Value* argv, char const* expected)
+    {
+        auto result = run_success(vm.print(argc, argv));
+        ASSERT_TRUE(result.is_bool());
+        EXPECT_TRUE(result.as_bool());
+        EXPECT_EQ(output_.str(), expected);
+    }
+
+private:
+    std::ostringstream output_;
+    std::streambuf* original_ { nullptr };
+};
+
+TEST_F(BuiltinPrint, NoArgs_PrintsNewline)
 {
     VM vm;
-    auto result = run_success(vm.print(0, nullptr));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 0, nullptr, "\n");
 }
 
-TEST(BuiltinPrint, StringArg)
+TEST_F(BuiltinPrint, StringArg)
 {
     VM vm;
     auto s = str("hello world");
-    auto result = run_success(vm.print(1, &s));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &s, "hello world\n");
 }
 
-TEST(BuiltinPrint, IntegerArg)
+TEST_F(BuiltinPrint, IntegerArg)
 {
     VM vm;
     Value arg = Value::from_int(42);
-    auto result = run_success(vm.print(1, &arg));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &arg, "42\n");
 }
 
-TEST(BuiltinPrint, FloatArg)
+TEST_F(BuiltinPrint, FloatArg)
 {
     VM vm;
     Value arg = Value::from_real(3.14);
-    auto result = run_success(vm.print(1, &arg));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &arg, "3.14\n");
 }
 
-TEST(BuiltinPrint, BoolArg_True)
+TEST_F(BuiltinPrint, BoolArg_True)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    auto result = run_success(vm.print(1, &arg));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &arg, "صحيح\n");
 }
 
-TEST(BuiltinPrint, BoolArg_False)
+TEST_F(BuiltinPrint, BoolArg_False)
 {
     VM vm;
     Value arg = Value::from_bool(false);
-    auto result = run_success(vm.print(1, &arg));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &arg, "خطا\n");
 }
 
-TEST(BuiltinPrint, NilArg)
+TEST_F(BuiltinPrint, NilArg)
 {
     VM vm;
     Value arg = Value::nil();
-    auto result = run_success(vm.print(1, &arg));
-    EXPECT_TRUE(result.is_truthy());
+    expect_print(vm, 1, &arg, "عدم\n");
 }
 
-TEST(BuiltinPrint, TwoArgs_DoesNotCrash)
+TEST_F(BuiltinPrint, TwoArgs_SeparatedByTab)
 {
     VM vm;
-    auto s = str("a");
-    Value args[] = { s, s };
-    auto result = run_success(vm.print(2, args));
-    EXPECT_TRUE(result.is_truthy());
+    Value args[] = { str("a"), str("b") };
+    expect_print(vm, 2, args, "a\tb\n");
 }

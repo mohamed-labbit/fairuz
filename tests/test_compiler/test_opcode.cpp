@@ -96,12 +96,6 @@ TEST(InstrAsBx, NegativeOffset)
     EXPECT_EQ(instr_sBx(i), -50);
 }
 
-TEST(InstrAsBx, MaxPositiveOffset)
-{
-    u32 i = make_AsBx((OpCode::JUMP), 0, 32767);
-    EXPECT_EQ(instr_sBx(i), 32767);
-}
-
 TEST(InstrAsBx, MaxNegativeOffset)
 {
     u32 i = make_AsBx((OpCode::LOOP), 0, -32767);

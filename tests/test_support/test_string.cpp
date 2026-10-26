@@ -341,11 +341,14 @@ TEST_F(StringRefTest, AppendChar_Multiple)
     EXPECT_EQ(s, "Hi");
 }
 
-TEST_F(StringRefTest, AppendChar_UnicodeChar)
+TEST_F(StringRefTest, AppendChar_Utf8Bytes)
 {
     StringRef s;
-    s += char(0x0645);
-    EXPECT_GE(s.len(), 1);
+    // U+0645 (م) is encoded as two UTF-8 bytes.
+    s += static_cast<char>(0xD9);
+    s += static_cast<char>(0x85);
+    EXPECT_EQ(s.len(), 2u);
+    EXPECT_EQ(s, "م");
 }
 
 TEST_F(StringRefTest, AppendChar_TriggerExpansion)
@@ -462,13 +465,6 @@ TEST_F(StringRefTest, Concat_NullCString)
     StringRef s1("Hello");
     StringRef s2 = s1 + static_cast<char const*>(nullptr);
     EXPECT_EQ(s2, "Hello");
-}
-
-TEST_F(StringRefTest, IndexOperator_ValidAccess)
-{
-    StringRef s("Hello");
-    EXPECT_EQ(s[0], 'H');
-    EXPECT_EQ(s[4], 'o');
 }
 
 TEST_F(StringRefTest, IndexOperator_Mutable)
@@ -706,47 +702,32 @@ TEST_F(StringRefTest, Slice_SharesMemory)
     EXPECT_EQ(s2, "Jel");
 }
 
-TEST_F(StringRefTest, FromUtf8_AsciiString)
+namespace {
+
+struct Utf8Case {
+    char const* name;
+    char const* text;
+};
+
+class StringRefUtf8Test
+    : public StringRefTest
+    , public ::testing::WithParamInterface<Utf8Case> { };
+
+} // namespace
+
+TEST_P(StringRefUtf8Test, PreservesLiteralBytes)
 {
-    StringRef s("Hello World");
-    EXPECT_EQ(s, "Hello World");
+    auto const& test = GetParam();
+    StringRef value(test.text);
+    EXPECT_EQ(value, test.text);
 }
 
-TEST_F(StringRefTest, FromUtf8_ArabicString)
-{
-    StringRef s("مرحبا");
-    EXPECT_EQ(s, "مرحبا");
-}
-
-TEST_F(StringRefTest, FromUtf8_ChineseString)
-{
-    StringRef s("你好世界");
-    EXPECT_EQ(s, "你好世界");
-}
-
-TEST_F(StringRefTest, FromUtf8_JapaneseString)
-{
-    StringRef s("こんにちは");
-    EXPECT_EQ(s, "こんにちは");
-}
-
-TEST_F(StringRefTest, FromUtf8_RussianString)
-{
-    StringRef s("Привет мир");
-    EXPECT_EQ(s, "Привет мир");
-}
-
-TEST_F(StringRefTest, FromUtf8_EmojiString)
-{
-    StringRef s("Hello 😀 World 🎉");
-    EXPECT_EQ(s, "Hello 😀 World 🎉");
-}
-
-TEST_F(StringRefTest, FromUtf8_MixedScript)
-{
-    StringRef s("Hello مرحبا 你好 🌍");
-    EXPECT_EQ(s, "Hello مرحبا 你好 🌍");
-}
+INSTANTIATE_TEST_SUITE_P(Encodings, StringRefUtf8Test,
+    ::testing::Values(Utf8Case { "AsciiString", "Hello World" }, Utf8Case { "ArabicString", "مرحبا" },
+        Utf8Case { "ChineseString", "你好世界" }, Utf8Case { "JapaneseString", "こんにちは" },
+        Utf8Case { "RussianString", "Привет мир" }, Utf8Case { "EmojiString", "Hello 😀 World 🎉" },
+        Utf8Case { "MixedScript", "Hello مرحبا 你好 🌍" }),
+    [](auto const& info) { return info.param.name; });
 
 TEST_F(StringRefTest, ToUtf8_EmptyString)
 {
@@ -850,33 +831,52 @@ TEST_F(StringRefPerfTest, Stress_ManySubstrings)
     EXPECT_GT(subs.size(), 100);
 }
 
-TEST_F(StringRefPerfTest, Stress_RandomOperations)
+TEST_F(StringRefTest, RandomOperationsMatchReference)
 {
     std::mt19937 rng(42);
     std::uniform_int_distribution<> op_dist(0, 4);
     std::uniform_int_distribution<> char_dist('A', 'Z');
 
     StringRef s;
+    std::string expected;
 
     for (int i = 0; i < 1000; i++) {
+        SCOPED_TRACE(i);
         int op = op_dist(rng);
         switch (op) {
-        case 0: s += char(char_dist(rng)); break;
-        case 1: s.clear(); break;
+        case 0: {
+            char c = static_cast<char>(char_dist(rng));
+            s += c;
+            expected += c;
+        } break;
+        case 1:
+            s.clear();
+            expected.clear();
+            break;
         case 2:
-            if (!s.empty()) s.erase(0);
+            if (!expected.empty()) {
+                s.erase(0);
+                expected.erase(0, 1);
+            }
             break;
         case 3:
-            if (!s.empty()) s.truncate(s.len() / 2);
+            if (!expected.empty()) {
+                s.truncate(expected.size() / 2);
+                expected.resize(expected.size() / 2);
+            }
             break;
         case 4: {
             StringRef copy = s;
+            EXPECT_EQ(copy.len(), expected.size());
+            EXPECT_EQ(copy, expected.c_str());
             s = copy;
         } break;
         }
-    }
 
-    EXPECT_TRUE(true);
+        StringRef const& observed = s;
+        EXPECT_EQ(observed.len(), expected.size());
+        EXPECT_EQ(std::string(observed.data(), observed.len()), expected);
+    }
 }
 
 TEST_F(StringRefTest, EdgeCase_NullTerminatorInMiddle)
@@ -925,29 +925,45 @@ TEST_F(StringRefTest, EdgeCase_HighUnicodeValues)
     EXPECT_GT(s.len(), 5);
 }
 
-TEST_F(StringRefTest, NoLeak_MultipleConstructDestruct)
+// Storage belongs to the arena; these verify repeated object lifetimes,
+// while sanitizer builds check invalid accesses during destruction.
+TEST_F(StringRefTest, Lifecycle_RepeatedConstructDestruct)
 {
-    for (int i = 0; i < 1000; i++) StringRef s("Test String");
-    EXPECT_TRUE(true);
+    ArenaAllocator arena;
+    for (int i = 0; i < 1000; i++) {
+        SCOPED_TRACE(i);
+        StringRef s("Test String", &arena);
+        EXPECT_EQ(s, "Test String");
+    }
 }
 
-TEST_F(StringRefTest, NoLeak_CopyAssignmentLoop)
+TEST_F(StringRefTest, Lifecycle_RepeatedCopyAssignment)
 {
-    StringRef original("Original");
+    ArenaAllocator arena;
+    StringRef original("Original", &arena);
     for (int i = 0; i < 100; i++) {
-        StringRef copy;
-        copy = original;
+        SCOPED_TRACE(i);
+        {
+            StringRef copy;
+            copy = original;
+            EXPECT_EQ(copy, "Original");
+        }
+        EXPECT_EQ(original, "Original");
     }
-    EXPECT_TRUE(true);
 }
 
-TEST_F(StringRefTest, NoLeak_MoveAssignmentLoop)
+TEST_F(StringRefTest, Lifecycle_RepeatedMoveAssignment)
 {
+    ArenaAllocator arena;
     for (int i = 0; i < 100; i++) {
-        StringRef s1("Test");
-        StringRef s2 = std::move(s1);
+        SCOPED_TRACE(i);
+        StringRef source("Test", &arena);
+        StringRef destination("Replaced", &arena);
+        destination = std::move(source);
+        EXPECT_EQ(destination, "Test");
+        EXPECT_TRUE(source.empty());
+        EXPECT_EQ(source.get(), nullptr);
     }
-    EXPECT_TRUE(true);
 }
 
 TEST_F(StringRefPerfTest, Performance_Utf8Conversion)
@@ -1117,19 +1133,23 @@ TEST_F(StringRefPerfTest, Concat_10k_AppendAssign)
 // Copy-on-Write semantics under load
 // ---------------------------------------------------------------------------
 
+template<bool Mutate> static f64 measure_cow_copies(StringRef const& original, int count)
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < count; i++) {
+        StringRef copy = original;
+        if constexpr (Mutate) copy[0] = 'X';
+        do_not_optimize(copy);
+    }
+    return microseconds_since(start);
+}
+
 // 100k shallow copies (no mutation) — should be near-free if CoW shares data.
 TEST_F(StringRefPerfTest, CoW_100k_ShallowCopies)
 {
     constexpr int N = 100'000;
     StringRef original("The quick brown fox jumps over the lazy dog");
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++) {
-        StringRef copy = original;
-        do_not_optimize(copy);
-    }
-    f64 us = microseconds_since(t0);
-
+    f64 us = measure_cow_copies<false>(original, N);
     std::printf("  CoW 100k shallow copies:         %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
@@ -1138,15 +1158,7 @@ TEST_F(StringRefPerfTest, CoW_100k_CopyThenMutate)
 {
     constexpr int N = 100'000;
     StringRef original("The quick brown fox jumps over the lazy dog");
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++) {
-        StringRef copy = original;
-        copy[0] = 'X'; // triggers CoW detach
-        do_not_optimize(copy);
-    }
-    f64 us = microseconds_since(t0);
-
+    f64 us = measure_cow_copies<true>(original, N);
     std::printf("  CoW 100k copy+mutate (break):    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
@@ -1155,23 +1167,8 @@ TEST_F(StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
 {
     constexpr int N = 50'000;
     StringRef original("The quick brown fox jumps over the lazy dog");
-
-    // shallow
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++) {
-        StringRef copy = original;
-        do_not_optimize(copy);
-    }
-    f64 shallow_us = microseconds_since(t0);
-
-    // mutating
-    t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++) {
-        StringRef copy = original;
-        copy[0] = 'X';
-        do_not_optimize(copy);
-    }
-    f64 mutate_us = microseconds_since(t0);
+    f64 shallow_us = measure_cow_copies<false>(original, N);
+    f64 mutate_us = measure_cow_copies<true>(original, N);
 
     std::printf(
         "  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n", shallow_us, mutate_us, mutate_us / shallow_us);

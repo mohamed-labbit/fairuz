@@ -20,7 +20,9 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <random>
+#include <set>
 #include <string>
+#include <utility>
 
 using namespace fairuz;
 using namespace fairuz::lex;
@@ -111,11 +113,15 @@ TEST(PropertyExpr, RandomArithmeticMatchesHost)
 {
     diagnostic::reset();
     std::mt19937_64 rng(0xC0FFEE);
+    std::set<std::pair<std::string, i64>> seen;
 
     for (int i = 0; i < 250; i++) {
         ExprSpec spec = gen_fa_expr(rng, 4);
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
+
+        // Keep the seeded sequence intact, but execute each input/oracle pair once.
+        if (!seen.emplace(source, expected).second) continue;
 
         EXPECT_EQ(run_fa_expr_source(source, expected), ExitStatus::SUCCESS)
             << source << " should evaluate to " << expected;

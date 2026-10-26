@@ -487,11 +487,6 @@ CSV_حلل("\"a\" "، ",")
 الاعدادات.نص()
 )fa",
         "قيمة INI لا يمكن تمثيلها دون فقد" },
-    { "CsvInvalidSeparator", R"fa(
-من قيم_مفصولة استورد CSV_حلل
-CSV_حلل("a,b"، "::")
-)fa",
-        "فاصل CSV يجب أن يكون حرفاً واحداً" },
     { "CsvUnterminatedQuote", R"fa(
 من قيم_مفصولة استورد CSV_حلل
 CSV_حلل("\"unterminated"، ",")

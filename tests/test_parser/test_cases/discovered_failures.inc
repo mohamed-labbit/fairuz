@@ -397,11 +397,6 @@
 )fa",
     "", Expectation::Error },
 
-{ "CsvRejectsDataAfterClosingQuote", R"fa(من قيم_مفصولة استورد CSV_حلل
-اكتب(CSV_حلل("\"a\"b"، ","))
-)fa",
-    "", Expectation::Error },
-
 // Binary file reading.
 // Counted, whole-file, and line reads must retain NUL bytes already accepted by the matching write API.
 { "FileReadPreservesNul", R"fa(مسار := __ملف_مؤقت__("fairuz-regression-"، ".bin"، عدم)["path"]

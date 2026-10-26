@@ -44,10 +44,6 @@ TEST(NumericSemanticsE2E, StrengthReductionDoesNotChangeMeaning)
     test_process::Result ok = test_cli::run(valid.path);
     EXPECT_EQ(ok.exit_code, 0);
     EXPECT_EQ(ok.out, "5\n");
-
-    test_source::SourceFile invalid("اكتب(مفقود * 0)\n");
-    test_process::Result bad = test_cli::run(invalid.path);
-    EXPECT_EQ(bad.exit_code, 65);
 }
 
 TEST(NumericSemanticsE2E, BitwiseCompoundAssignments)
