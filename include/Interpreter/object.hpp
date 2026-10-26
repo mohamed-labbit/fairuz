@@ -12,12 +12,12 @@
 #define FAIRUZ_INTERPRETER_OBJECT_HPP
 
 #include "Diag/runtime_error.hpp"
+#include "Interpreter/integer.hpp"
 #include "Interpreter/obj_header.hpp"
 #include "Interpreter/value.hpp"
 #include "Macros.hpp"
 #include "Support/array.hpp"
 #include "Support/error.hpp"
-#include "Interpreter/integer.hpp"
 #include "Support/string.hpp"
 #include "Support/table.hpp"
 
