@@ -75,15 +75,23 @@ TEST(CompilerFunc, NestedFunctionIndexing)
     bc.done();
 }
 
-TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
+TEST(CompilerFunc, ConditionalReturnPreservesFallback)
 {
-    // fn fact(n) { if (n) { return n } return 1 }
     Chunk* chunk = compile_ok("دالة مضروب(ن):\n"
                               "    اذا ن:\n"
                               "        ارجع ن\n"
                               "    ارجع 1\n");
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode) dump(chunk);
-    ASSERT_FALSE(chunk->functions.empty());
-    EXPECT_FALSE(chunk->functions[0]->code.empty());
+    ASSERT_EQ(chunk->functions.size(), 1u);
+    Chunk const* fn = chunk->functions[0];
+    ASSERT_NE(fn, nullptr);
+    EXPECT_EQ(fn->arity, 1);
+
+    BytecodeChecker fbc(*fn);
+    fbc.next("skip conditional return").op(OpCode::JUMP_IF_FALSE).A(0).s_bx(1);
+    fbc.next("return parameter").op(OpCode::RETURN).A(0).B(1);
+    fbc.next("fallback value").op(OpCode::LOAD_INT).A(1).Bx(load_int_bx(1));
+    fbc.next("return fallback").op(OpCode::RETURN).A(1).B(1);
+    fbc.done();
 }
