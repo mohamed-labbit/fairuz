@@ -12,6 +12,7 @@
 #include "Compiler/bytecode_emitter.hpp"
 #include "Compiler/compiler.hpp"
 #include "Compiler/opcode.hpp"
+#include "Compiler/optimizer.hpp"
 #include "Compiler/register_allocator.hpp"
 #include "Diag/runtime_error.hpp"
 #include "Interpreter/object.hpp"
@@ -25,9 +26,34 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace fairuz::runtime {
+
+namespace {
+
+bool is_numeric_constant(ExprResult const& result)
+{
+    return result.kind == ExprResult::Kind::KINT || result.kind == ExprResult::Kind::KFLOAT;
+}
+
+std::optional<AST::ExprPtr> fold_numeric_results(
+    AST::BinaryExpr* expression, ExprResult const& lhs, ExprResult const& rhs)
+{
+    if (!is_numeric_constant(lhs) || !is_numeric_constant(rhs)) return std::nullopt;
+    SourceLocation loc = expression->get_location();
+    AST::IntLiteralExpr lhs_int(lhs.kind == ExprResult::Kind::KINT ? lhs.ival : 0, loc);
+    AST::IntLiteralExpr rhs_int(rhs.kind == ExprResult::Kind::KINT ? rhs.ival : 0, loc);
+    AST::FloatLiteralExpr lhs_float(lhs.kind == ExprResult::Kind::KFLOAT ? lhs.dval : 0.0, loc);
+    AST::FloatLiteralExpr rhs_float(rhs.kind == ExprResult::Kind::KFLOAT ? rhs.dval : 0.0, loc);
+    AST::BinaryExpr binary(expression->get_kind(),
+        lhs.kind == ExprResult::Kind::KINT ? static_cast<AST::ExprPtr>(&lhs_int) : &lhs_float,
+        rhs.kind == ExprResult::Kind::KINT ? static_cast<AST::ExprPtr>(&rhs_int) : &rhs_float, loc);
+    return Optimizer::try_constant_folding(&binary);
+}
+
+} // namespace
 
 Compiler::CompileExprResult Compiler::compile_expr_impl(AST::ExprPtr e)
 {
@@ -131,6 +157,14 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
 {
     SourceLocation loc = e->get_location();
 
+    // Fold literal operands before lowering, including large integer literals.
+    auto numeric_literal
+        = [](AST::ExprPtr operand) { return AST::is_literal_int(operand) || AST::is_literal_float(operand); };
+
+    if (numeric_literal(e->lhs) && numeric_literal(e->rhs)) {
+        if (auto folded = Optimizer::try_constant_folding(e)) return compile_expr_impl(*folded);
+    }
+
     AST::ExprKind op = e->get_kind();
     if (op == AST::ExprKind::OP_AND) {
         ALLOC_REG(dst, loc);
@@ -198,30 +232,25 @@ Compiler::CompileExprResult Compiler::compile_binary_impl(AST::BinaryExpr* e)
     default: return raise_compile_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
-    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal_int(e->rhs)
-        && AST::as_literal_int(e->rhs)->large_literal.empty() && AST::as_literal_int(e->rhs)->value >= 0
-        && AST::as_literal_int(e->rhs)->value <= 255) {
-        auto* amount_expr = AST::as_literal_int(e->rhs);
-        i64 amount = amount_expr->value;
-        if (amount < 0 || amount > 255)
-            return raise_compile_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
+    RegMark mark(m_current);
+    FA_COMPILE_TRY(lhs_ret, compile_expr_impl(e->lhs));
+    RegType lhs;
+    // Materialize live/relocatable values before compiling the RHS. Literal
+    // constants can wait, allowing nested folds without emitting dead loads.
+    bool constant_lhs = is_numeric_constant(lhs_ret);
+    if (!constant_lhs) ANY_REG_SET(lhs_ret, loc, &lhs);
+    FA_COMPILE_TRY(rhs_ret, compile_expr_impl(e->rhs));
+    if (auto folded = fold_numeric_results(e, lhs_ret, rhs_ret)) return compile_expr_impl(*folded);
+    if (constant_lhs) ANY_REG_SET(lhs_ret, loc, &lhs);
 
-        RegMark mark(m_current);
-        FA_COMPILE_TRY(expr_result, compile_expr_impl(e->lhs));
-        ANY_REG_BIND(expr_result, loc, lhs);
-        PCType pc = m_bytecode_emitter.binary_immediate(bc_op, { }, lhs, static_cast<u8>(amount), loc);
+    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && rhs_ret.kind == ExprResult::Kind::KINT
+        && rhs_ret.ival >= 0 && rhs_ret.ival <= 255) {
+        PCType pc = m_bytecode_emitter.binary_immediate(bc_op, { }, lhs, static_cast<u8>(rhs_ret.ival), loc);
         return ExprResult::reloc(pc);
     }
-
-    // Nonliteral shift counts live in registers, unlike the immediate forms.
+    // Nonconstant shift counts live in registers, unlike the immediate forms.
     if (bc_op == OpCode::OP_LSHIFT) bc_op = OpCode::OP_LSHIFT_REG;
     else if (bc_op == OpCode::OP_RSHIFT) bc_op = OpCode::OP_RSHIFT_REG;
-
-    RegMark mark(m_current);
-
-    FA_COMPILE_TRY(lhs_ret, compile_expr_impl(e->lhs));
-    ANY_REG_BIND(lhs_ret, loc, lhs);
-    FA_COMPILE_TRY(rhs_ret, compile_expr_impl(e->rhs));
     ANY_REG_BIND(rhs_ret, loc, rhs);
 
     if (swapped) std::swap(lhs, rhs);
