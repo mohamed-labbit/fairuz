@@ -8,6 +8,8 @@
 
 #include "../test_interpreter_common.h"
 
+#include <cmath>
+
 TEST(BuiltinClock, ReturnsFiniteMonotonicSeconds)
 {
     VM vm;
