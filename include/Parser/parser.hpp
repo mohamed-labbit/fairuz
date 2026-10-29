@@ -81,8 +81,8 @@ public:
 
     Parser(Parser const&) = delete;
     Parser& operator=(Parser const&) = delete;
-    Parser(Parser&&) = delete;
-    Parser& operator=(Parser&&) = delete;
+    Parser(Parser&&) noexcept = delete;
+    Parser& operator=(Parser&&) noexcept = delete;
 
     Array<AST::StmtPtr> parse_program();
     ParseStmtResult parse_statement();

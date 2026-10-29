@@ -35,8 +35,8 @@ public:
     Error(Error const&) = default;
     Error& operator=(Error const&) = default;
 
-    Error(Error&&) = default;
-    Error& operator=(Error&&) = default;
+    Error(Error&&) noexcept = default;
+    Error& operator=(Error&&) noexcept = default;
 
     bool operator==(Error const& other) const { return m_code == other.m_code; }
 
@@ -77,8 +77,8 @@ public:
 
     ErrorOr(ErrorOr const&) = default;
     ErrorOr& operator=(ErrorOr const&) = default;
-    ErrorOr(ErrorOr&&) = default;
-    ErrorOr& operator=(ErrorOr&&) = default;
+    ErrorOr(ErrorOr&&) noexcept = default;
+    ErrorOr& operator=(ErrorOr&&) noexcept = default;
     ~ErrorOr() = default;
 
     bool has_value() const noexcept { return m_storage.has_value(); }
@@ -170,8 +170,8 @@ public:
 
     ErrorOr(ErrorOr const&) = default;
     ErrorOr& operator=(ErrorOr const&) = default;
-    ErrorOr(ErrorOr&&) = default;
-    ErrorOr& operator=(ErrorOr&&) = default;
+    ErrorOr(ErrorOr&&) noexcept = default;
+    ErrorOr& operator=(ErrorOr&&) noexcept = default;
     ~ErrorOr() = default;
 
     bool has_value() const noexcept { return m_storage.has_value(); }

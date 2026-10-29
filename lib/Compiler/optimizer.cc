@@ -78,9 +78,15 @@ std::optional<AST::ExprPtr> Optimizer::try_constant_folding(AST::BinaryExpr* e)
     bool integers = lhs.is_int() && rhs.is_int();
     Value result = Value::nil();
     switch (e->get_kind()) {
-    case Kind::OP_ADD: result = integers ? integer::add(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() + rhs.as_double_any()); break;
-    case Kind::OP_SUB: result = integers ? integer::sub(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() - rhs.as_double_any()); break;
-    case Kind::OP_MUL: result = integers ? integer::mul(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() * rhs.as_double_any()); break;
+    case Kind::OP_ADD:
+        result = integers ? integer::add(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() + rhs.as_double_any());
+        break;
+    case Kind::OP_SUB:
+        result = integers ? integer::sub(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() - rhs.as_double_any());
+        break;
+    case Kind::OP_MUL:
+        result = integers ? integer::mul(lhs, rhs, gc) : Value::from_real(lhs.as_double_any() * rhs.as_double_any());
+        break;
     case Kind::OP_DIV:
     case Kind::OP_MOD: {
         // Preserve runtime errors and their execution order, including -0.0.

@@ -90,10 +90,10 @@ public:
     /// each node is referred to by a constant pointer that must be valid
     /// so the only way to copy data must be using 'clone' below
     ASTNode(ASTNode const&) = delete;
-    ASTNode(ASTNode&&) = delete;
+    ASTNode(ASTNode&&) noexcept = delete;
 
     ASTNode& operator=(ASTNode const&) = delete;
-    ASTNode& operator=(ASTNode&&) = delete;
+    ASTNode& operator=(ASTNode&&) noexcept = delete;
 
     FAIRUZ_NODISCARD virtual NodeType get_node_type() const { return node_type; }
     FAIRUZ_NODISCARD u32 get_line() const;

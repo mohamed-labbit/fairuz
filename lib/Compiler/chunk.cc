@@ -80,7 +80,7 @@ FunctionIndex Chunk::add_function(Chunk* function)
     return index;
 }
 
-ClassIndex Chunk::add_class_descriptor(ClassDescriptor&& descriptor)
+ClassIndex Chunk::add_class_descriptor(ClassDescriptor&& descriptor) noexcept
 {
     if (class_descriptors.size() > MAX_CONSTANTS) diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
     ClassIndex index { static_cast<u16>(class_descriptors.size()) };

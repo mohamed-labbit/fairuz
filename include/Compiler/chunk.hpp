@@ -56,17 +56,17 @@ struct Chunk {
     Array<u64*> global_cache;
     Array<ClassDescriptor> class_descriptors; // new
 
-    ClassIndex add_class_descriptor(ClassDescriptor&& d);
+    ClassIndex add_class_descriptor(ClassDescriptor&& d) noexcept;
     FunctionIndex add_function(Chunk* function);
 
     Chunk() = default;
     ~Chunk() = default;
 
     Chunk(Chunk const&) = delete;
-    Chunk(Chunk&&) = default;
+    Chunk(Chunk&&) noexcept = default;
 
     Chunk& operator=(Chunk const&) = delete;
-    Chunk& operator=(Chunk&&) = default;
+    Chunk& operator=(Chunk&&) noexcept = default;
 
     PCType emit(InstrType instr, SourceLocation loc);
     bool patch_jump(PCType instr_idx);
