@@ -19,6 +19,7 @@
 #include "Support/error.hpp"
 
 #include <cassert>
+#include <expected>
 #include <iostream>
 #include <sstream>
 #include <stack>
