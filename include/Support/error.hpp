@@ -35,8 +35,8 @@ public:
     Error(Error const&) = default;
     Error& operator=(Error const&) = default;
 
-    Error(Error&&) noexcept = default;
-    Error& operator=(Error&&) noexcept = default;
+    Error(Error&&) = default;
+    Error& operator=(Error&&) = default;
 
     bool operator==(Error const& other) const { return m_code == other.m_code; }
 
@@ -75,10 +75,8 @@ public:
     static ErrorOr from_value(T value) { return ErrorOr(std::in_place, std::move(value)); }
     static ErrorOr from_error(E error) { return ErrorOr(std::unexpect, std::move(error)); }
 
-    ErrorOr(ErrorOr const&) = default;
-    ErrorOr& operator=(ErrorOr const&) = default;
-    ErrorOr(ErrorOr&&) noexcept = default;
-    ErrorOr& operator=(ErrorOr&&) noexcept = default;
+    ErrorOr(ErrorOr&&) = default;
+    ErrorOr& operator=(ErrorOr&&) = default;
     ~ErrorOr() = default;
 
     bool has_value() const noexcept { return m_storage.has_value(); }
@@ -157,7 +155,7 @@ private:
 template<typename E> class FAIRUZ_NODISCARD ErrorOr<void, E> {
 public:
     // For void, default construction represents success.
-    ErrorOr() noexcept = default;
+    ErrorOr() = default;
 
     ErrorOr(E error)
         : m_storage(std::unexpect, std::move(error))
@@ -170,8 +168,8 @@ public:
 
     ErrorOr(ErrorOr const&) = default;
     ErrorOr& operator=(ErrorOr const&) = default;
-    ErrorOr(ErrorOr&&) noexcept = default;
-    ErrorOr& operator=(ErrorOr&&) noexcept = default;
+    ErrorOr(ErrorOr&&) = default;
+    ErrorOr& operator=(ErrorOr&&) = default;
     ~ErrorOr() = default;
 
     bool has_value() const noexcept { return m_storage.has_value(); }
