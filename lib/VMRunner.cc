@@ -27,6 +27,12 @@
 #include <type_traits>
 #include <utility>
 
+#define REQUIRE_NO_ERRORS()          \
+    if (diagnostic::has_errors()) {  \
+        diagnostic::dump();          \
+        return diagnostic_failure(); \
+    }
+
 namespace fairuz::runtime {
 namespace {
 
@@ -134,7 +140,7 @@ RunResult report_execution_error(RuntimeError const& error)
     // Deferred parsing/imports can return an error whose original diagnostic
     // is already recorded. Report returned-only errors, but never duplicate
     // an existing parser diagnostic or its source information.
-    if (!diagnostic::has_errors()) ErrorRenderer().report(error);
+    if (!diagnostic::has_errors()) ErrorRenderer::report(error);
     diagnostic::dump();
     return failed(error.kind == ErrorCategory::INTERNAL ? RunFailure::INTERNAL : RunFailure::PROGRAM);
 }
@@ -154,10 +160,8 @@ RunResult run_file(char const* filepath, RunContext& context)
     auto const& options = context.options;
     parser::Parser parser(&file, options.dump_ast ? parser::BodyParsing::EAGER : parser::BodyParsing::LAZY);
     auto statements = parser.parse_program();
-    if (diagnostic::has_errors()) {
-        diagnostic::dump(); // Printing is incremental; parse_program may have printed already.
-        return diagnostic_failure();
-    }
+
+    REQUIRE_NO_ERRORS();
 
     if (options.dump_ast) {
         AST::ASTPrinter printer(true);
@@ -167,10 +171,8 @@ RunResult run_file(char const* filepath, RunContext& context)
     Compiler compiler(std::move(source));
     auto compiled = compiler.compile(statements);
     if (compiled.has_error()) return report_execution_error(compiled.error());
-    if (diagnostic::has_errors()) {
-        diagnostic::dump();
-        return diagnostic_failure();
-    }
+    
+    REQUIRE_NO_ERRORS();
 
     auto* chunk = compiled.value();
     if (chunk == nullptr) return report_host_error(ErrorCode::INTERNAL_ERROR, "compilation produced no bytecode");
@@ -178,7 +180,7 @@ RunResult run_file(char const* filepath, RunContext& context)
     if (options.check_only) {
         auto validation = Compiler::compile_all(chunk);
         if (validation.has_error()) return report_execution_error(validation.error());
-        if (diagnostic::has_errors()) return diagnostic_failure();
+        REQUIRE_NO_ERRORS();
     }
     if (options.dump_bytecode) chunk->disassemble();
     if (options.check_only) return { ExitStatus::SUCCESS, RunFailure::NONE };
@@ -192,10 +194,9 @@ RunResult run_file(char const* filepath, RunContext& context)
     auto executed = virtual_machine.run(chunk);
     auto end = std::chrono::steady_clock::now();
     if (executed.has_error()) return report_execution_error(executed.error());
-    if (diagnostic::has_errors()) {
-        diagnostic::dump();
-        return diagnostic_failure();
-    }
+    
+    REQUIRE_NO_ERRORS();
+    
     if (options.print_time) {
         std::chrono::duration<double> elapsed = end - start;
         std::cerr << "time: " << elapsed.count() << "s\n";
