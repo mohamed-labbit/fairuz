@@ -138,7 +138,7 @@ public:
     void print_runtime_error(RuntimeError err) const { std::cerr << error_string(err) << std::endl; }
 
     // Reporting is a host decision; constructing/returning an error stays silent.
-    void report(RuntimeError const& err) const
+    static void report(RuntimeError const& err)
     {
         diagnostic::SourceScope scope(err.source);
         auto id = diagnostic::engine.report_deferred(diagnostic::Severity::ERROR, err.loc, err.errc, err.detail);
