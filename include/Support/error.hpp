@@ -75,6 +75,8 @@ public:
     static ErrorOr from_value(T value) { return ErrorOr(std::in_place, std::move(value)); }
     static ErrorOr from_error(E error) { return ErrorOr(std::unexpect, std::move(error)); }
 
+    ErrorOr(ErrorOr const&) = default;
+    ErrorOr& operator=(ErrorOr const&) = default;
     ErrorOr(ErrorOr&&) = default;
     ErrorOr& operator=(ErrorOr&&) = default;
     ~ErrorOr() = default;
