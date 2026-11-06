@@ -80,8 +80,8 @@ static u32 decode_utf8_at(StringRef const& buf, size_t const byte_pos, u64* out_
 {
     if (byte_pos >= buf.len()) diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 decode past end of buffer");
 
-    unsigned char const* p = (unsigned char const*)buf.data() + byte_pos;
-    unsigned char const* end = (unsigned char const*)buf.data() + buf.len();
+    auto* p = reinterpret_cast<unsigned char const*>(buf.data()) + byte_pos;
+    auto* end = reinterpret_cast<unsigned char const*>(buf.data()) + buf.len();
 
     unsigned char const c = *p;
 
