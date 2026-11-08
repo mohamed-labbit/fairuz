@@ -171,7 +171,7 @@ RunResult run_file(char const* filepath, RunContext& context)
     Compiler compiler(std::move(source));
     auto compiled = compiler.compile(statements);
     if (compiled.has_error()) return report_execution_error(compiled.error());
-    
+
     REQUIRE_NO_ERRORS();
 
     auto* chunk = compiled.value();
@@ -194,9 +194,9 @@ RunResult run_file(char const* filepath, RunContext& context)
     auto executed = virtual_machine.run(chunk);
     auto end = std::chrono::steady_clock::now();
     if (executed.has_error()) return report_execution_error(executed.error());
-    
+
     REQUIRE_NO_ERRORS();
-    
+
     if (options.print_time) {
         std::chrono::duration<double> elapsed = end - start;
         std::cerr << "time: " << elapsed.count() << "s\n";
