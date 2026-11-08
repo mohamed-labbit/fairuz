@@ -441,28 +441,15 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
     VERIFY_RESULT(fn_reg_ret);
     RegType fn_reg = fn_reg_ret.value();
 
-    auto compile_args = [&]() -> Compiler::CompileStmtResult {
-        for (AST::ExprPtr arg : e->args) {
-            ALLOC_REG(arg_reg, loc);
-            FA_COMPILE_TRY(arg_cmp_ret, compile_expr_impl(arg));
-            m_bytecode_emitter.discharge(arg_cmp_ret, arg_reg, arg->get_location());
-            m_current->registers.rewind(static_cast<u16>(arg_reg.value) + 1);
+    auto compile_args = [&](CallRegisters& frame) -> Compiler::CompileStmtResult {
+        for (auto arg : e->args) {
+            auto dest = frame.next_arg();
+            if (dest.has_error()) return raise_compile_error(dest.error());
+            FA_COMPILE_TRY(value, compile_expr_impl(arg));
+            m_bytecode_emitter.discharge(value, dest.value(), arg->get_location());
+            frame.finish_arg(dest.value());
         }
         return { };
-    };
-
-    auto compile_object
-        = [&](AST::ExprPtr object, SourceLocation loc) -> ErrorOr<std::tuple<RegType, RegType>, RuntimeError> {
-        ALLOC_REG(object_reg, loc);
-        FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
-        m_bytecode_emitter.discharge(object_cmp_ret, object_reg, object->get_location());
-        // Nested receiver expressions may temporarily allocate well above
-        // object_reg. Method calling convention requires self and explicit
-        // arguments to occupy consecutive registers, so discard those
-        // temporaries before reserving the self slot and arguments.
-        m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
-        ALLOC_REG(reserved_reg, loc);
-        return std::make_tuple(object_reg, reserved_reg);
     };
 
     // Resolve external members from the actual receiver at runtime, including
@@ -479,10 +466,21 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             /// internal method call 'this.method(implicit this, ...)'
             auto method_name = AST::as_identifier(member)->spelling;
             int slot = current_method_slot(method_name);
+
             if (slot >= 0) {
-                FA_COMPILE_TRY(regs, compile_object(object, loc));
-                auto [object_reg, _] = regs;
-                FA_COMPILE_DISCARD_TRY(compile_args());
+                ALLOC_REG(object_reg, loc);
+                CallRegisters frame { m_current->registers, object_reg, CallRegisters::CallLayout::INVOKE };
+                FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
+                m_bytecode_emitter.discharge(object_cmp_ret, object_reg, object->get_location());
+                // Nested receiver expressions may temporarily allocate well above
+                // object_reg. Method calling convention requires self and explicit
+                // arguments to occupy consecutive registers, so discard those
+                // temporaries before reserving the self slot and arguments.
+                frame.finish_callee();
+                ErrorOr<RegType> reserved_reg = frame.prepare_auxiliary();
+                if (reserved_reg.has_error()) return raise_compile_error(reserved_reg.error());
+
+                FA_COMPILE_DISCARD_TRY(compile_args(frame));
                 auto argc = e->args.size() + 1;
                 if (slot <= 0xFF)
                     m_bytecode_emitter.invoke(object_reg, MethodSlot { static_cast<u8>(slot) }, argc, loc);
@@ -491,19 +489,35 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 if (tail && !m_current->is_top_level)
                     m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
 
-                m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
-                return ExprResult::reg(object_reg);
+                return ExprResult::reg(frame.finish_with_result());
             }
+
+            CallRegisters frame { m_current->registers, fn_reg, CallRegisters::CallLayout::INVOKE };
             // A member stored in a field can itself be callable. When no
             // method slot exists, load the member value and use the ordinary
             // CALL path instead of rejecting valid higher-order code.
             FA_COMPILE_TRY(callee_cmp_ret, compile_expr_impl(e->callee));
             m_bytecode_emitter.discharge(callee_cmp_ret, fn_reg, loc);
-            m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
+            frame.finish_callee();
+            FA_COMPILE_DISCARD_TRY(compile_args(frame));
+
+            auto argc = e->args.size();
+            if (tail && !m_current->is_top_level) {
+                m_bytecode_emitter.emit_ABC(OpCode::CALL_TAIL, fn_reg.value, argc, 0, loc);
+                frame.finish_terminal();
+                return ExprResult::reg(fn_reg);
+            }
+
+            m_bytecode_emitter.ic_call(fn_reg, argc, loc);
+            return ExprResult::reg(frame.finish_with_result());
         } else {
             /// external method call 'obj.method()'
-            FA_COMPILE_TRY(regs, compile_object(object, loc));
-            auto [object_reg, member_reg] = regs;
+            ALLOC_REG(object_reg, loc);
+            CallRegisters frame { m_current->registers, object_reg, CallRegisters::CallLayout::INVOKE };
+            FA_COMPILE_TRY(object_cmp_ret, compile_expr_impl(object));
+            m_bytecode_emitter.discharge(object_cmp_ret, object_reg, object->get_location());
+            frame.finish_callee();
+            ALLOC_REG(member_reg, loc);
 
             if (AST::is_identifier(member)) {
                 /// if it's a simple name then load it from the constant table
@@ -514,9 +528,7 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
                 m_bytecode_emitter.discharge(member_cmp_ret, member_reg, member->get_location());
             }
 
-            auto args_cmp_ret = compile_args();
-            VERIFY_RESULT(args_cmp_ret);
-
+            FA_COMPILE_DISCARD_TRY(compile_args(frame));
             auto argc = e->args.size() + 1; // +1 for implicit 'this'
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
             auto idx = intern_string(AST::as_identifier(member)->spelling);
@@ -524,31 +536,24 @@ Compiler::CompileExprResult Compiler::compile_call_impl(AST::CallExpr* e, RegTyp
             if (tail && !m_current->is_top_level)
                 m_bytecode_emitter.emit_ABC(OpCode::RETURN, object_reg.value, 1, 0, loc);
             /// move the cursor back where it was before compiling 'member'
-            m_current->registers.rewind(static_cast<u16>(object_reg.value) + 1);
-            return ExprResult::reg(object_reg);
+            return ExprResult::reg(frame.finish_with_result());
         }
     } else {
         /// plain function call 'expr()'
+        CallRegisters frame { m_current->registers, fn_reg, CallRegisters::CallLayout::NORMAL };
         FA_COMPILE_TRY(callee_cmp_ret, compile_expr_impl(e->callee));
         m_bytecode_emitter.discharge(callee_cmp_ret, fn_reg, loc);
-        // A computed callee can leave temporary registers live. Arguments must
-        // begin immediately after fn_reg for CALL/IC_CALL.
-        m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
+        frame.finish_callee();
+        FA_COMPILE_DISCARD_TRY(compile_args(frame));
+        u32 argc = e->args.size();
+        if (tail && !m_current->is_top_level) {
+            m_bytecode_emitter.emit_ABC(OpCode::CALL_TAIL, fn_reg.value, argc, 0, loc);
+            frame.finish_terminal();
+            return ExprResult::reg(fn_reg);
+        }
+        m_bytecode_emitter.ic_call(fn_reg, argc, loc);
+        return ExprResult::reg(frame.finish_with_result());
     }
-
-    auto args_cmp_ret = compile_args();
-    VERIFY_RESULT(args_cmp_ret);
-
-    auto argc = e->args.size();
-    if (tail && !m_current->is_top_level) {
-        m_bytecode_emitter.emit_ABC(OpCode::CALL_TAIL, fn_reg.value, argc, 0, loc);
-        m_current->registers.rewind(fn_reg.value);
-        return ExprResult::reg(fn_reg);
-    }
-
-    m_bytecode_emitter.ic_call(fn_reg, argc, loc);
-    m_current->registers.rewind(static_cast<u16>(fn_reg.value) + 1);
-    return ExprResult::reg(fn_reg);
 }
 
 Compiler::CompileExprResult Compiler::compile_list_impl(AST::ListExpr* e)
