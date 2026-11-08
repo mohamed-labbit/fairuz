@@ -171,6 +171,42 @@ private:
     }
 }; // struct ExprResult
 
+class CallRegisters {
+public:
+    enum class CallLayout : int {
+        NORMAL,
+        INVOKE,
+    };
+
+    CallRegisters() = delete;
+
+    CallRegisters(RegisterAllocator& alloc, RegType base, CallLayout clayout)
+        : m_allocator(alloc)
+        , m_base(base)
+        , m_call_layout(clayout)
+    {
+    }
+
+    /// keeps hold on the base and drops the scratch above it
+    void finish_callee();
+    // allocates the next slot immediately after the completed prefix
+    ErrorOr<RegType> next_arg();
+    // requires that the value has already been materialized there;
+    // it releases only scratch above that slot
+    void finish_arg(RegType arg);
+
+    RegType finish_with_result();
+    void finish_terminal();
+    // Reserve the invocation slot after the receiver, before explicit arguments.
+    ErrorOr<RegType> prepare_auxiliary();
+
+private:
+    RegisterAllocator& m_allocator;
+    RegType m_base;
+    CallLayout m_call_layout;
+    bool m_auxiliary_prepared { false };
+};
+
 class Compiler {
 public:
     using CompileExprResult = ErrorOr<ExprResult, RuntimeError>;
