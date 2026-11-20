@@ -142,8 +142,9 @@ static void print_runtime_value_impl(Value value, std::unordered_set<ObjHeader*>
                 std::cout << "<cycle>";
                 return;
             }
-            std::cout << '{';
+            std::cout << "{\n";
             for (auto [k, v] : dict->data) {
+                std::cout << "    ";
                 if (k.is_string()) {
                     std::cout << '"';
                     std::cout << k.as_string()->str;
@@ -159,9 +160,9 @@ static void print_runtime_value_impl(Value value, std::unordered_set<ObjHeader*>
                 } else {
                     print_runtime_value_impl(v, active_containers, depth + 1);
                 }
-                std::cout << ", ";
+                std::cout << ",\n";
             }
-            std::cout << '}';
+            std::cout << "}";
             active_containers.erase(&dict->obj);
             return;
         }
