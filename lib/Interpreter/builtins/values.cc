@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diag/errc.hpp"
+#include "Interpreter/object.hpp"
 #include "Interpreter/vm.hpp"
 #include "util.hpp"
 
@@ -17,6 +18,7 @@
 
 namespace fairuz::runtime {
 
+///
 VM::RuntimeResult VM::print(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr) {
@@ -26,6 +28,17 @@ VM::RuntimeResult VM::print(int argc, Value* argv)
 
     for (int i = 0; i < argc; i++) {
         if (i > 0) std::cout << '\t';
+        if (argv[i].is_instance()) {
+            ObjInstance* instance = argv[i].as_instance();
+            int slot = instance->klass->method_slot(sp_method_name(ObjClass::REPR));
+            if (slot != -1) {
+                auto ret = call_special_sync(argv[i], slot);
+                if (ret.has_error()) return ret.error();
+                std::cout << ret.value().as_string()->str;
+                std::cout << '\n';
+                return Value::from_bool(true);
+            }
+        }
         print_runtime_value(argv[i]);
     }
     std::cout << '\n';
