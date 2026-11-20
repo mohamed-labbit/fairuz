@@ -9,6 +9,7 @@
 // Builtins for containers (list, dict) implementation.
 //===----------------------------------------------------------------------===//
 
+#include "Diag/errc.hpp"
 #include "Interpreter/value.hpp"
 #include "Interpreter/vm.hpp"
 #include "Util/utf8.hpp"
@@ -29,6 +30,8 @@ VM::RuntimeResult VM::dict(int argc, Value* argv)
 {
     Value ret = m_gc.make_dict();
     if (argc <= 0 || argv == nullptr) return ret;
+    if (argc % 2 != 0)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT, "'dict' arguments must be key, value pairs");
 
     ObjDict* dict_obj = ret.as_dict();
     for (int i = 0; i + 1 < argc; i += 2) dict_obj->set(argv[i], argv[i + 1]);
